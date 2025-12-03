@@ -1,0 +1,448 @@
+{
+  "name": "Derinsu",
+  "nodes": [
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4-turbo",
+          "mode": "list",
+          "cachedResultName": "GPT-4-TURBO"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Konu: {{ $json.subject }}\nKimden:{{ $json.from.value[0].address }}\nİçerik: {{ $json.textPlain || $json.textHtml || $json.snippet }}\n\nGörev: E-postayı özetle (1-2 cümle), kısa bir yorum yap, gerekli ise kibar bir yanıt taslağı ver, 1-5 arası önem puanı ver ve 1-3 etiket çıkar.\nYANIT FORMATIN:\n{\n  \"ozet\": \"...\",\n  \"yorum\": \"...\",\n  \"yanit_taslagi\": \"...\",\n  \"onem\": 1-5,\n  \"etiketler\": [\"...\",\"...\"]\n}\nSadece JSON döndür.\n"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        336,
+        -64
+      ],
+      "id": "7a2d4bae-7e3c-4a20-af0f-2da77be2be94",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "ox8aSoMlUagXilPo",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "f1bc1a9a-4e7f-4081-a2bf-9330272418d6",
+              "name": "data",
+              "value": "=Buffer.from(\n  JSON.stringify({\n    source: $json.source || \"gmail\",\n    title: $json.subject || $json.title || \"\",\n    body: $json.body || $json.ozet || \"\",\n    time: new Date().toISOString()\n  }) + \"\\n\"\n).toString('base64')\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1040,
+        16
+      ],
+      "id": "4832525c-343f-48d3-8aba-2ed870e85196",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) Kaydedilecek JSON satırı\nconst text = JSON.stringify({\n  source: $json.source || \"gmail\",\n  title: $json.subject || $json.title || \"\",\n  body: $json.body || $json.ozet || \"\",\n  time: new Date().toISOString()\n}) + \"\\n\";\n\n// 2) Bunu n8n'in beklediği binary formatında döndür\nreturn [\n  {\n    json: {},  // writer buna bakmayacak\n    binary: {\n      data: {\n        data: Buffer.from(text).toString('base64')\n      }\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        32
+      ],
+      "id": "87903f04-209b-4796-a58c-3eb3ba5dbaae",
+      "name": "Code in JavaScript3"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1nt_zWoluiwmOiameQubfltt6oyD5NGU4ksfHpDziWno",
+          "mode": "list",
+          "cachedResultName": "DERINSU EXEL",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/DUMMY_GMAIL_API_KEY"        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/DUMMY_GMAIL_API"
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "tıme": "={{ $now }}",
+            "tıttle": "={{ $json.title }}",
+            "özet": "={{ $json.ozet }}",
+            "yanit": "={{ $json.yanit_taslagi }}",
+            "onem": "={{ $json.onem }}",
+            "etiketler": "={{ $json.etiketler }}",
+            "source": "gmail",
+            "yorum": "={{ $json.yorum }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tıme",
+              "displayName": "tıme",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "tıttle",
+              "displayName": "tıttle",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "özet",
+              "displayName": "özet",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "yorum",
+              "displayName": "yorum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "yanit",
+              "displayName": "yanit",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "onem",
+              "displayName": "onem",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "etiketler",
+              "displayName": "etiketler",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "source",
+              "displayName": "source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        816,
+        -144
+      ],
+      "id": "8a4b8c23-a026-47dc-ad32-00d35498b760",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "83f27e89-aa9d-4d0f-b715-76e5aa5c8202",
+              "name": "ozet",
+              "value": "={{ ($json.message.content.ozet || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "dc881852-a019-4b4b-885d-590ea78f6df3",
+              "name": "yorum",
+              "value": "={{ ($json.message.content.yorum || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "34ec233c-7f64-4069-81d0-780458515cc4",
+              "name": "yanit_taslagi",
+              "value": "={{ ($json.message.content.yanit_taslagi || '').toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "1e81834c-a846-4065-86f6-e0ba1aba53bb",
+              "name": "onem",
+              "value": "={{ Number($json.message.content.onem ?? 1) }}",
+              "type": "string"
+            },
+            {
+              "id": "3df51b15-d5f3-4a5b-875f-d0012f010556",
+              "name": "etiketler",
+              "value": "={{ Array.isArray($json.message.content.etiketler) ? $json.message.content.etiketler.join(', ') : '' }}",
+              "type": "string"
+            },
+            {
+              "id": "aeebd763-1e89-43ab-9706-4417139b516f",
+              "name": "source",
+              "value": "gmail",
+              "type": "string"
+            },
+            {
+              "id": "4f3aa910-0abc-45dd-add7-46ed13c9f83d",
+              "name": "title",
+              "value": "={{ $('Get a message').item.json.subject }}",
+              "type": "string"
+            },
+            {
+              "id": "8ea234fa-93de-4f46-844b-785449222d80",
+              "name": "body",
+              "value": "={{\n(() => {\n  const m = $item(0,'Get a message').json ?? $item(0,'Gmail Trigger').json ?? {};\n  const text = m.textPlain || m.textHtml || m.snippet || m.payload?.body?.data || '';\n  return String(text || '').trim();\n})()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "f71917bc-a5d0-47a7-ab7f-71c5cbba7a90",
+              "name": "from",
+              "value": "={{ $('Get a message').item.json.from.value[0].address }}",
+              "type": "string"
+            },
+            {
+              "id": "7eb3e203-9b72-4702-87f5-7e754c884770",
+              "name": "tg_text",
+              "value": "={{ [   '📩 Yeni mail:',   `👤 Kimden: ${$json.from || '-'}`,   `🧷 Başlık: ${$json.title || '-'}`,   '',   `🧠 Özet: ${$json.ozet || '-'}`,   `💬 Yorum: ${$json.yorum || '-'}`,   '',   '✉️ Yanıt taslağı:',   `${$json.yanit_taslagi || '-'}`,   '',   `🔎 Önem: ${$json.onem || '-'}`,   `🗂️ Etiketler: ${$json.etiketler || '-'}`,   `🔗 Aç: ${$json.link || '-'}` ].join('\\n') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        608,
+        -48
+      ],
+      "id": "0e663876-f3e7-4d83-aa2d-a2308efc1f39",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "messageId": "={{ $json.id }}\n",
+        "simple": false,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        160,
+        -64
+      ],
+      "id": "4e98f8f0-7546-40fa-a5f5-7ddbe48f8ff6",
+      "name": "Get a message",
+      "webhookId": "18fc5047-27f6-41e6-a720-7e3efd2d28a4",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4m3aMGjLm89egLIv",
+          "name": "Gmail account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "filters": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -176,
+        -48
+      ],
+      "id": "231da091-1451-40f0-936f-26460bdd7cfa",
+      "name": "Gmail Trigger1",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "4m3aMGjLm89egLIv",
+          "name": "Gmail account 2"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/DUMMY_TELEGRAM_BOT_TOKEN"/sendMessage",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "chat_id",
+              "value": "1496380263"
+            },
+            {
+              "name": "text",
+              "value": "=📩 Yeni mail:\n👤 Kimden: {{ $json.from || '-' }}\n🧷 Başlık:{{ $json.title }}\n\n🧠 Özet: {{ $json.ozet || '-' }}\n💬 Yorum: {{ $json.yorum || '-' }}\n\n✉️ Yanıt taslağı:\n{{ $json.yanit_taslagi || '-' }}\n\n🔎 Önem: {{ $json.onem }} / 5\n🗂️ Etiketler: {{ $json.etiketler || '-' }}\n🔗 Aç: {{ $json.link || '-' }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        816,
+        48
+      ],
+      "id": "1733bbbf-fd3a-4f96-bad5-4cf91259b929",
+      "name": "HTTP Request",
+      "retryOnFail": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript3": {
+      "main": [
+        []
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get a message": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gmail Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "08bb778d-af7e-4296-b26b-dc5c44968387",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "Lw6aYEbdftU5hiSL",
+  "tags": []
+}

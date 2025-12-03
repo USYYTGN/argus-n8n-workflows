@@ -1,0 +1,272 @@
+{
+  "name": "ÜRETİM HATTI",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tools/create_n8n_flow",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -560,
+        -336
+      ],
+      "id": "327c7b9f-29e6-4748-8002-28947fdcbd87",
+      "name": "TOOL_create_n8n_flow",
+      "webhookId": "b145b66e-4470-419c-a0a2-83b4aa5c206d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "DUMMY_N8N_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.apiWorkflow.name }}"
+            },
+            {
+              "name": "nodes",
+              "value": "={{ $json.apiWorkflow.nodes }}"
+            },
+            {
+              "name": "connections",
+              "value": "={{ $json.apiWorkflow.connections }}"
+            },
+            {
+              "name": "settings",
+              "value": "={{ $json.apiWorkflow.settings }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        272,
+        -352
+      ],
+      "id": "5b1d85ec-080d-4bc9-a370-9233932c4186",
+      "name": "X-N8N-API-KEY"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        752,
+        -320
+      ],
+      "id": "a352105e-1d21-492b-b462-395c8c79d2b3",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "DUMMY_ANTHROPIC_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.claudeRequest }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -128,
+        -336
+      ],
+      "id": "2c019546-8347-4024-a1ec-239538f1b24e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\n// Claude HTTP cevabından workflow JSON'unu çekip\n// n8n API'nin anlayacağı apiWorkflow objesine çeviriyoruz.\n\nconst out = [];\n\nfor (const item of items) {\n  const data = item.json || {};\n\n  // 1) Claude messages cevabındaki text'i al\n  let rawText = \"\";\n\n  if (Array.isArray(data.content) && data.content.length > 0) {\n    const textPart =\n      data.content.find((p) => p.type === \"text\") || data.content[0];\n    rawText = textPart.text || \"\";\n  } else if (typeof data.completion === \"string\") {\n    rawText = data.completion;\n  } else if (typeof data.text === \"string\") {\n    rawText = data.text;\n  } else {\n    rawText = JSON.stringify(data);\n  }\n\n  // 2) Metnin içindeki ilk '{' ile son '}' arasını JSON kabul et\n  let wf;\n  try {\n    const start = rawText.indexOf(\"{\");\n    const end = rawText.lastIndexOf(\"}\");\n\n    if (start === -1 || end === -1 || end <= start) {\n      throw new Error(\"Claude yanıtında JSON obje bulunamadı\");\n    }\n\n    const jsonStr = rawText.slice(start, end + 1);\n    wf = JSON.parse(jsonStr);\n  } catch (err) {\n    out.push({\n      json: {\n        error: \"WORKFLOW_JSON_PARSE_FAILED\",\n        message: String(err),\n        rawText,\n      },\n    });\n    continue;\n  }\n\n  // 3) n8n workflow formatına çevir\n  const apiWorkflow = {\n    name: wf.name || \"ARGUS auto: Flow\",\n    // active BİLEREK YOK, n8n read-only diye ağlamasın\n    nodes: wf.nodes || [],\n    connections: wf.connections || {},\n    settings: wf.settings || {},\n  };\n\n  out.push({ json: { apiWorkflow } });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -336
+      ],
+      "id": "8d2f6b99-da94-4f9a-a233-4ed14b66c459",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = items[0].json;\nconst data = item.data || item; // bazı sürümler data içinde döner\n\nif (!data || !data.id) {\n  return [\n    {\n      json: {\n        ok: false,\n        error: item.message || item.error || 'Workflow oluşturulamadı (id yok).',\n        raw: item\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      workflowId: data.id,\n      name: data.name,\n      url: `https://argusbot.duckdns.org/workflow/${data.id}`\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -320
+      ],
+      "id": "2ed90e95-4ce6-455b-85ac-0d7cfaadd1ef",
+      "name": "N8N DÖNÜŞ"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://argusbot.duckdns.org/webhook/argus_memory_write",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userId\": \"ULAS\",\n  \"type\": \"command\",\n  \"text\": \"CMD: {{$json.text}}\",\n  \"meta\": \"{\\\"source\\\":\\\"telegram\\\",\\\"chatId\\\":\\\"{{$json.chat_id}}\\\"}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        544,
+        -544
+      ],
+      "id": "a1fccfa8-ecc4-4146-9db0-0b4928079239",
+      "name": "WRITE_MEMORY_WORKFLOW.",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook'tan gelen isteği al\nconst req = $input.first().json;\nconst body = req.body || {};\nconst desc = body.description || 'Açıklama yok';\nconst name = body.workflowName || 'ARGUS auto: Akış';\n\nconst systemPrompt = [\n  \"Sen bir N8N workflow uzmanısın. Kullanıcı isteğine göre çalışan JSON workflow üret.\",\n  \"\",\n  \"KURALLAR:\",\n  \"1. SADECE JSON döndür\",\n  \"2. active: false\",\n  \"3. position: [240,300] başla, her node +200\",\n  \"\",\n  \"MEVCUT ENV VARIABLES:\",\n  \"TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, ALERT_TARGET_NUMBER\",\n  \"TELEGRAM_BOT_TOKEN, YOUTUBE_API_KEY, ANTHROPIC_API_KEY, BINANCE_API_KEY\",\n  \"Kullanım: {{$env.VARIABLE_NAME}}\",\n  \"\",\n  \"NODE TİPLERİ:\",\n  \"\",\n  \"SCHEDULE: n8n-nodes-base.scheduleTrigger\",\n  \"Günlük 17:15: cronExpression: 15 17 * * *\",\n  \"\",\n  \"HTTP REQUEST: n8n-nodes-base.httpRequest\",\n  \"GET: method=GET, url=...\",\n  \"POST: method=POST, sendBody=true\",\n  \"\",\n  \"CODE: n8n-nodes-base.code\",\n  \"mode: runOnceForAllItems\",\n  \"jsCode: const items=$input.all(); ...\",\n  \"\",\n  \"TELEGRAM: n8n-nodes-base.telegram\",\n  \"operation: sendMessage\",\n  \"chatId, text: ={{$json.message}}\",\n  \"\",\n  \"TWILIO ARAMA (2 NODE ÇOK ÖNEMLİ!):\",\n  \"\",\n  \"Node 1 - Code (Twilio Data Hazırla):\",\n  \"jsCode içinde:\",\n  \"- process.env.ALERT_TARGET_NUMBER al\",\n  \"- process.env.TWILIO_PHONE_NUMBER al\",\n  \"- Twiml XML oluştur: <Response><Say language='tr-TR'>MESAJ</Say></Response>\",\n  \"- Return: {to: numara, from: numara, twiml: xml}\",\n  \"\",\n  \"Node 2 - HTTP Request (Twilio Call):\",\n  \"method: POST\",\n  \"url: =https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json\",\n  \"authentication: genericCredentialType, httpBasicAuth\",\n  \"sendBody: true\",\n  \"contentType: raw\",\n  \"rawContentType: =application/x-www-form-urlencoded\",\n  \"body: = ile başla, string concat kullan:\",\n  \"  'To=' + encodeURIComponent($json.to) +\",\n  \"  '&from=' + encodeURIComponent($json.from) +\",\n  \"  '&Twiml=' + encodeURIComponent($json.twiml)\",\n  \"\",\n  \"KRİPTO FİYAT:\",\n  \"CoinGecko API (key gereksiz):\",\n  \"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try\",\n  \"\",\n  \"YOUTUBE:\",\n  \"https://www.googleapis.com/youtube/v3/search?q=QUERY&key={{$env.YOUTUBE_API_KEY}}\",\n  \"\",\n  \"CONNECTIONS:\",\n  \"Her node'u sırayla bağla:\",\n  'node1: {main: [[{node: node2, type: main, index: 0}]]}',\n  \"\",\n  \"WORKFLOW YAPISI:\",\n  \"1. Trigger (Schedule veya Manual)\",\n  \"2. Data Fetch (HTTP GET, API)\",\n  \"3. Data Process (Code node)\",\n  \"4. Action (Telegram, Twilio, etc)\",\n  \"\",\n  \"ÖRNEKLER:\",\n  \"BTC fiyat + ara: Schedule → GET CoinGecko → Code parse → Code twilio data → POST Twilio\",\n  \"YouTube ara: Manual → GET YouTube → Code parse → Telegram\",\n  \"Mail oku: Schedule → Gmail → Code → Telegram/Twilio\",\n  \"\",\n  \"ÖNEMLİ:\",\n  \"- Twilio için RAW form-urlencoded kullan\",\n  \"- Code node'da process.env ile ENV oku\",\n  \"- Body string concat: = ile başla\",\n  \"- encodeURIComponent kullan\",\n  \"\",\n  \"SADECE JSON DÖNDÜR!\"\n].join(\"\\n\");\n\nconst userPrompt = \"İstek: \" + desc + \"\\n\\nYukarıdaki kuralları uygula. Twilio için form-urlencoded raw body kullan. Code node'da process.env kullan. SADECE JSON döndür!\";\n\nreturn [{\n  json: {\n    workflowName: name,\n    claudeRequest: {\n      model: 'claude-sonnet-4-5-20250929',\n      max_tokens: 8192,\n      temperature: 0.3,\n      system: systemPrompt,\n      messages: [{\n        role: 'user',\n        content: [{type: 'text', text: userPrompt}]\n      }]\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        -336
+      ],
+      "id": "494b6748-7d46-48d6-a0f5-a157e3f02097",
+      "name": "KURALLAR"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "TOOL_create_n8n_flow": {
+      "main": [
+        [
+          {
+            "node": "KURALLAR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "X-N8N-API-KEY": {
+      "main": [
+        [
+          {
+            "node": "N8N DÖNÜŞ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "X-N8N-API-KEY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "N8N DÖNÜŞ": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WRITE_MEMORY_WORKFLOW.": {
+      "main": [
+        []
+      ]
+    },
+    "KURALLAR": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "0416f1b7-4546-4cad-ade0-a8b7e8bf9a3d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "0OvLyVNV4rEQp2qz",
+  "tags": []
+}

@@ -1,0 +1,227 @@
+{
+  "name": "ARGUS_VOICE_AGENT_STABLE",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "DUMMY_ANTHROPIC_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content_type",
+              "value": "=application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-5-20250929\",\n  max_tokens: 80,\n  temperature: 0.4,\n  system: $json.systemPrompt,\n  messages: [\n    {\n      role: \"user\",\n      content: [\n        { type: \"text\", text: $json.userText }\n      ]\n    }\n  ]\n}) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -368,
+        -64
+      ],
+      "id": "4e5d0516-9ac8-4574-b65a-bba4fdfb41ee",
+      "name": "ISTEK_VOICE"
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json;  // Twilio'dan gelen form alanları\n\nconst from = req.From || req.from || '';\nconst to = req.To || req.to || '';\nconst speech =\n  req.SpeechResult ||\n  req.RecognitionResult ||\n  req.TranscriptionText ||\n  '';\n\nreturn [{\n  json: {\n    ...req,     // istersen tüm ham datayı da sakla\n    from,\n    to,\n    speech,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -752,
+        -64
+      ],
+      "id": "dd078b18-0e78-4d4a-bfc3-eac8199a1e31",
+      "name": "TWILIO_PARSE"
+    },
+    {
+      "parameters": {
+        "jsCode": "const res = $input.first().json;\n\nlet rawText = \"\";\nif (Array.isArray(res.content) && res.content[0]?.text) {\n  rawText = res.content[0].text;\n} else if (typeof res.content === \"string\") {\n  rawText = res.content;\n}\n\n// İçindeki JSON'u yakala\nconst match = rawText.match(/\\{[\\s\\S]*\\}/);\nif (!match) {\n  throw new Error(\"Claude cevabından JSON bulamadım: \" + rawText);\n}\n\nlet parsed;\ntry {\n  parsed = JSON.parse(match[0]);\n} catch (e) {\n  throw new Error(\"Claude JSON parse hatası: \" + e.message + \" | text: \" + match[0]);\n}\n\nconst reply = parsed.reply || \"Sistem tarafında bir hata oldu, sonra tekrar dene.\";\nconst end_call = Boolean(parsed.end_call);\n\nreturn [{\n  json: { reply, end_call }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -64
+      ],
+      "id": "1e331912-351f-4c94-9ef5-a8a70e33e60c",
+      "name": "PARSE_CLAUDE_VOICE"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\n\nconst replyRaw = input.reply || 'Bir şeyler ters gitti ama seni duyuyorum.';\nconst endCall = input.end_call === true;\n\n// XML'i bozan & işareti vs. için ufak temizlik\nconst reply = replyRaw.replace(/&/g, ' ve ');\n\nlet twiml = '';\n\nif (endCall) {\n  twiml =\n    '<Response>' +\n      '<Say language=\"tr-TR\">' + reply + '</Say>' +\n      '<Hangup/>' +\n    '</Response>';\n} else {\n  twiml =\n    '<Response>' +\n      '<Say language=\"tr-TR\">' + reply + '</Say>' +\n      '<Gather input=\"speech\" language=\"tr-TR\" method=\"POST\"/>' +\n    '</Response>';\n}\n\nreturn [{\n  json: { twiml }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -64
+      ],
+      "id": "07bccb31-5273-4ca2-8aec-bd8523d2c0c9",
+      "name": "BUILD_TWIML"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "={{ $json.twiml }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "text/xml"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        176,
+        -64
+      ],
+      "id": "eab0276d-df09-407d-9676-40260610e908",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "argus_voice_agent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -928,
+        -64
+      ],
+      "id": "f9647792-d4fe-4544-a06f-08a798ec9965",
+      "name": "Webhook",
+      "webhookId": "bb8ca12d-74fa-4b88-84b6-c4972bec9a14"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Twilio'dan gelen isteği al\nconst req = $input.first().json;\nconst body = req.body || {};\n\n// Telefon numaraları\nconst from =\n  body.From ||\n  body.from ||\n  '';\n\nconst to =\n  body.To ||\n  body.to ||\n  '';\n\n// Konuşma metni (Twilio'nun farklı alanları)\nconst speech =\n  body.SpeechResult ||\n  body.UnstableSpeechResult ||\n  body.RecognitionResult ||\n  body.TranscriptionText ||\n  body.speechResult ||\n  '';\n\n// Kullanıcının cümlesi\nconst userText = speech && String(speech).trim()\n  ? String(speech).trim()\n  : 'Kullanıcıdan net bir şey gelmedi. Kısa bir karşılama cümlesi söyle ve konuşmaya hazır olduğunu belirt.';\n\nconst now = new Date().toISOString();\n\n// === SYSTEM PROMPT BURADA ===\nconst systemPrompt = `\nSenin adın ARGUS. Benim kişisel yapay zeka asistanımsın.\nBu kanalda benimle TELEFON ÜZERİNDEN, gerçek zamanlı Türkçe konuşuyorsun.\n\nKONUŞMA TARZIN:\n- Günlük, doğal, İstanbul Türkçesiyle konuş.\n- Google Translate gibi robotik cümle kurma.\n- En fazla 2 kısa cümle kur (toplam yaklaşık 20–30 kelime).\n- Argo duyarsam bile sen sakin ve düzgün cevap ver, küfür etme.\n\nPİYASA / BİTCOİN / OTOMASYON:\n- Gerçek zamanlı fiyatları doğrudan veremiyorsan bunu kısa söyle, konuyu uzatma.\n- \"İnternete bağlı değilim\", \"anlık veri göremem\", \"tarayıcıya erişemem\" gibi klasik cümleleri kullanma.\n- Bunun yerine:\n  - Gerekirse kullanıcıdan fiyat iste: \"Fiyatı sen söyle, ben yorum yapayım.\"\n  - Veya genel prensip ve stratejileri anlat.\n\nTÜRKÇE İÇİN ÖZEL KURALLAR:\n- Mümkünse kısaltmaları aç: \"BTC\" yerine \"Bitcoin\", \"ETH\" yerine \"Ethereum\" de.\n- Cümleyi sembol ve kısaltma çöplüğüne çevirme ki sesli okuma doğal gelsin.\n- Emoji kullanma.\n\nJSON FORMAT KURALI:\nHer zaman sadece şu JSON formatını döndür:\n\n{\n  \"reply\": \"Telefonda söyleyeceğin Türkçe cümle\",\n  \"end_call\": true veya false\n}\n\n- \"end_call\" true ise: Kullanıcıya vedalaşan kısa bir cümle söyle ve görüşmeyi bitir.\n- \"end_call\" false ise: Cevabı ver ve kullanıcının devam edebileceğini ima et.\n\nJSON dışında tek bir karakter bile yazma.\nŞu anki sistem zamanı (UTC): ${now}\n`.trim();\n\n// n8n'de bir sonraki node'a göndereceğimiz veri\nreturn [\n  {\n    json: {\n      systemPrompt,\n      userText,\n      from,\n      to,\n      timestamp: now,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -560,
+        -64
+      ],
+      "id": "95980788-6801-4e3c-aaa6-5ee8ec518a5e",
+      "name": "SYSTEMKODU_VOICE1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json;\n\n// Twilio verisi req.body altında geliyor\nconst body = req.body || {};\n\n// Telefon numaraları\nconst from =\n  body.From ||\n  body.from ||\n  '';\n\nconst to =\n  body.To ||\n  body.to ||\n  '';\n\n// Konuşma metni: önce body altına bak\nconst speech =\n  body.SpeechResult ||\n  body.RecognitionResult ||\n  body.TranscriptionText ||\n  '';\n\n// Kullanıcının cümlesi\nconst userText = speech && String(speech).trim()\n  ? String(speech).trim()\n  : 'Ses anlaşılamadı, kullanıcıdan net bir cümle gelmedi. Kısa bir karşılama cümlesi söyle.';\n\nconst now = new Date().toISOString();\n\nconst systemPrompt = `\nSenin adın ARGUS. Benim kişisel yapay zeka asistanımsın.\nBu kanalda benimle TELEFON ÜZERİNDEN Türkçe konuşuyorsun.\n\nGörevin:\n- Ne söylediğimi anlamak\n- Kısa, net ve doğal cümlelerle cevap vermek\n\nKurallar:\n- Telefonda konuştuğunu unutma, en fazla 2–3 cümle.\n- Argo konuşuyorsam sen daha sakin ve düzgün cevap ver.\n- Bitcoin / piyasa / otomasyon hakkında normal sohbet edebilirsin.\n\nHER ZAMAN sadece şu JSON formatını döndür:\n\n{\n  \"reply\": \"Kullanıcıya telefonda söyleyeceğin Türkçe cümle\",\n  \"end_call\": true | false\n}\n\n- \"end_call\" true ise, cevap ver ve görüşmeyi bitir.\n- \"end_call\" false ise, cevap ver ve kullanıcıdan yeni cümle bekle.\n\nJSON dışında tek bir karakter bile yazma.\nŞu anki sistem zamanı (UTC): ${now}\n`.trim();\n\nreturn [{\n  json: {\n    systemPrompt,\n    userText,\n    from,\n    to,\n  },\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        -464
+      ],
+      "id": "f1de0943-5369-4f5c-a282-a2a3a4c0561b",
+      "name": "SYSTEMKODU_VOICE",
+      "disabled": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "ISTEK_VOICE": {
+      "main": [
+        [
+          {
+            "node": "PARSE_CLAUDE_VOICE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TWILIO_PARSE": {
+      "main": [
+        [
+          {
+            "node": "SYSTEMKODU_VOICE1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PARSE_CLAUDE_VOICE": {
+      "main": [
+        [
+          {
+            "node": "BUILD_TWIML",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD_TWIML": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "TWILIO_PARSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SYSTEMKODU_VOICE1": {
+      "main": [
+        [
+          {
+            "node": "ISTEK_VOICE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "1ad56612-a83d-499f-a8ad-2683677dbd47",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "8GntRP5B0JtOeU3I",
+  "tags": []
+}
