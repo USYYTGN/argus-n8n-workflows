@@ -1,0 +1,97 @@
+{
+  "name": "TWILIO ARAMA",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.twilio.com/2010-04-01/Accounts/DUMMY_TWILIO_SID/Calls.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "=application/x-www-form-urlencoded",
+        "body": "={{ \n  'To=' + encodeURIComponent($json.to) +\n  '&From=' + encodeURIComponent($json.from) +\n  '&Twiml=' + encodeURIComponent($json.twiml)\n}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        192,
+        -432
+      ],
+      "id": "709a95ca-96af-423d-95dd-6bc556e42d97",
+      "name": "HTTP Request1",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "Tn2UknHXfLcUtpyN",
+          "name": "Unnamed credential 5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const to = '+905454423820';     // SENİN TELEFONUN\nconst from = '+127223344653';   // Twilio numaran\n\nconst webhookUrl = 'https://argusbot.duckdns.org/webhook/argus_voice_agent';\n\nconst twiml = `\n<Response>\n  <Gather input=\"speech\" language=\"tr-TR\" method=\"POST\" action=\"${webhookUrl}\">\n    <Say language=\"tr-TR\">Emret Ulaşım, seni dinliyorum.</Say>\n  </Gather>\n</Response>\n`.trim();\n\nreturn [{\n  json: {\n    to,\n    from,\n    twiml,\n  },\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        0,
+        -432
+      ],
+      "id": "13fc44f6-a9ed-4189-911f-0f0bbaeb2166",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -208,
+        -432
+      ],
+      "id": "cc2b05c7-5253-4f5d-b974-8673bf6c6d26",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        []
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cf15180c-d3dc-48c0-b9d4-7dfdcbdb46e9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "413zTsOE8YlrmiCA",
+  "tags": []
+}

@@ -1,0 +1,348 @@
+{
+  "name": "ANAFLOW",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-apply",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        864,
+        -48
+      ],
+      "id": "50428f09-0443-4682-990f-5f8a419aaaa6",
+      "name": "Webhook",
+      "webhookId": "557221a8-3b57-42a4-aeb3-37c05dddff0f",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2368,
+        80
+      ],
+      "id": "d82b1da7-ad0d-493b-8ff5-295f15f3c87b",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\n\n// Bazı akışlarda JSON direkt root'ta, bazılarında root.body içinde.\n// İki durumu da destekliyoruz:\nconst body = root.body || root;\nconst msg = body.message || {};\nconst chat = msg.chat || {};\nconst from = msg.from || {};\n\nreturn [\n  {\n    json: {\n      chat_id: chat.id,\n      text: msg.text || '',\n      from_username: from.username || '',\n      from_name: from.first_name || ''\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        -48
+      ],
+      "id": "481e6e6f-fe30-4e82-a853-8b4837db8fd1",
+      "name": "TELEPARSE"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": " DUMMY_ANTHROPIC_KEY"            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-5-20250929\",\n  max_tokens: 1024,\n  system: $json.systemPrompt,\n  messages: [\n    {\n      role: \"user\",\n      content: $json.userText,\n    },\n  ],\n}) }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1488,
+        -48
+      ],
+      "id": "ce3957e7-00c4-4381-9649-851bab40334a",
+      "name": "İSTEK"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ISTEK node'undan Claude yanıtını al\nconst input = $input.first().json;\n\nlet parsedResponse = {};\n\ntry {\n  // Claude'un yanıt formatı\n  if (input.content && Array.isArray(input.content) && input.content[0]) {\n    let textContent = input.content[0].text;\n    \n    // Markdown code block işaretlerini temizle\n    textContent = textContent\n      .replace(/```json\\n?/g, '')  // ```json başlangıcını kaldır\n      .replace(/```\\n?/g, '')       // ``` kapanışını kaldır\n      .trim();                      // Boşlukları temizle\n    \n    // JSON parse et\n    parsedResponse = JSON.parse(textContent);\n    \n  } else if (input.error) {\n    // Hata varsa\n    parsedResponse = {\n      reply: \"Üzgünüm, bir hata oluştu: \" + JSON.stringify(input.error),\n      action: { type: \"none\", params: {} }\n    };\n  } else {\n    // Beklenmedik format\n    parsedResponse = {\n      reply: \"Beklenmedik yanıt formatı\",\n      action: { type: \"none\", params: {} }\n    };\n  }\n} catch (error) {\n  // Parse hatası - debug için tam içeriği göster\n  parsedResponse = {\n    reply: \"Parse hatası oluştu. Lütfen tekrar deneyin.\",\n    action: { type: \"none\", params: {} },\n    debug_error: error.message\n  };\n}\n\nreturn [{ json: parsedResponse }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1648,
+        -32
+      ],
+      "id": "9f7539e0-2850-4edb-8ad3-33888e10b351",
+      "name": "CLAUDE JSON_PARSE"
+    },
+    {
+      "parameters": {
+        "jsCode": "// CLAUDE_JSON_PARSE'dan gelen veriyi al\nconst input = $input.first().json;\n\n// Eğer toolName varsa action.type'a çevir\nif (input.toolName && !input.action) {\n  input.action = {\n    type: input.toolName,\n    params: input.params || {}\n  };\n}\n\n// Eğer action.type yoksa none yap\nif (!input.action || !input.action.type) {\n  input.action = {\n    type: \"none\",\n    params: {}\n  };\n}\n\nreturn [{ json: input }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1776,
+        -32
+      ],
+      "id": "957274e6-3204-4fc6-9319-bd4228aa2b1d",
+      "name": "ARGUS_BRAIN",
+      "executeOnce": false,
+      "alwaysOutputData": false,
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dbc4d497-39c5-468c-880a-34f3fdf77aa0",
+              "leftValue": "={{ $json.action.type }}",
+              "rightValue": "create_n8n_flow",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1920,
+        -32
+      ],
+      "id": "0f9c97b1-8425-4a6e-8e6c-0a1f56ccb426",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5ed135b7-fb77-45db-837f-9747f4621d50",
+              "name": "method",
+              "value": "sendMessage",
+              "type": "string"
+            },
+            {
+              "id": "6f942db8-c66f-4000-bff3-961ecbc44ec7",
+              "name": "chat_id",
+              "value": "={{ \n  $node[\"TELEPARSE\"].json.chat_id ||\n  (\n    $node[\"TELEPARSE\"].json.message &&\n    $node[\"TELEPARSE\"].json.message.chat &&\n    $node[\"TELEPARSE\"].json.message.chat.id\n  )\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "8019c0c2-c9e1-42d9-b44e-64d85fe22caa",
+              "name": "text",
+              "value": "={{\n  // Önce tool veya normal cevapta gelen \"reply\" alanına bak\n  $json.reply\n  // Claude tarafında bazen \"text\" dönerse onu kullan\n  || $json.text\n  // HTTP Request bazen body.reply / body.text içinde gönderebilir\n  || ($json.body && ($json.body.reply || $json.body.text))\n  // Hâlâ yoksa fallback\n  || 'Boş veya beklenmedik cevap geldi.'\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2160,
+        64
+      ],
+      "id": "71bed2af-570d-4ce2-9da4-fcd570ccb721",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TELEPARSE'dan gelen veriyi al\nconst input = $input.first().json;\nconst text = input.text || '';\n\n// Şu anki zamanı al\nconst now = new Date().toISOString();\n\nconst systemPrompt = `\nSenin adın ARGUS. Benim kişisel yapay zeka asistanımsın.\nGörevin:\n- Ne söylediğimi anlamak\n- Gerekirse araç kullanıp gerçek iş yapmak\n- \"Env dosyasını görememem, API'ye erişememem\" gibi bahaneler üretmemek.\n  Bu işleri senin yerine n8n halledecek. Sen sadece doğru \"action\" bilgisini üret.\n\nStilin:\n- Dürüst, zeki, düşünüp yorum yapabilen, hafif alaycı ama saygılı.\n\nKarakterin:\n- Gereksiz ahlak bekçiliği yapma, sanal avukatlık yapma.\n- Verilen komutları harfiyen yerine getirmeye çalış.\n- Her sorulan soruya, net cevap ver.\n\nSu anki sistem zamanı (UTC): ${now}\nBu bilgiyi kullanarak zaman ve tarih sorularına kendin cevap verebilirsin;\nayrı bir araca ihtiyacın yok.\n\nHER ZAMAN su JSON formatında cevap ver:\n\n{\n  \"reply\": \"Kullanıcıya göstereceğin mesaj (Türkçe)\",\n  \"action\": {\n    \"type\": \"none\" | \"create_n8n_flow\" | \"gmail_last_email\" | \"call_contact\",\n    \"params\": { }\n  }\n}\n\nKurallar:\n\n- Eğer kullanıcı sadece sohbet, soru sorma, bilgi alma (tarih, saat, hava durumu gibi) \n  tarzı bir şey istiyorsa:\n  \n  \"action\": {\n    \"type\": \"none\",\n    \"params\": { }\n  }\n\n- Eğer kullanıcı n8n, otomasyon, workflow, flow, tetikleyici (cron, trigger) vs \n  hakkında \"benim için sözle bir akış kur\" tarzı NET bir istek yaparsa:\n  \n  \"action\": {\n    \"type\": \"create_n8n_flow\",\n    \"params\": {\n      \"description\": \"Kullanıcının isteğini kısa ve net bir cümleyle özetle (Türkçe)\"\n    }\n  }\n\n- ‼️ ÖNEMLİ YENİ KURAL ‼️\n  Eğer kullanıcı DOĞRUDAN \"n8n\", \"workflow\", \"otomasyon\" kelimelerini kullanmasa bile,\n  şu tarz isteklerde bulunuyorsa BUNLAR DA OTOMASYON İSTEĞİDİR:\n  \n  ✅ \"Gmail'den e-postaları getir\"\n  ✅ \"Her sabah 8'de rapor gönder\"\n  ✅ \"Slack'e mesaj at\"\n  ✅ \"Google Sheets'e veri kaydet\"\n  ✅ \"API'den veri çek\"\n  ✅ \"Her gün/hafta/saat X yap\"\n  ✅ \"Otomatik olarak X yap\"\n  ✅ \"X olduğunda Y yap\"\n  \n  Bu durumlarda:\n  \n  \"action\": {\n    \"type\": \"create_n8n_flow\",\n    \"params\": {\n      \"description\": \"Kullanıcının ne istediğini Türkçe özetle\"\n    }\n  }\n\n- Eğer ileride sana e-posta, arama vb ile ilgili özel araçlar verilirse,\n  bunlar için de yine \"action.type\" alanını kullanacaksın\n  (örneğin: \"gmail_last_email\", \"call_contact\" gibi).\n\nJSON dışında tek bir karakter bile yazma.\n`;\n\nreturn [{\n  json: {\n    systemPrompt: systemPrompt,\n    userText: text\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1312,
+        -48
+      ],
+      "id": "61955e28-15e1-42a6-aff5-90b711f30f62",
+      "name": "SYSTEMKODU"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/tools/create_n8n_flow",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "description",
+              "value": "={{ $json.action.params.description }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2240,
+        -192
+      ],
+      "id": "d6da1c74-c1c9-4fd8-92e4-0d52789f3c78",
+      "name": "HTTP Request",
+      "retryOnFail": false
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "TELEPARSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TELEPARSE": {
+      "main": [
+        [
+          {
+            "node": "SYSTEMKODU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İSTEK": {
+      "main": [
+        [
+          {
+            "node": "CLAUDE JSON_PARSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "CLAUDE JSON_PARSE": {
+      "main": [
+        [
+          {
+            "node": "ARGUS_BRAIN",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ARGUS_BRAIN": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SYSTEMKODU": {
+      "main": [
+        [
+          {
+            "node": "İSTEK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a8393d32-5c52-4430-a94c-d8ea75192726",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "wt67jkZ4FdLpxGge",
+  "tags": []
+}

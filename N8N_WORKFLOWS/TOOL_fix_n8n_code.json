@@ -1,0 +1,104 @@
+{
+  "name": "TOOL_fix_n8n_code",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "tool_fix_n8n_code",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -112,
+        -32
+      ],
+      "id": "7406df2d-6623-4150-b1f5-ac3a612239a7",
+      "name": "Webhook",
+      "webhookId": "9fed3e67-2ea2-4a1e-9be3-48647af6af5c"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        432,
+        -32
+      ],
+      "id": "53ce538e-3349-48c3-8b7e-eeba2a2e6e26",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:3102/argus/fix-code",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "description",
+              "value": "={{$json.body.params.description}}\n"
+            },
+            {
+              "name": "language",
+              "value": "={{$json.body.params.language}}\n"
+            },
+            {
+              "name": "code",
+              "value": "={{$json.body.params.code}}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        160,
+        -32
+      ],
+      "id": "cabf5d28-341a-4647-a819-d667002c546d",
+      "name": "ARGUS Fix Code"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ARGUS Fix Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ARGUS Fix Code": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "cc94437d-c329-4b6e-abfc-8b525afadb3a",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "BZiyYD0W3X3ptiCE",
+  "tags": []
+}

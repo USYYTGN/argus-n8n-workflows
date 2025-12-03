@@ -1,0 +1,136 @@
+{
+  "name": "tamirci",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "argus/auto-build",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -432,
+        -48
+      ],
+      "id": "9d835da5-b529-4ca2-b2ae-ca02dfba10f8",
+      "name": "Webhook",
+      "webhookId": "020aa38d-adcc-481e-81c9-6ce328eb6683"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:3102/argus/build-n8n-workflow",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "text",
+              "value": "={{$json[\"body\"][\"text\"]}}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -176,
+        -48
+      ],
+      "id": "aaf4be0c-7142-4f21-b3ac-c56e8b0bb3c6",
+      "name": "ARGUS Build Workflow"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:5678/api/v1/workflows",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-N8N-API-KEY",
+              "value": "DUMMY_N8N_API_KEY"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        208,
+        -48
+      ],
+      "id": "d5de3214-2cc7-4181-ae22-a072ba1808b8",
+      "name": "N8N"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Builder'dan gelen veri:\n// { ok: true, workflow: { ... } } veya direkt { ... }\nconst src = $json.workflow || $json;\n\n// n8n public API için sade workflow\nconst workflow = {\n  name: src.name || 'ARGUS auto: Workflow',\n  nodes: src.nodes || [],\n  connections: src.connections || {},\n  // DİKKAT: settings'i her zaman tertemiz boş obje yapıyoruz\n  settings: {},\n};\n\nreturn [\n  {\n    json: workflow,\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        -48
+      ],
+      "id": "237caadc-77da-4f88-a9b0-0f151c5aa1f1",
+      "name": "Code in JavaScript"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ARGUS Build Workflow",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ARGUS Build Workflow": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "N8N",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a979d5e7-678d-42dc-b800-5dad47581ff3",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "w7qrcxZiyGlzk4Ep",
+  "tags": []
+}

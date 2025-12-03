@@ -1,0 +1,15 @@
+# Gerçek anahtarlar buraya girmeyecek
+.env
+*.env
+
+# n8n'ın hassas şeyleri
+.n8n/
+**/credentials.json
+**/keys.json
+
+# Node projeleri varsa
+node_modules/
+
+# Çöp dosyalar
+Thumbs.db
+.DS_Store

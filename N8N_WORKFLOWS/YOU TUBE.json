@@ -1,0 +1,1092 @@
+{
+  "name": "YOU TUBE",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 2
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -688,
+        368
+      ],
+      "id": "c3045d76-01f3-4ce7-b9df-43e72e8dbac4",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "2fb0e5aa-b708-41f5-9e81-2549fa29998d",
+              "name": "title",
+              "value": "={{$json[\"snippet\"][\"title\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "ed51a76f-9067-4949-b250-29c1dc0ac799",
+              "name": "channelTitle",
+              "value": "={{$json[\"snippet\"][\"channelTitle\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "1ffaf4f7-aafe-4a06-b739-91d7c36c814f",
+              "name": "publishedAt",
+              "value": "={{$json[\"snippet\"][\"publishedAt\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "b5ba8579-dfa9-42d7-bdd8-812988772a2c",
+              "name": "views",
+              "value": "={{$json[\"statistics\"][\"viewCount\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "98f747ee-42e6-4147-b0c7-f4ce98d96828",
+              "name": "likes",
+              "value": "={{$json[\"statistics\"][\"likeCount\"] || 0}}\n",
+              "type": "string"
+            },
+            {
+              "id": "b495cae2-1bc9-4195-94ef-3fb1cf66c87d",
+              "name": "url",
+              "value": "=https://www.youtube.com/watch?v={{$json[\"id\"]}}\n",
+              "type": "string"
+            },
+            {
+              "id": "369aea58-4680-4541-bd44-d14c7ec0681d",
+              "name": "platform",
+              "value": "youtube",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        960,
+        272
+      ],
+      "id": "1be5c3fa-b6d0-4a63-a8e5-2e3749ef98c7",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\n\nfunction cleanString(v) {\n  if (v === undefined || v === null) return \"\";\n  return String(v).trim(); // \\n, boşluk vs kırpar\n}\n\nconst scoredItems = items.map(v => {\n  const rawTitle = cleanString(v.title);\n  const rawChannel = cleanString(v.channelTitle);\n  const rawViews = cleanString(v.views);\n  const rawLikes = cleanString(v.likes);\n  const rawPublished = cleanString(v.publishedAt);\n\n  const title = rawTitle || \"(Başlıksız Video)\";\n  const channelTitle = rawChannel || \"Bilinmiyor\";\n\n  const views = parseInt(rawViews || \"0\", 10) || 0;\n  const likes = parseInt(rawLikes || \"0\", 10) || 0;\n\n  // zamanı ms'e çevir\n  let publishedTimeMs = 0;\n  if (/^\\d+$/.test(rawPublished)) {\n    // saf rakam → TikTok epoch saniye\n    publishedTimeMs = parseInt(rawPublished, 10) * 1000;\n  } else {\n    const t = Date.parse(rawPublished);\n    if (!isNaN(t)) {\n      publishedTimeMs = t;\n    }\n  }\n\n  const nowMs = Date.now();\n  const ageHours = publishedTimeMs\n    ? (nowMs - publishedTimeMs) / (1000 * 60 * 60)\n    : 9999;\n\n  let freshnessBonus = 1;\n  if (ageHours < 24) {\n    freshnessBonus = 1.5;\n  } else if (ageHours < 72) {\n    freshnessBonus = 1.2;\n  } else if (ageHours < 168) {\n    freshnessBonus = 1.05;\n  }\n\n  const platform = cleanString(v.platform);\n  const originCountry = cleanString(v.originCountry);\n\n  const score = (views + likes * 5) * freshnessBonus;\n\n  return {\n    title,\n    channelTitle,\n    views,\n    likes,\n    publishedAt: rawPublished,\n    url: cleanString(v.url),\n    platform,\n    originCountry,\n    ageHours,\n    freshnessBonus,\n    score,\n  };\n});\n\nscoredItems.sort((a, b) => b.score - a.score);\n\nreturn scoredItems.map(s => ({ json: s }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1200,
+        672
+      ],
+      "id": "a2c456f4-3a35-46cc-b726-a4522e4a9945",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "mostPopular"
+            },
+            {
+              "name": "regionCode",
+              "value": "TR"
+            },
+            {
+              "name": "maxResults",
+              "value": "20"
+            },
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "key",
+              "value": "DUMMY_YOUTUBE_API_KEY"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d57c066d-e027-44a4-98e8-b55ccd346742",
+      "name": "TR"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "mostPopular"
+            },
+            {
+              "name": "regionCode",
+              "value": "GB"
+            },
+            {
+              "name": "maxResults",
+              "value": "20"
+            },
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "key",
+              "value": "AIzaSyBMSvre1wLxDHV1Inl0faFSAn_pNNp_rZk"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        0,
+        368
+      ],
+      "id": "8cf0db14-9263-4ac3-9928-013ad1dbca5e",
+      "name": "BK"
+    },
+    {
+     
+      ],
+      "id": "bb81c254-3517-45fe-9915-34fcbf9cfbe0",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "score",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1360,
+        640
+      ],
+      "id": "1d20bc0d-9b24-4325-85b0-d375cf5c1065",
+      "name": "Sort"
+    },
+    {
+      "parameters": {
+        "maxItems": 30
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        656
+      ],
+      "id": "42314d7a-b828-4b59-aa0d-9d917d69c1fb",
+      "name": "Limit"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        704,
+        368
+      ],
+      "id": "ab3c29ab-a71f-4319-be2e-ed4afb921c3b",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46c23c79-367e-42c5-841e-496516a00574",
+              "name": "originCountry",
+              "value": "TR",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        0
+      ],
+      "id": "c97e779e-6b40-46d0-9e8a-557bb2cc0144",
+      "name": "Add Country TR"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46c23c79-367e-42c5-841e-496516a00574",
+              "name": "originCountry",
+              "value": "RU",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        192
+      ],
+      "id": "7e05ba78-8abc-487c-bd8c-8067a8ec4a6e",
+      "name": "Add Country RU"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46c23c79-367e-42c5-841e-496516a00574",
+              "name": "originCountry",
+              "value": "UK",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        400,
+        368
+      ],
+      "id": "aa16dace-36de-4f32-a403-a7a80acecc8f",
+      "name": "Add Country BK"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        208,
+        560
+      ],
+      "id": "11d33ffb-1c70-473f-a25b-4c755a0a0537",
+      "name": "Split Out USA"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "46c23c79-367e-42c5-841e-496516a00574",
+              "name": "originCountry",
+              "value": "US",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        544
+      ],
+      "id": "b1434aeb-7b49-491c-9294-5eedb91df9e8",
+      "name": "Add Country USA"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        208,
+        368
+      ],
+      "id": "8dec979f-c9e9-4a9c-9cca-7c9e60d9835f",
+      "name": "Split Out UK"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1024,
+        560
+      ],
+      "id": "f991a67c-40f8-4dda-b916-aba7f6ea1f04",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Limit node'dan gelen en iyi videolar\nconst items = $input.all().map(i => i.json);\n\n// En yüksek skorlu ilk 5\nconst top = items.slice(0, 5);\n\nlet text = \"Bugün internette en çok patlayan içerikler şöyle: \";\n\ntop.forEach((v, idx) => {\n  const name = v.channelTitle || \"bilinmeyen kanal\";\n  const title = v.title || \"isimsiz video\";\n  const views = v.views ? v.views.toLocaleString(\"tr-TR\") : \"bilinmiyor\";\n  const likes = v.likes ? v.likes.toLocaleString(\"tr-TR\") : \"0\";\n  const platform = v.platform === \"tiktok\" ? \"TikTok\" : \"YouTube\";\n\n  text += `${idx + 1}. sırada ${platform} üzerinde ${name} adlı kanalın \"${title}\" videosu var. ` +\n          `${views} izlenme ve ${likes} beğeni toplamış. `;\n});\n\ntext += \"Bence şu anda ilk sıradaki video en çok ivmeyi almış gibi duruyor. Devam etmek ister misin canım? 💅\";\n\nreturn [{ json: { voiceAnswer: text } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1392,
+        240
+      ],
+      "id": "8c0c5e7c-338c-408b-b234-2b324530adce",
+      "name": "BUILD VOICE ANSWER"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8622262c-d679-4bc5-a8c1-091fbbf837ce",
+              "leftValue": "=$items(\"SET MODE\")[0].json[\"mode\"]\n\n",
+              "rightValue": "draft_video",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1616,
+        320
+      ],
+      "id": "f669cd16-458f-43d3-8556-c1fec46c5873",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6733738c-fd83-4a23-9906-4f632c76f357",
+              "name": "mode",
+              "value": "draft_video",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -432,
+        368
+      ],
+      "id": "b3ead29d-6ecb-4fa7-ad69-bacd1b1220a7",
+      "name": "SET MODE"
+    },
+    {
+      "parameters": {
+        "jsCode": "// N8N Image Prompt Builder\nconst platform = $json[\"sourcePlatform\"] || \"social\";\nconst title = $json[\"originalTitle\"] || \"trend içerik\";\n\nconst imagePrompt = `\nHigh quality vertical 9:16 cinematic thumbnail inspired by \"${title}\".\nRequirements:\n- Viral ${platform === \"tiktok\" ? \"TikTok / YouTube Shorts\" : \"social media\"} vibe\n- Bold, dramatic lighting and high energy\n- Clean depth background\n- NO real celebrity faces\n- NO brand logos or text in image\n- Safe for all audiences\n`;\n\nreturn [\n  {\n    json: {\n      rank: 1,\n      sourcePlatform: platform,\n      originalTitle: title,\n      imagePrompt: imagePrompt.trim(),\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1840,
+        336
+      ],
+      "id": "462c35c4-4e52-49c1-9024-6b2983a6afaa",
+      "name": "BUILD IMAGE PROMPTS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "DUMMY_OPENAI_API_KEY
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-image-1"
+            },
+            {
+              "name": "prompt",
+              "value": "={{$json[\"imagePrompt\"]}}\n"
+            },
+            {
+              "name": "size",
+              "value": "1024x1536"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2000,
+        336
+      ],
+      "id": "34f44b1f-b516-489c-9681-10d1918a879e",
+      "name": "Generate Image"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.telegram.org/bot8139885429:AAEPdmrjU54s32nv4iMra67BORM_wsA1IeQ/sendPhoto",
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "photo",
+              "inputDataFieldName": "photo"
+            },
+            {
+              "name": "chat_id",
+              "value": "1496380263"
+            },
+            {
+              "name": "caption",
+              "value": "=\"🔥 DERİNSU TASLAK 🔥\\n\\n\" +\n\"Başlık: \" + ($json[\"caption\"] || \"—\") + \"\\n\" +\n\"Durum: \" + ($json[\"status\"] || \"—\") + \"\\n\\n\" +\n\"Onaylıyor musun? ✅ / ❌\"\n"
+            },
+            {
+              "name": "parse_mode",
+              "value": "HTML"
+            },
+            {
+              "name": "reply_markup",
+              "value": "=JSON.stringify({\n  inline_keyboard: [\n    [\n      { text: \"✅ Onayla\", callback_data: \"approve\" },\n      { text: \"❌ Reddet\", callback_data: \"reject\" }\n    ]\n  ]\n})\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2448,
+        352
+      ],
+      "id": "7660dc21-590a-404c-b6b7-5aa592059ae1",
+      "name": "HTTP Request",
+      "retryOnFail": true,
+      "waitBetweenTries": 1000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Meta (WhatsApp Business) webhook verification handler.\n// Meta GET isteğinde query paramlarında şunları yollar:\n//   hub.mode\n//   hub.verify_token\n//   hub.challenge\n//\n// Biz doğru verify_token geldiyse hub.challenge değerini body olarak geri döneceğiz.\n\nconst query = $json.query || {};\n\nif (query[\"hub.verify_token\"] === \"derinsutoken\") {\n  return [\n    {\n      json: {},\n      response: {\n        statusCode: 200,\n        headers: {\n          \"Content-Type\": \"text/plain\",\n        },\n        body: query[\"hub.challenge\"],\n      },\n    },\n  ];\n} else {\n  return [\n    {\n      json: {},\n      response: {\n        statusCode: 403,\n        headers: {\n          \"Content-Type\": \"text/plain\",\n        },\n        body: \"verification failed\",\n      },\n    },\n  ];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2224,
+        336
+      ],
+      "id": "9b55d677-dab0-436c-9d1f-54979811f2ba",
+      "name": "Convert Base64 to File"
+    },
+    {
+      "parameters": {
+        "url": "http://127.0.0.1:3333/trends?tag=turkiye",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        64,
+        1008
+      ],
+      "id": "26c095a1-66a7-43ef-8503-9b54c392e7f9",
+      "name": "TIKTOK_TREND_FETCH"
+    },
+    {
+      "parameters": {
+        "url": "https://tiktok-api23.p.rapidapi.com/api/user/liked-posts",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "userıd",
+              "value": "6881290705605477381"
+            },
+            {
+              "name": "max.cursor",
+              "value": "0"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-RapidAPI-Key",
+              "value": " 424f933f13mshbaab32facfedb6ep1aa871jsn0309f9625848"
+            },
+            {
+              "name": "X-RapidAPI-Host",
+              "value": "tiktok-api23.p.rapidapi.com"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        96,
+        800
+      ],
+      "id": "2e9a0d6d-7732-4b41-a375-3dc59302efb3",
+      "name": "TIK TOKTR4"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "itemList",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        320,
+        800
+      ],
+      "id": "8ecc5e02-04b2-4aec-aaad-9b4024bc932e",
+      "name": "Split Out TIK TOK TR1",
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "de119db4-89e3-4968-b68b-e7543b533424",
+              "name": "title",
+              "value": "={{$json[\"AIGCDescription\"] || $json[\"desc\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "d7413384-6dca-47d7-a937-dab84413743c",
+              "name": "channelTitle",
+              "value": "={{$json[\"author\"][\"nickname\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "599dd811-a172-4758-b728-1a0aaeeb541d",
+              "name": "views",
+              "value": "={{$json[\"stats\"][\"playCount\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "f13ee7c4-f4bd-4ae9-8b79-eab84f21745f",
+              "name": "likes",
+              "value": "={{$json[\"stats\"][\"diggCount\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "f1dd8e85-5cd1-4569-86a9-286ea569a6cd",
+              "name": "publishedAt",
+              "value": "={{$json[\"createTime\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "f9c37efd-8d92-43b9-bbda-4fa5454aa69f",
+              "name": "url",
+              "value": "={{$json[\"video\"][\"playAddr\"]}}",
+              "type": "string"
+            },
+            {
+              "id": "552c0ba4-b30e-4426-8d2e-d26f3f82b077",
+              "name": "originCountry",
+              "value": "TR",
+              "type": "string"
+            },
+            {
+              "id": "12ec8385-4448-496b-b1f0-53922f24c2e4",
+              "name": "platform",
+              "value": "tiktok",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        544,
+        800
+      ],
+      "id": "de2a5138-4a77-4b9d-bf9d-8aca9c2899fc",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\n\nif (!data.ok) {\n  return [{ json: { error: data.error || \"scraper failed\" } }];\n}\n\nreturn data.videos.map(v => ({ json: v }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        1008
+      ],
+      "id": "85f5d76a-af55-4976-844c-fb41c8cf0d66",
+      "name": "PARSE_TIKTOK_TRENDS"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "SET MODE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Sort",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TR": {
+      "main": [
+        [
+          {
+            "node": "Split Out TR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BK": {
+      "main": [
+        [
+          {
+            "node": "Split Out UK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "USA": {
+      "main": [
+        [
+          {
+            "node": "Split Out USA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RUSYA": {
+      "main": [
+        [
+          {
+            "node": "Split Out  RUSYA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out TR": {
+      "main": [
+        [
+          {
+            "node": "Add Country TR",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out  RUSYA": {
+      "main": [
+        [
+          {
+            "node": "Add Country RU",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sort": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "BUILD VOICE ANSWER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Country TR": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Country RU": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Add Country BK": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out USA": {
+      "main": [
+        [
+          {
+            "node": "Add Country USA",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add Country USA": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Split Out UK": {
+      "main": [
+        [
+          {
+            "node": "Add Country BK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD VOICE ANSWER": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [],
+        [
+          {
+            "node": "BUILD IMAGE PROMPTS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SET MODE": {
+      "main": [
+        [
+          {
+            "node": "TR",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "RUSYA",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "BK",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "USA",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "BUILD VOICE ANSWER",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TIK TOKTR4",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "TIKTOK_TREND_FETCH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD IMAGE PROMPTS": {
+      "main": [
+        [
+          {
+            "node": "Generate Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Image": {
+      "main": [
+        [
+          {
+            "node": "Convert Base64 to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Convert Base64 to File": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TIKTOK_TREND_FETCH": {
+      "main": [
+        [
+          {
+            "node": "PARSE_TIKTOK_TRENDS",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TIK TOKTR4": {
+      "main": [
+        [
+          {
+            "node": "Split Out TIK TOK TR1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Out TIK TOK TR1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PARSE_TIKTOK_TRENDS": {
+      "main": [
+        []
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "17e5e7cd-4e81-486b-a87e-b604f8b9b6ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "6d72b097e9939b54f387c7e8778403aafbb452d61f987ec6e8760dbc662cec42"
+  },
+  "id": "CGS0RCiE6JONgoZO",
+  "tags": []
+}
