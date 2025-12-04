@@ -10,13 +10,20 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [
-        -560,
-        -336
-      ],
+      "position": [240, 300],
       "id": "327c7b9f-29e6-4748-8002-28947fdcbd87",
       "name": "TOOL_create_n8n_flow",
       "webhookId": "b145b66e-4470-419c-a0a2-83b4aa5c206d"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook'tan gelen komutu al\nconst req = $input.first().json;\nconst body = req.body || {};\nconst desc = (body.description || '').toLowerCase();\nconst name = body.workflowName || 'ARGUS Akış';\n\n// UUID generator\nfunction uuid() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {\n    const r = Math.random() * 16 | 0;\n    return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);\n  });\n}\n\n// Workflow templates\nlet workflow = null;\n\n// ═══════════════════════════════════════════════════════════\n// TEMPLATE 1: BTC Fiyatı + Twilio Araması\n// ═══════════════════════════════════════════════════════════\nif (desc.includes('btc') || desc.includes('bitcoin')) {\n  const schedule = desc.includes('17:15') ? '15 17 * * *' : '0 9 * * *';\n  \n  workflow = {\n    name: `${name} - BTC Fiyat Araması`,\n    nodes: [\n      {\n        parameters: {\n          rule: {\n            interval: [{ field: 'cronExpression', expression: schedule }]\n          }\n        },\n        type: 'n8n-nodes-base.scheduleTrigger',\n        typeVersion: 1.2,\n        position: [240, 300],\n        id: uuid(),\n        name: 'Her Gün Çalış'\n      },\n      {\n        parameters: {\n          url: 'https://api.coingecko.com/api/v3/simple/price',\n          sendQuery: true,\n          queryParameters: {\n            parameters: [\n              { name: 'ids', value: 'bitcoin' },\n              { name: 'vs_currencies', value: 'usd,try' }\n            ]\n          },\n          options: { response: { response: { responseFormat: 'json' } } }\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.2,\n        position: [460, 300],\n        id: uuid(),\n        name: 'BTC Fiyat Çek'\n      },\n      {\n        parameters: {\n          jsCode: `const btc = $json.bitcoin;\nconst usd = Math.round(btc.usd);\nconst tryPrice = Math.round(btc.try);\nconst message = \\`Bitcoin'in anlık fiyatı ${usd} dolar, yani ${tryPrice.toLocaleString('tr-TR')} Türk Lirası\\`;\nconst to = process.env.ALERT_TARGET_NUMBER;\nconst from = process.env.TWILIO_PHONE_NUMBER;\nconst twiml = \\`<Response><Say language='tr-TR'>\${message}</Say><Pause length='1'/><Say language='tr-TR'>Başka bir şey ister misin?</Say></Response>\\`;\nreturn [{ json: { to, from, twiml, usd, tryPrice } }];`\n        },\n        type: 'n8n-nodes-base.code',\n        typeVersion: 2,\n        position: [680, 300],\n        id: uuid(),\n        name: 'TwiML Hazırla'\n      },\n      {\n        parameters: {\n          method: 'POST',\n          url: '=https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json',\n          authentication: 'genericCredentialType',\n          genericAuthType: 'httpBasicAuth',\n          sendBody: true,\n          contentType: 'raw',\n          rawContentType: '=application/x-www-form-urlencoded',\n          body: `={{ 'To=' + encodeURIComponent($json.to) + '&From=' + encodeURIComponent($json.from) + '&Twiml=' + encodeURIComponent($json.twiml) }}`,\n          options: {}\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.3,\n        position: [900, 300],\n        id: uuid(),\n        name: 'Twilio Araması',\n        credentials: { httpBasicAuth: { id: 'Tn2UknHXfLcUtpyN', name: 'Twilio Credentials' } }\n      },\n      {\n        parameters: {\n          method: 'POST',\n          url: '=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage',\n          sendBody: true,\n          bodyParameters: {\n            parameters: [\n              { name: 'chat_id', value: '1496380263' },\n              { name: 'text', value: '=✅ BTC: ${{$json.usd}} ({{$json.tryPrice}} TL) - Seni aradım!' }\n            ]\n          },\n          options: {}\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.2,\n        position: [1120, 300],\n        id: uuid(),\n        name: 'Telegram Bildir'\n      }\n    ],\n    connections: {\n      'Her Gün Çalış': { main: [[{ node: 'BTC Fiyat Çek', type: 'main', index: 0 }]] },\n      'BTC Fiyat Çek': { main: [[{ node: 'TwiML Hazırla', type: 'main', index: 0 }]] },\n      'TwiML Hazırla': { main: [[{ node: 'Twilio Araması', type: 'main', index: 0 }]] },\n      'Twilio Araması': { main: [[{ node: 'Telegram Bildir', type: 'main', index: 0 }]] }\n    },\n    active: false,\n    settings: { executionOrder: 'v1' }\n  };\n}\n\n// ═══════════════════════════════════════════════════════════\n// TEMPLATE 2: Gmail Son 3 E-posta Özeti\n// ═══════════════════════════════════════════════════════════\nelse if (desc.includes('mail') || desc.includes('e-posta') || desc.includes('eposta')) {\n  workflow = {\n    name: `${name} - Gmail Özet`,\n    nodes: [\n      {\n        parameters: {},\n        type: 'n8n-nodes-base.manualTrigger',\n        typeVersion: 1,\n        position: [240, 300],\n        id: uuid(),\n        name: 'Manuel Başlat'\n      },\n      {\n        parameters: {\n          jsCode: `// Gmail API kullanarak son 3 e-postayı çek\nconst response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=3', {\n  headers: { 'Authorization': \\`Bearer \${process.env.GMAIL_ACCESS_TOKEN}\\` }\n});\nconst data = await response.json();\nreturn data.messages?.map(m => ({ json: { id: m.id } })) || [];`\n        },\n        type: 'n8n-nodes-base.code',\n        typeVersion: 2,\n        position: [460, 300],\n        id: uuid(),\n        name: 'Gmail Listele'\n      },\n      {\n        parameters: {\n          method: 'POST',\n          url: '=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage',\n          sendBody: true,\n          bodyParameters: {\n            parameters: [\n              { name: 'chat_id', value: '1496380263' },\n              { name: 'text', value: '=Son 3 e-posta: {{$json.summary}}' }\n            ]\n          },\n          options: {}\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.2,\n        position: [680, 300],\n        id: uuid(),\n        name: 'Telegram Gönder'\n      }\n    ],\n    connections: {\n      'Manuel Başlat': { main: [[{ node: 'Gmail Listele', type: 'main', index: 0 }]] },\n      'Gmail Listele': { main: [[{ node: 'Telegram Gönder', type: 'main', index: 0 }]] }\n    },\n    active: false,\n    settings: { executionOrder: 'v1' }\n  };\n}\n\n// ═══════════════════════════════════════════════════════════\n// TEMPLATE 3: YouTube En Çok İzlenen Videolar\n// ═══════════════════════════════════════════════════════════\nelse if (desc.includes('youtube') || desc.includes('video')) {\n  workflow = {\n    name: `${name} - YouTube Trend`,\n    nodes: [\n      {\n        parameters: {},\n        type: 'n8n-nodes-base.manualTrigger',\n        typeVersion: 1,\n        position: [240, 300],\n        id: uuid(),\n        name: 'Manuel Başlat'\n      },\n      {\n        parameters: {\n          url: 'https://www.googleapis.com/youtube/v3/search',\n          sendQuery: true,\n          queryParameters: {\n            parameters: [\n              { name: 'part', value: 'snippet' },\n              { name: 'type', value: 'video' },\n              { name: 'order', value: 'viewCount' },\n              { name: 'publishedAfter', value: '={{new Date(Date.now() - 24*60*60*1000).toISOString()}}' },\n              { name: 'maxResults', value: '3' },\n              { name: 'regionCode', value: 'TR' },\n              { name: 'key', value: '={{$env.YOUTUBE_API_KEY}}' }\n            ]\n          },\n          options: { response: { response: { responseFormat: 'json' } } }\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.2,\n        position: [460, 300],\n        id: uuid(),\n        name: 'YouTube Ara'\n      },\n      {\n        parameters: {\n          jsCode: `const items = $json.items || [];\nconst videos = items.slice(0, 3).map((v, i) => \\`\${i+1}. \${v.snippet.title}\\`);\nconst message = 'Son 24 saatte en çok izlenen videolar:\\\\n' + videos.join('\\\\n');\nreturn [{ json: { message } }];`\n        },\n        type: 'n8n-nodes-base.code',\n        typeVersion: 2,\n        position: [680, 300],\n        id: uuid(),\n        name: 'Video Listesi Hazırla'\n      },\n      {\n        parameters: {\n          method: 'POST',\n          url: '=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage',\n          sendBody: true,\n          bodyParameters: {\n            parameters: [\n              { name: 'chat_id', value: '1496380263' },\n              { name: 'text', value: '={{$json.message}}' }\n            ]\n          },\n          options: {}\n        },\n        type: 'n8n-nodes-base.httpRequest',\n        typeVersion: 4.2,\n        position: [900, 300],\n        id: uuid(),\n        name: 'Telegram Gönder'\n      }\n    ],\n    connections: {\n      'Manuel Başlat': { main: [[{ node: 'YouTube Ara', type: 'main', index: 0 }]] },\n      'YouTube Ara': { main: [[{ node: 'Video Listesi Hazırla', type: 'main', index: 0 }]] },\n      'Video Listesi Hazırla': { main: [[{ node: 'Telegram Gönder', type: 'main', index: 0 }]] }\n    },\n    active: false,\n    settings: { executionOrder: 'v1' }\n  };\n}\n\n// ═══════════════════════════════════════════════════════════\n// FALLBACK: Genel Template\n// ═══════════════════════════════════════════════════════════\nelse {\n  workflow = {\n    name: `${name} - Genel`,\n    nodes: [\n      {\n        parameters: {},\n        type: 'n8n-nodes-base.manualTrigger',\n        typeVersion: 1,\n        position: [240, 300],\n        id: uuid(),\n        name: 'Başlat'\n      },\n      {\n        parameters: {\n          jsCode: `return [{ json: { message: 'Workflow oluşturuldu: ${desc}' } }];`\n        },\n        type: 'n8n-nodes-base.code',\n        typeVersion: 2,\n        position: [460, 300],\n        id: uuid(),\n        name: 'İşle'\n      }\n    ],\n    connections: {\n      'Başlat': { main: [[{ node: 'İşle', type: 'main', index: 0 }]] }\n    },\n    active: false,\n    settings: { executionOrder: 'v1' }\n  };\n}\n\nif (!workflow) {\n  throw new Error('Workflow template bulunamadı');\n}\n\nreturn [{ json: { apiWorkflow: workflow } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "id": "494b6748-7d46-48d6-a0f5-a157e3f02097",
+      "name": "WORKFLOW BUILDER"
     },
     {
       "parameters": {
@@ -27,7 +34,7 @@
           "parameters": [
             {
               "name": "X-N8N-API-KEY",
-              "value": "DUMMY_N8N_API_KEY"
+              "value": "={{$env.N8N_API_KEY}}"
             },
             {
               "name": "Content-Type",
@@ -36,233 +43,63 @@
           ]
         },
         "sendBody": true,
-        "bodyParameters": {
-          "parameters": [
-            {
-              "name": "name",
-              "value": "={{ $json.apiWorkflow.name }}"
-            },
-            {
-              "name": "nodes",
-              "value": "={{ $json.apiWorkflow.nodes }}"
-            },
-            {
-              "name": "connections",
-              "value": "={{ $json.apiWorkflow.connections }}"
-            },
-            {
-              "name": "settings",
-              "value": "={{ $json.apiWorkflow.settings }}"
-            }
-          ]
-        },
-        "options": {
-          "response": {
-            "response": {}
-          }
-        }
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.apiWorkflow) }}",
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [
-        272,
-        -352
-      ],
+      "position": [680, 300],
       "id": "5b1d85ec-080d-4bc9-a370-9233932c4186",
-      "name": "X-N8N-API-KEY"
+      "name": "n8n API - Workflow Oluştur"
     },
     {
       "parameters": {
+        "jsCode": "const item = $input.first().json;\nconst data = item.data || item;\n\nif (!data || !data.id) {\n  return [{\n    json: {\n      ok: false,\n      error: item.message || item.error || 'Workflow oluşturulamadı',\n      raw: item\n    }\n  }];\n}\n\nreturn [{\n  json: {\n    ok: true,\n    workflowId: data.id,\n    name: data.name,\n    reply: `✅ Workflow oluşturuldu: ${data.name}\\nID: ${data.id}\\nURL: https://argusbot.duckdns.org/workflow/${data.id}`,\n    url: `https://argusbot.duckdns.org/workflow/${data.id}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "id": "2ed90e95-4ce6-455b-85ac-0d7cfaadd1ef",
+      "name": "Response Builder"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
         "options": {
           "responseCode": 200
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
-      "position": [
-        752,
-        -320
-      ],
+      "position": [1120, 300],
       "id": "a352105e-1d21-492b-b462-395c8c79d2b3",
-      "name": "Respond to Webhook1"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://api.anthropic.com/v1/messages",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {
-              "name": "Content-Type",
-              "value": "application/json"
-            },
-            {
-              "name": "x-api-key",
-              "value": "DUMMY_ANTHROPIC_KEY"
-            },
-            {
-              "name": "anthropic-version",
-              "value": "2023-06-01"
-            }
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ $json.claudeRequest }}",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        -128,
-        -336
-      ],
-      "id": "2c019546-8347-4024-a1ec-239538f1b24e",
-      "name": "HTTP Request"
-    },
-    {
-      "parameters": {
-        "jsCode": "\n\n// Claude HTTP cevabından workflow JSON'unu çekip\n// n8n API'nin anlayacağı apiWorkflow objesine çeviriyoruz.\n\nconst out = [];\n\nfor (const item of items) {\n  const data = item.json || {};\n\n  // 1) Claude messages cevabındaki text'i al\n  let rawText = \"\";\n\n  if (Array.isArray(data.content) && data.content.length > 0) {\n    const textPart =\n      data.content.find((p) => p.type === \"text\") || data.content[0];\n    rawText = textPart.text || \"\";\n  } else if (typeof data.completion === \"string\") {\n    rawText = data.completion;\n  } else if (typeof data.text === \"string\") {\n    rawText = data.text;\n  } else {\n    rawText = JSON.stringify(data);\n  }\n\n  // 2) Metnin içindeki ilk '{' ile son '}' arasını JSON kabul et\n  let wf;\n  try {\n    const start = rawText.indexOf(\"{\");\n    const end = rawText.lastIndexOf(\"}\");\n\n    if (start === -1 || end === -1 || end <= start) {\n      throw new Error(\"Claude yanıtında JSON obje bulunamadı\");\n    }\n\n    const jsonStr = rawText.slice(start, end + 1);\n    wf = JSON.parse(jsonStr);\n  } catch (err) {\n    out.push({\n      json: {\n        error: \"WORKFLOW_JSON_PARSE_FAILED\",\n        message: String(err),\n        rawText,\n      },\n    });\n    continue;\n  }\n\n  // 3) n8n workflow formatına çevir\n  const apiWorkflow = {\n    name: wf.name || \"ARGUS auto: Flow\",\n    // active BİLEREK YOK, n8n read-only diye ağlamasın\n    nodes: wf.nodes || [],\n    connections: wf.connections || {},\n    settings: wf.settings || {},\n  };\n\n  out.push({ json: { apiWorkflow } });\n}\n\nreturn out;"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        96,
-        -336
-      ],
-      "id": "8d2f6b99-da94-4f9a-a233-4ed14b66c459",
-      "name": "Code in JavaScript2"
-    },
-    {
-      "parameters": {
-        "jsCode": "const item = items[0].json;\nconst data = item.data || item; // bazı sürümler data içinde döner\n\nif (!data || !data.id) {\n  return [\n    {\n      json: {\n        ok: false,\n        error: item.message || item.error || 'Workflow oluşturulamadı (id yok).',\n        raw: item\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      workflowId: data.id,\n      name: data.name,\n      url: `https://argusbot.duckdns.org/workflow/${data.id}`\n    }\n  }\n];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        480,
-        -320
-      ],
-      "id": "2ed90e95-4ce6-455b-85ac-0d7cfaadd1ef",
-      "name": "N8N DÖNÜŞ"
-    },
-    {
-      "parameters": {
-        "method": "POST",
-        "url": "https://argusbot.duckdns.org/webhook/argus_memory_write",
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={\n  \"userId\": \"ULAS\",\n  \"type\": \"command\",\n  \"text\": \"CMD: {{$json.text}}\",\n  \"meta\": \"{\\\"source\\\":\\\"telegram\\\",\\\"chatId\\\":\\\"{{$json.chat_id}}\\\"}\"\n}\n",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [
-        544,
-        -544
-      ],
-      "id": "a1fccfa8-ecc4-4146-9db0-0b4928079239",
-      "name": "WRITE_MEMORY_WORKFLOW.",
-      "retryOnFail": true,
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Webhook'tan gelen isteği al\nconst req = $input.first().json;\nconst body = req.body || {};\nconst desc = body.description || 'Açıklama yok';\nconst name = body.workflowName || 'ARGUS auto: Akış';\n\n// Helper function to generate unique IDs\nfunction generateId() {\n  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {\n    const r = Math.random() * 16 | 0;\n    const v = c === 'x' ? r : (r & 0x3 | 0x8);\n    return v.toString(16);\n  });\n}\n\nconst systemPrompt = `Sen bir N8N workflow uzmanısın. Kullanıcı isteğine göre TAMAMEN ÇALIŞAN JSON workflow üret.\n\n═══════════════════════════════════════════════════════════════\nKRİTİK KURALLAR\n═══════════════════════════════════════════════════════════════\n\n1. SADECE GEÇERLİ JSON DÖNDÜR (Markdown yok, açıklama yok)\n2. Her node için UUID v4 format ID kullan\n3. active: false OLMALI\n4. Node position: X ekseni +220, Y ekseni 300 sabit\n5. Twilio için MUTLAKA httpBasicAuth credentials kullan\n\n═══════════════════════════════════════════════════════════════\nMEVCUT ENVIRONMENT VARIABLES\n═══════════════════════════════════════════════════════════════\n\nTWILIO_ACCOUNT_SID - Twilio hesap ID\nTWILIO_AUTH_TOKEN - Twilio auth token  \nTWILIO_PHONE_NUMBER - Twilio telefon numarası (+12722...)\nALERT_TARGET_NUMBER - Hedef telefon (+905454...)\nTELEGRAM_BOT_TOKEN - Telegram bot token\nYOUTUBE_API_KEY - YouTube Data API key\nANTHROPIC_API_KEY - Claude API key\nBINANCE_API_KEY - Binance API key\nGMAIL_USER - Gmail adresi\nGMAIL_APP_PASSWORD - Gmail uygulama şifresi\n\nKullanım: Code node içinde → process.env.VARIABLE_NAME\nKullanım: Expression → {{$env.VARIABLE_NAME}}\n\n═══════════════════════════════════════════════════════════════\nNODE TİPLERİ VE PARAMETRELERİ\n═══════════════════════════════════════════════════════════════\n\n━━━ 1. SCHEDULE TRIGGER ━━━\n\n{\n  \"parameters\": {\n    \"rule\": {\n      \"interval\": [{\n        \"field\": \"cronExpression\",\n        \"expression\": \"15 17 * * *\"  // Her gün 17:15\n      }]\n    }\n  },\n  \"type\": \"n8n-nodes-base.scheduleTrigger\",\n  \"typeVersion\": 1.2,\n  \"position\": [240, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Her Gün 17:15\"\n}\n\nDiğer cron örnekleri:\n- Her saat: \"0 * * * *\"\n- Her sabah 9: \"0 9 * * *\"\n- Her 30 dk: \"*/30 * * * *\"\n\n━━━ 2. MANUAL TRIGGER ━━━\n\n{\n  \"parameters\": {},\n  \"type\": \"n8n-nodes-base.manualTrigger\",\n  \"typeVersion\": 1,\n  \"position\": [240, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Manuel Çalıştır\"\n}\n\n━━━ 3. HTTP REQUEST (GET) ━━━\n\n{\n  \"parameters\": {\n    \"url\": \"https://api.coingecko.com/api/v3/simple/price\",\n    \"sendQuery\": true,\n    \"queryParameters\": {\n      \"parameters\": [\n        {\"name\": \"ids\", \"value\": \"bitcoin\"},\n        {\"name\": \"vs_currencies\", \"value\": \"usd,try\"}\n      ]\n    },\n    \"options\": {\n      \"response\": {\n        \"response\": {\"responseFormat\": \"json\"}\n      }\n    }\n  },\n  \"type\": \"n8n-nodes-base.httpRequest\",\n  \"typeVersion\": 4.2,\n  \"position\": [460, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"API Çağrısı\"\n}\n\n━━━ 4. HTTP REQUEST (POST - Twilio) ━━━\n\nTwilio için 2 node gerekli:\n\nNode 1 - Code (TwiML hazırla):\n{\n  \"parameters\": {\n    \"jsCode\": \"const btcPrice = $json.bitcoin.usd;\\nconst message = \\`Bitcoin fiyatı: ${btcPrice} dolar\\`;\\nconst to = process.env.ALERT_TARGET_NUMBER;\\nconst from = process.env.TWILIO_PHONE_NUMBER;\\nconst twiml = \\`<Response><Say language='tr-TR'>${message}</Say></Response>\\`;\\nreturn [{json: {to, from, twiml}}];\"\n  },\n  \"type\": \"n8n-nodes-base.code\",\n  \"typeVersion\": 2,\n  \"position\": [680, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"TwiML Hazırla\"\n}\n\nNode 2 - HTTP Request (Twilio API):\n{\n  \"parameters\": {\n    \"method\": \"POST\",\n    \"url\": \"=https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json\",\n    \"authentication\": \"genericCredentialType\",\n    \"genericAuthType\": \"httpBasicAuth\",\n    \"sendBody\": true,\n    \"contentType\": \"raw\",\n    \"rawContentType\": \"=application/x-www-form-urlencoded\",\n    \"body\": \"={{ 'To=' + encodeURIComponent($json.to) + '&From=' + encodeURIComponent($json.from) + '&Twiml=' + encodeURIComponent($json.twiml) }}\",\n    \"options\": {}\n  },\n  \"type\": \"n8n-nodes-base.httpRequest\",\n  \"typeVersion\": 4.3,\n  \"position\": [900, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Twilio Araması\",\n  \"credentials\": {\n    \"httpBasicAuth\": {\n      \"id\": \"Tn2UknHXfLcUtpyN\",\n      \"name\": \"Twilio Credentials\"\n    }\n  }\n}\n\n━━━ 5. CODE NODE ━━━\n\n{\n  \"parameters\": {\n    \"jsCode\": \"const items = $input.all();\\nconst result = items.map(item => {\\n  const data = item.json;\\n  return {json: {processed: data}};\\n});\\nreturn result;\"\n  },\n  \"type\": \"n8n-nodes-base.code\",\n  \"typeVersion\": 2,\n  \"position\": [680, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Veri İşle\"\n}\n\n━━━ 6. TELEGRAM MESAJ ━━━\n\n{\n  \"parameters\": {\n    \"method\": \"POST\",\n    \"url\": \"=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage\",\n    \"sendBody\": true,\n    \"bodyParameters\": {\n      \"parameters\": [\n        {\"name\": \"chat_id\", \"value\": \"1496380263\"},\n        {\"name\": \"text\", \"value\": \"={{$json.message}}\"}\n      ]\n    },\n    \"options\": {}\n  },\n  \"type\": \"n8n-nodes-base.httpRequest\",\n  \"typeVersion\": 4.2,\n  \"position\": [1120, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Telegram Gönder\"\n}\n\n━━━ 7. GMAIL (IMAP) ━━━\n\n{\n  \"parameters\": {\n    \"url\": \"=https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=3\",\n    \"sendHeaders\": true,\n    \"headerParameters\": {\n      \"parameters\": [\n        {\"name\": \"Authorization\", \"value\": \"=Bearer {{$env.GMAIL_ACCESS_TOKEN}}\"}\n      ]\n    },\n    \"options\": {\n      \"response\": {\"response\": {\"responseFormat\": \"json\"}}\n    }\n  },\n  \"type\": \"n8n-nodes-base.httpRequest\",\n  \"typeVersion\": 4.2,\n  \"position\": [460, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"Gmail Listele\"\n}\n\n━━━ 8. YOUTUBE SEARCH ━━━\n\n{\n  \"parameters\": {\n    \"url\": \"https://www.googleapis.com/youtube/v3/search\",\n    \"sendQuery\": true,\n    \"queryParameters\": {\n      \"parameters\": [\n        {\"name\": \"part\", \"value\": \"snippet\"},\n        {\"name\": \"type\", \"value\": \"video\"},\n        {\"name\": \"order\", \"value\": \"viewCount\"},\n        {\"name\": \"publishedAfter\", \"value\": \"={{new Date(Date.now() - 24*60*60*1000).toISOString()}}\"},\n        {\"name\": \"maxResults\", \"value\": \"3\"},\n        {\"name\": \"key\", \"value\": \"={{$env.YOUTUBE_API_KEY}}\"}\n      ]\n    },\n    \"options\": {\"response\": {\"response\": {\"responseFormat\": \"json\"}}}\n  },\n  \"type\": \"n8n-nodes-base.httpRequest\",\n  \"typeVersion\": 4.2,\n  \"position\": [460, 300],\n  \"id\": \"uuid-buraya\",\n  \"name\": \"YouTube Ara\"\n}\n\n═══════════════════════════════════════════════════════════════\nCONNECTIONS YAPISI\n═══════════════════════════════════════════════════════════════\n\nHer node adı için main output:\n\n\"connections\": {\n  \"Node1 İsmi\": {\n    \"main\": [[{\n      \"node\": \"Node2 İsmi\",\n      \"type\": \"main\",\n      \"index\": 0\n    }]]\n  },\n  \"Node2 İsmi\": {\n    \"main\": [[{\n      \"node\": \"Node3 İsmi\",\n      \"type\": \"main\",\n      \"index\": 0\n    }]]\n  }\n}\n\n═══════════════════════════════════════════════════════════════\nTAM ÇALIŞAN ÖRNEK: BTC FİYATI + ARAMA\n═══════════════════════════════════════════════════════════════\n\n{\n  \"name\": \"BTC Fiyatı ve Arama\",\n  \"nodes\": [\n    {\n      \"parameters\": {\n        \"rule\": {\"interval\": [{\"field\": \"cronExpression\", \"expression\": \"15 17 * * *\"}]}\n      },\n      \"type\": \"n8n-nodes-base.scheduleTrigger\",\n      \"typeVersion\": 1.2,\n      \"position\": [240, 300],\n      \"id\": \"a1b2c3d4-e5f6-4a5b-8c9d-0e1f2a3b4c5d\",\n      \"name\": \"Her Gün 17:15\"\n    },\n    {\n      \"parameters\": {\n        \"url\": \"https://api.coingecko.com/api/v3/simple/price\",\n        \"sendQuery\": true,\n        \"queryParameters\": {\n          \"parameters\": [\n            {\"name\": \"ids\", \"value\": \"bitcoin\"},\n            {\"name\": \"vs_currencies\", \"value\": \"usd,try\"}\n          ]\n        },\n        \"options\": {\"response\": {\"response\": {\"responseFormat\": \"json\"}}}\n      },\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 4.2,\n      \"position\": [460, 300],\n      \"id\": \"b2c3d4e5-f6a7-4b5c-9d0e-1f2a3b4c5d6e\",\n      \"name\": \"BTC Fiyat Çek\"\n    },\n    {\n      \"parameters\": {\n        \"jsCode\": \"const btc = $json.bitcoin;\\nconst usd = btc.usd;\\nconst tryPrice = btc.try;\\nconst message = \\`Bitcoin fiyatı: ${usd} dolar, ${tryPrice} lira\\`;\\nconst to = process.env.ALERT_TARGET_NUMBER;\\nconst from = process.env.TWILIO_PHONE_NUMBER;\\nconst twiml = \\`<Response><Say language='tr-TR'>${message}</Say></Response>\\`;\\nreturn [{json: {to, from, twiml, usd, tryPrice}}];\"\n      },\n      \"type\": \"n8n-nodes-base.code\",\n      \"typeVersion\": 2,\n      \"position\": [680, 300],\n      \"id\": \"c3d4e5f6-a7b8-4c5d-0e1f-2a3b4c5d6e7f\",\n      \"name\": \"TwiML Hazırla\"\n    },\n    {\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"url\": \"=https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json\",\n        \"authentication\": \"genericCredentialType\",\n        \"genericAuthType\": \"httpBasicAuth\",\n        \"sendBody\": true,\n        \"contentType\": \"raw\",\n        \"rawContentType\": \"=application/x-www-form-urlencoded\",\n        \"body\": \"={{ 'To=' + encodeURIComponent($json.to) + '&From=' + encodeURIComponent($json.from) + '&Twiml=' + encodeURIComponent($json.twiml) }}\",\n        \"options\": {}\n      },\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 4.3,\n      \"position\": [900, 300],\n      \"id\": \"d4e5f6a7-b8c9-4d0e-1f2a-3b4c5d6e7f8a\",\n      \"name\": \"Twilio Araması\",\n      \"credentials\": {\"httpBasicAuth\": {\"id\": \"Tn2UknHXfLcUtpyN\", \"name\": \"Twilio Credentials\"}}\n    },\n    {\n      \"parameters\": {\n        \"method\": \"POST\",\n        \"url\": \"=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage\",\n        \"sendBody\": true,\n        \"bodyParameters\": {\n          \"parameters\": [\n            {\"name\": \"chat_id\", \"value\": \"1496380263\"},\n            {\"name\": \"text\", \"value\": \"=✅ BTC: ${{$json.usd}} ({{$json.tryPrice}} TL) - Seni aradım!\"}\n          ]\n        },\n        \"options\": {}\n      },\n      \"type\": \"n8n-nodes-base.httpRequest\",\n      \"typeVersion\": 4.2,\n      \"position\": [1120, 300],\n      \"id\": \"e5f6a7b8-c9d0-4e1f-2a3b-4c5d6e7f8a9b\",\n      \"name\": \"Telegram Bildir\"\n    }\n  ],\n  \"connections\": {\n    \"Her Gün 17:15\": {\"main\": [[{\"node\": \"BTC Fiyat Çek\", \"type\": \"main\", \"index\": 0}]]},\n    \"BTC Fiyat Çek\": {\"main\": [[{\"node\": \"TwiML Hazırla\", \"type\": \"main\", \"index\": 0}]]},\n    \"TwiML Hazırla\": {\"main\": [[{\"node\": \"Twilio Araması\", \"type\": \"main\", \"index\": 0}]]},\n    \"Twilio Araması\": {\"main\": [[{\"node\": \"Telegram Bildir\", \"type\": \"main\", \"index\": 0}]]}\n  },\n  \"active\": false,\n  \"settings\": {\"executionOrder\": \"v1\"}\n}\n\n═══════════════════════════════════════════════════════════════\nKRİTİK NOTLAR\n═══════════════════════════════════════════════════════════════\n\n1. Her node için FARKLI UUID kullan\n2. Position X: 240, 460, 680, 900, 1120... (+220)\n3. Position Y: hep 300\n4. Twilio MUTLAKA credentials ile\n5. Body expression = ile başlar\n6. Code node'da process.env kullan\n7. SADECE JSON döndür, başka hiçbir şey yazma\n8. YouTube publishedAfter: son 24 saat için date formula kullan\n9. Gmail için OAuth token gerekir\n10. Her node ismini connections'ta TAM AYNI yaz\n\nŞİMDİ KULLANICI İSTEĞİNE GÖRE YUKARI ÖRNEKLERİ KULLANARAK TAM ÇALIŞAN JSON WORKFLOW OLUŞTUR!\n`;\n\nconst userPrompt = `İSTEK: ${desc}\\n\\nYukarıdaki örnekleri kullanarak tam çalışan workflow oluştur. Her node için farklı UUID kullan. Twilio için credentials ekle. SADECE JSON döndür!`;\n\nreturn [{\n  json: {\n    workflowName: name,\n    claudeRequest: {\n      model: 'claude-sonnet-4-5-20250929',\n      max_tokens: 16000,\n      temperature: 0.2,\n      system: systemPrompt,\n      messages: [{\n        role: 'user',\n        content: [{type: 'text', text: userPrompt}]\n      }]\n    }\n  }\n}];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -304,
-        -336
-      ],
-      "id": "494b6748-7d46-48d6-a0f5-a157e3f02097",
-      "name": "KURALLAR"
+      "name": "Respond to Webhook"
     }
   ],
   "pinData": {},
   "connections": {
     "TOOL_create_n8n_flow": {
-      "main": [
-        [
-          {
-            "node": "KURALLAR",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+      "main": [[{ "node": "WORKFLOW BUILDER", "type": "main", "index": 0 }]]
     },
-    "X-N8N-API-KEY": {
-      "main": [
-        [
-          {
-            "node": "N8N DÖNÜŞ",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "WORKFLOW BUILDER": {
+      "main": [[{ "node": "n8n API - Workflow Oluştur", "type": "main", "index": 0 }]]
     },
-    "HTTP Request": {
-      "main": [
-        [
-          {
-            "node": "Code in JavaScript2",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "n8n API - Workflow Oluştur": {
+      "main": [[{ "node": "Response Builder", "type": "main", "index": 0 }]]
     },
-    "Code in JavaScript2": {
-      "main": [
-        [
-          {
-            "node": "X-N8N-API-KEY",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "N8N DÖNÜŞ": {
-      "main": [
-        [
-          {
-            "node": "Respond to Webhook1",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "WRITE_MEMORY_WORKFLOW.": {
-      "main": [
-        []
-      ]
-    },
-    "KURALLAR": {
-      "main": [
-        [
-          {
-            "node": "HTTP Request",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
+    "Response Builder": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
     }
   },
   "active": true,
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Istanbul",
-    "callerPolicy": "workflowsFromSameOwner",
-    "availableInMCP": false
+    "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "0416f1b7-4546-4cad-ade0-a8b7e8bf9a3d",
+  "versionId": "workflow-builder-v2",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
