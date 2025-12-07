@@ -1,0 +1,356 @@
+{
+  "name": "ANAFLOW V2 (C.CODE)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-apply",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "webhook-telegram",
+      "name": "Telegram Webhook",
+      "webhookId": "557221a8-3b57-42a4-aeb3-37c05dddff0f"
+    },
+    {
+      "parameters": {
+        "jsCode": "const root = $input.first().json;\nconst body = root.body || root;\nconst msg = body.message || {};\nconst chat = msg.chat || {};\nconst from = msg.from || {};\n\nreturn [{\n  json: {\n    chat_id: chat.id,\n    text: msg.text || '',\n    from_username: from.username || '',\n    from_name: from.first_name || '',\n    operation: 'GET'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "id": "parse-telegram",
+      "name": "Parse Telegram Message"
+    },
+    {
+      "parameters": {
+        "workflowId": "{{ Add ARGUS_MEMORY_CORE workflow ID here after import }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        680,
+        300
+      ],
+      "id": "get-memory",
+      "name": "GET ARGUS_MEMORY"
+    },
+    {
+      "parameters": {
+        "jsCode": "// C.CODE TASK PARSER\n// Parse natural language commands into structured task descriptions\n\nconst telegramData = $('Parse Telegram Message').first().json;\nconst memoryData = $input.first().json.memory || {};\n\nconst userText = telegramData.text || '';\nconst now = new Date().toISOString();\n\n// C.CODE SYSTEM PROMPT - ONLY PARSES TASKS, DOES NOT DESIGN PRODUCTS\nconst systemPrompt = `\nYou are C.CODE. You do NOT design products. You ONLY write code or n8n workflow JSON.\n\nYour task: Parse the user's natural language command into a structured action.\n\nARGUS_MEMORY Context:\n${JSON.stringify(memoryData, null, 2)}\n\nCurrent system time (UTC): ${now}\n\nRules from ARGUS_MEMORY:\n${memoryData.rules ? memoryData.rules.map(r => '- ' + r).join('\\n') : 'No specific rules'}\n\nNo-go items:\n${memoryData.no_go ? memoryData.no_go.map(n => '- ' + n).join('\\n') : 'None'}\n\nYour ONLY job: Determine if the user wants to create an n8n workflow.\n\nIf YES → return:\n{\n  \"action\": {\n    \"type\": \"create_n8n_flow\",\n    \"params\": {\n      \"description\": \"Brief task description in Turkish\"\n    }\n  },\n  \"reply\": \"Workflow oluşturuluyor...\"\n}\n\nIf NO (just chat/question) → return:\n{\n  \"action\": {\n    \"type\": \"none\",\n    \"params\": {}\n  },\n  \"reply\": \"C.CODE only generates code/workflows. For general chat, use a different assistant.\"\n}\n\nWorkflow creation triggers:\n- \"workflow oluştur\"\n- \"n8n akışı\"\n- \"otomasyon yap\"\n- \"her gün/saat X yap\"\n- \"Gmail'den veri çek\"\n- \"Slack'e mesaj gönder\"\n- \"API çağrısı yap\"\n- \"zamanlanmış görev\"\n- Any automation/integration request\n\nReturn ONLY JSON. No markdown, no code blocks, no explanations.\n`;\n\nreturn [{\n  json: {\n    systemPrompt: systemPrompt,\n    userText: userText,\n    chat_id: telegramData.chat_id\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        900,
+        300
+      ],
+      "id": "ccode-prompt-builder",
+      "name": "C.CODE Prompt Builder"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 512,\n  system: $json.systemPrompt,\n  messages: [{\n    role: 'user',\n    content: $json.userText\n  }]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1120,
+        300
+      ],
+      "id": "ccode-api-call",
+      "name": "C.CODE API Call"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse C.CODE response\nconst input = $input.first().json;\nlet parsedResponse = {};\n\ntry {\n  if (input.content && Array.isArray(input.content) && input.content[0]) {\n    let textContent = input.content[0].text;\n    \n    // Remove markdown code blocks if present\n    textContent = textContent\n      .replace(/```json\\n?/g, '')\n      .replace(/```\\n?/g, '')\n      .trim();\n    \n    parsedResponse = JSON.parse(textContent);\n  } else if (input.error) {\n    parsedResponse = {\n      action: { type: 'none', params: {} },\n      reply: 'C.CODE error: ' + JSON.stringify(input.error)\n    };\n  } else {\n    parsedResponse = {\n      action: { type: 'none', params: {} },\n      reply: 'Unexpected response format'\n    };\n  }\n} catch (error) {\n  parsedResponse = {\n    action: { type: 'none', params: {} },\n    reply: 'C.CODE parse error. Please try again.',\n    debug_error: error.message\n  };\n}\n\n// Ensure action structure exists\nif (!parsedResponse.action || !parsedResponse.action.type) {\n  parsedResponse.action = { type: 'none', params: {} };\n}\n\nreturn [{ json: parsedResponse }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1340,
+        300
+      ],
+      "id": "ccode-parser",
+      "name": "C.CODE Response Parser"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "check-workflow-creation",
+              "leftValue": "={{ $json.action.type }}",
+              "rightValue": "create_n8n_flow",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1560,
+        300
+      ],
+      "id": "route-action",
+      "name": "Route Action"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://localhost:5678/webhook/tools/create_n8n_flow",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "description",
+              "value": "={{ $json.action.params.description }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1780,
+        200
+      ],
+      "id": "call-workflow-builder",
+      "name": "Call Workflow Builder"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-method",
+              "name": "method",
+              "value": "sendMessage",
+              "type": "string"
+            },
+            {
+              "id": "set-chat-id",
+              "name": "chat_id",
+              "value": "={{ $('Parse Telegram Message').first().json.chat_id }}",
+              "type": "string"
+            },
+            {
+              "id": "set-text",
+              "name": "text",
+              "value": "={{ $json.reply || $json.text || 'Workflow completed' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2000,
+        300
+      ],
+      "id": "prepare-telegram-response",
+      "name": "Prepare Telegram Response"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        2220,
+        300
+      ],
+      "id": "respond-webhook",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Telegram Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Telegram Message": {
+      "main": [
+        [
+          {
+            "node": "GET ARGUS_MEMORY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GET ARGUS_MEMORY": {
+      "main": [
+        [
+          {
+            "node": "C.CODE Prompt Builder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "C.CODE Prompt Builder": {
+      "main": [
+        [
+          {
+            "node": "C.CODE API Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "C.CODE API Call": {
+      "main": [
+        [
+          {
+            "node": "C.CODE Response Parser",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "C.CODE Response Parser": {
+      "main": [
+        [
+          {
+            "node": "Route Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Action": {
+      "main": [
+        [
+          {
+            "node": "Call Workflow Builder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Workflow Builder": {
+      "main": [
+        [
+          {
+            "node": "Prepare Telegram Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Telegram Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "versionId": "anaflow-ccode-v2",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce",
+    "generatedBy": "C.CODE",
+    "description": "Refactored ANAFLOW with C.CODE mode and ARGUS_MEMORY integration"
+  },
+  "id": "wt67jkZ4FdLpxGge",
+  "tags": []
+}

@@ -1,0 +1,54 @@
+{
+  "name": "ARGUS Memory Core",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "manual-trigger-memory",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ARGUS Memory Core - Global Static Data Store\n// This workflow provides centralized memory storage for ARGUS system\n// All workflows can GET/SET memory state through this core\n\nconst operation = $json.operation || 'GET';\nconst globalData = this.getWorkflowStaticData('global');\n\n// Initialize ARGUS_MEMORY if it doesn't exist\nif (!globalData.argusMemory) {\n  globalData.argusMemory = {\n    project: 'ARGUS n8n Automation System',\n    stage: 'refactoring',\n    data_source: 'static_data',\n    rules: [\n      'C.CODE generates ONLY code/workflows, NO product design',\n      'All AI calls go through C.CODE endpoint',\n      'ARGUS_MEMORY is read-only for generated workflows',\n      'Task descriptions must be concrete and actionable'\n    ],\n    no_go: [\n      'No direct Claude API calls for content generation',\n      'No product design or UX suggestions',\n      'No UI/ERP features without explicit task'\n    ],\n    last_action: 'ARGUS Memory Core initialized',\n    next_step: 'Integrate with builder workflow'\n  };\n}\n\nif (operation === 'GET') {\n  // Return current memory state\n  return [{\n    json: {\n      success: true,\n      operation: 'GET',\n      memory: globalData.argusMemory,\n      timestamp: new Date().toISOString()\n    }\n  }];\n} \nelse if (operation === 'SET') {\n  // Update memory with new data\n  const newMemory = $json.newMemory;\n  \n  if (!newMemory) {\n    return [{\n      json: {\n        success: false,\n        operation: 'SET',\n        error: 'newMemory field is required for SET operation'\n      }\n    }];\n  }\n  \n  // Merge new memory with existing (preserving structure)\n  globalData.argusMemory = {\n    ...globalData.argusMemory,\n    ...newMemory,\n    last_updated: new Date().toISOString()\n  };\n  \n  return [{\n    json: {\n      success: true,\n      operation: 'SET',\n      memory: globalData.argusMemory,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\nelse if (operation === 'UPDATE_FIELD') {\n  // Update a specific field without replacing entire memory\n  const field = $json.field;\n  const value = $json.value;\n  \n  if (!field) {\n    return [{\n      json: {\n        success: false,\n        operation: 'UPDATE_FIELD',\n        error: 'field name is required'\n      }\n    }];\n  }\n  \n  globalData.argusMemory[field] = value;\n  globalData.argusMemory.last_updated = new Date().toISOString();\n  \n  return [{\n    json: {\n      success: true,\n      operation: 'UPDATE_FIELD',\n      field: field,\n      value: value,\n      memory: globalData.argusMemory,\n      timestamp: new Date().toISOString()\n    }\n  }];\n}\nelse {\n  return [{\n    json: {\n      success: false,\n      error: 'Invalid operation. Use GET, SET, or UPDATE_FIELD',\n      received: operation\n    }\n  }];\n}\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        460,
+        300
+      ],
+      "id": "argus-memory-controller",
+      "name": "ARGUS Memory GET/SET"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "ARGUS Memory GET/SET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "versionId": "argus-memory-v1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "tags": []
+}
