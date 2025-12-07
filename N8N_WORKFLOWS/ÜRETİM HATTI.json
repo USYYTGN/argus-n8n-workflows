@@ -11,25 +11,12 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        240,
-        300
+        -560,
+        -336
       ],
-      "id": "webhook-create-flow",
+      "id": "327c7b9f-29e6-4748-8002-28947fdcbd87",
       "name": "TOOL_create_n8n_flow",
       "webhookId": "b145b66e-4470-419c-a0a2-83b4aa5c206d"
-    },
-    {
-      "parameters": {
-        "jsCode": "const req = $input.first().json;\nconst body = req.body || {};\nconst desc = (body.description || 'Açıklama yok').toLowerCase();\nconst name = body.workflowName || 'ARGUS auto: ' + desc.slice(0, 30);\n\n// === YARDIMCI FONKSİYONLAR ===\nfunction generateId() {\n  return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);\n}\n\nfunction getTypeVersion(type) {\n  const versions = {\n    'n8n-nodes-base.httpRequest': 4.3,\n    'n8n-nodes-base.code': 2,\n    'n8n-nodes-base.set': 3.4,\n    'n8n-nodes-base.splitOut': 1,\n    'n8n-nodes-base.sort': 1,\n    'n8n-nodes-base.limit': 1,\n    'n8n-nodes-base.manualTrigger': 1,\n    'n8n-nodes-base.scheduleTrigger': 1.3,\n    'n8n-nodes-base.gmail': 2.1,\n    'n8n-nodes-base.gmailTrigger': 1.3\n  };\n  return versions[type] || 1;\n}\n\nfunction createNode(type, nodeName, position, parameters, extras = {}) {\n  const node = {\n    parameters,\n    type,\n    typeVersion: getTypeVersion(type),\n    position,\n    id: extras.id || generateId(),\n    name: nodeName\n  };\n  if (extras.credentials) node.credentials = extras.credentials;\n  if (extras.webhookId) node.webhookId = extras.webhookId;\n  return node;\n}\n\nfunction addConnection(connections, fromNode, toNode) {\n  if (!connections[fromNode]) {\n    connections[fromNode] = { main: [[]] };\n  }\n  connections[fromNode].main[0].push({ node: toNode, type: 'main', index: 0 });\n}\n\n// === PATTERN DETEKSİYONU ===\nconst isScheduled = /her (gün|saat|dakika|hafta)|günlük|saatlik|zamanlanmış|cron|\\d{1,2}:\\d{2}/i.test(desc);\nconst isCrypto = /bitcoin|btc|eth|ethereum|kripto|coin|fiyat.*kontrol|price.*check/i.test(desc);\nconst isTelegram = /telegram|mesaj gönder|bildirim|notify/i.test(desc);\nconst isTwilio = /ara|arama|twilio|telefon|sesli|call/i.test(desc);\nconst isYouTube = /youtube|video.*trend|popüler.*video|trending.*video/i.test(desc);\nconst isInstagram = /instagram|reel|story|post.*idea/i.test(desc);\nconst isGmail = /mail|e-posta|gmail|inbox/i.test(desc);\nconst needsAI = /ai|yapay zeka|claude|gpt|öner|analyze|benzer|similar/i.test(desc);\nconst needsVideoGeneration = /video.*üret|video.*oluştur|video.*yap/i.test(desc);\n\nlet nodes = [];\nlet connections = {};\nlet currentX = 240;\nconst Y = 300;\nconst SPACING = 220;\n\n// === TRIGGER NODE ===\nlet triggerNode;\nif (isGmail && !isScheduled) {\n  triggerNode = createNode('n8n-nodes-base.gmailTrigger', 'Gmail Trigger', [currentX, Y], {\n    pollTimes: { item: [{ mode: 'everyMinute' }] },\n    filters: {}\n  }, { credentials: { gmailOAuth2: { id: '4m3aMGjLm89egLIv', name: 'Gmail account 2' } } });\n} else if (isScheduled) {\n  let cronExpression = '0 9 * * *';\n  const hourMatch = desc.match(/(\\d{1,2}):(\\d{2})/);\n  if (hourMatch) {\n    cronExpression = `${hourMatch[2]} ${hourMatch[1]} * * *`;\n  } else if (/her saat/i.test(desc)) {\n    cronExpression = '0 * * * *';\n  } else if (/her (\\d+) dakika/i.test(desc)) {\n    const minutes = desc.match(/her (\\d+) dakika/i)[1];\n    cronExpression = `*/${minutes} * * * *`;\n  }\n  triggerNode = createNode('n8n-nodes-base.scheduleTrigger', 'Schedule Trigger', [currentX, Y], {\n    rule: { interval: [{ field: 'cronExpression', expression: cronExpression }] }\n  });\n} else {\n  triggerNode = createNode('n8n-nodes-base.manualTrigger', \"When clicking 'Execute workflow'\", [currentX, Y], {});\n}\n\nnodes.push(triggerNode);\nlet previousNodeName = triggerNode.name;\ncurrentX += SPACING;\n\n// === YOUTUBE WORKFLOW (YOU TUBE.json pattern) ===\nif (isYouTube) {\n  // 1. YouTube API Call - DOĞRU endpoint: /videos?chart=mostPopular\n  const youtubeNode = createNode('n8n-nodes-base.httpRequest', 'YouTube API - Popüler Videolar', [currentX, Y], {\n    method: 'GET',\n    url: 'https://www.googleapis.com/youtube/v3/videos',\n    sendQuery: true,\n    queryParameters: {\n      parameters: [\n        { name: 'chart', value: 'mostPopular' },\n        { name: 'regionCode', value: 'TR' },\n        { name: 'maxResults', value: '20' },\n        { name: 'part', value: 'snippet,statistics' },\n        { name: 'key', value: '={{$env.YOUTUBE_API_KEY}}' }\n      ]\n    },\n    options: { response: { response: { responseFormat: 'json' } } }\n  });\n  nodes.push(youtubeNode);\n  addConnection(connections, previousNodeName, youtubeNode.name);\n  previousNodeName = youtubeNode.name;\n  currentX += SPACING;\n\n  // 2. Code - Array'i ayrı item'lara böl (Split Out yerine - daha garantili!)\n  const splitNode = createNode('n8n-nodes-base.code', 'Split Video Items', [currentX, Y], {\n    jsCode: `const items = $json.items || [];\nreturn items.map(item => ({ json: item }));`\n  });\n  nodes.push(splitNode);\n  addConnection(connections, previousNodeName, splitNode.name);\n  previousNodeName = splitNode.name;\n  currentX += SPACING;\n\n  // 3. Set - Field mapping\n  const setNode = createNode('n8n-nodes-base.set', 'Video Verilerini Düzenle', [currentX, Y], {\n    assignments: {\n      assignments: [\n        { id: generateId(), name: 'title', value: '={{$json.snippet.title}}', type: 'string' },\n        { id: generateId(), name: 'channel', value: '={{$json.snippet.channelTitle}}', type: 'string' },\n        { id: generateId(), name: 'description', value: '={{$json.snippet.description}}', type: 'string' },\n        { id: generateId(), name: 'viewCount', value: '={{Number($json.statistics.viewCount) || 0}}', type: 'number' },\n        { id: generateId(), name: 'likeCount', value: '={{Number($json.statistics.likeCount) || 0}}', type: 'number' },\n        { id: generateId(), name: 'commentCount', value: '={{Number($json.statistics.commentCount) || 0}}', type: 'number' },\n        { id: generateId(), name: 'videoId', value: '={{$json.id}}', type: 'string' }\n      ]\n    },\n    options: {}\n  });\n  nodes.push(setNode);\n  addConnection(connections, previousNodeName, setNode.name);\n  previousNodeName = setNode.name;\n  currentX += SPACING;\n\n  // 4. Code - Scoring (YOU TUBE.json pattern)\n  const scoreNode = createNode('n8n-nodes-base.code', 'Skor Hesapla', [currentX, Y], {\n    jsCode: `const views = $json.viewCount || 0;\nconst likes = $json.likeCount || 0;\nconst comments = $json.commentCount || 0;\n\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\nconst score = (views * 0.5) + (likes * 30) + (comments * 50) + (engagementRate * 1000);\n\nreturn [{\n  json: {\n    ...$json,\n    engagementRate: engagementRate.toFixed(2),\n    score: Math.round(score)\n  }\n}];`\n  });\n  nodes.push(scoreNode);\n  addConnection(connections, previousNodeName, scoreNode.name);\n  previousNodeName = scoreNode.name;\n  currentX += SPACING;\n\n  // 5. Sort - Skora göre sırala\n  const sortNode = createNode('n8n-nodes-base.sort', 'Skora Göre Sırala', [currentX, Y], {\n    sortFieldsUi: {\n      sortField: [{\n        fieldName: 'score',\n        order: 'descending'\n      }]\n    }\n  });\n  nodes.push(sortNode);\n  addConnection(connections, previousNodeName, sortNode.name);\n  previousNodeName = sortNode.name;\n  currentX += SPACING;\n\n  // 6. Limit - İlk 3 video\n  const limitNode = createNode('n8n-nodes-base.limit', 'İlk 3 Video', [currentX, Y], {\n    maxItems: 3\n  });\n  nodes.push(limitNode);\n  addConnection(connections, previousNodeName, limitNode.name);\n  previousNodeName = limitNode.name;\n  currentX += SPACING;\n\n  // 7. AI Analysis (eğer isteniyorsa)\n  if (needsAI) {\n    const aiNode = createNode('n8n-nodes-base.httpRequest', 'Claude AI - Video Analizi', [currentX, Y], {\n      method: 'POST',\n      url: 'https://api.anthropic.com/v1/messages',\n      sendHeaders: true,\n      headerParameters: {\n        parameters: [\n          { name: 'x-api-key', value: '={{$env.ANTHROPIC_API_KEY}}' },\n          { name: 'anthropic-version', value: '2023-06-01' },\n          { name: 'Content-Type', value: 'application/json' }\n        ]\n      },\n      sendBody: true,\n      specifyBody: 'json',\n      jsonBody: `={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 512,\n  messages: [{\n    role: 'user',\n    content: 'Video: ' + $json.title + '\\\\nKanal: ' + $json.channel + '\\\\nGörüntülenme: ' + $json.viewCount + '\\\\n\\\\nBu videoya benzer 3 TAM VİDEO SENARYOSU ÜRET. Her video için DETAYLI ÜRETİM PLANI ver:\\\\n\\\\n## Video Başlığı (clickbait, SEO-friendly)\\\\n## Video Açıklaması (100-150 kelime)\\\\n## TAM SENARYO (Saniye saniye):\\\\n- 0-10sn: [Açılış hooku - izleyiciyi yakala]\\\\n- 10-30sn: [Giriş/problem tanımı]\\\\n- 30-90sn: [Ana içerik/çözüm]\\\\n- 90-120sn: [Sonuç/CTA]\\\\n## Görsel Önerileri: [B-roll çekimleri, animasyonlar, grafikler]\\\\n## Müzik/Ses: [Mood, tempo, önerilen müzikler]\\\\n## Thumbnail Tasarımı: [Renkler, yazı, görsel öğeler]\\\\n## Hashtag'ler: [10 adet viral hashtag]\\\\n## Hedef İzlenme: [İlk 24 saat tahmini]\\\\n\\\\nTÜRKÇE, yapılabilir, viral potansiyeli YÜKSEK içerikler üret!'\n  }]\n}) }}`,\n      options: { response: { response: { responseFormat: 'json' } } }\n    });\n    nodes.push(aiNode);\n    addConnection(connections, previousNodeName, aiNode.name);\n    previousNodeName = aiNode.name;\n    currentX += SPACING;\n\n    // AI yanıtını parse et\n    const parseAINode = createNode('n8n-nodes-base.code', 'AI Cevabını Formatla', [currentX, Y], {\n      jsCode: `const items = $input.all();\nlet message = '🎬 YouTube Trend Analizi\\\\n\\\\n';\n\nitems.forEach((item, i) => {\n  const title = item.json.title || '-';\n  const channel = item.json.channel || '-';\n  const score = item.json.score || 0;\n  const aiResponse = item.json.content?.[0]?.text || 'AI önerisi yok';\n\n  message += \\`📹 Video \\${i+1}: \\${title}\\\\n\\`;\n  message += \\`👤 Kanal: \\${channel}\\\\n\\`;\n  message += \\`⭐ Skor: \\${score}\\\\n\\`;\n  message += \\`💡 AI Önerisi: \\${aiResponse}\\\\n\\\\n\\`;\n});\n\nreturn [{ json: { message } }];`\n    });\n    nodes.push(parseAINode);\n    addConnection(connections, previousNodeName, parseAINode.name);\n    previousNodeName = parseAINode.name;\n    currentX += SPACING;\n  } else {\n    // Basit formatla\n    const simpleFormatNode = createNode('n8n-nodes-base.code', 'Basit Format', [currentX, Y], {\n      jsCode: `const items = $input.all();\nlet message = '🎬 En Popüler Videolar:\\\\n\\\\n';\n\nitems.forEach((item, i) => {\n  message += \\`\\${i+1}. \\${item.json.title}\\\\n\\`;\n  message += \\`   Kanal: \\${item.json.channel}\\\\n\\`;\n  message += \\`   Görüntülenme: \\${item.json.viewCount}\\\\n\\\\n\\`;\n});\n\nreturn [{ json: { message } }];`\n    });\n    nodes.push(simpleFormatNode);\n    addConnection(connections, previousNodeName, simpleFormatNode.name);\n    previousNodeName = simpleFormatNode.name;\n    currentX += SPACING;\n  }\n  \n  // 8. VIDEO GENERATION (eğer \"video üret\" varsa)\n  if (needsVideoGeneration) {\n    // AI'dan gelen senaryo ile video üret\n    const videoGenNode = createNode('n8n-nodes-base.httpRequest', 'Shotstack API - Video Üret', [currentX, Y], {\n      method: 'POST',\n      url: 'https://api.shotstack.io/stage/render',\n      sendHeaders: true,\n      headerParameters: {\n        parameters: [\n          { name: 'x-api-key', value: '={{\\$env.SHOTSTACK_API_KEY}}' },\n          { name: 'Content-Type', value: 'application/json' }\n        ]\n      },\n      sendBody: true,\n      specifyBody: 'json',\n      jsonBody: `={{ JSON.stringify({\n  timeline: {\n    background: '#000000',\n    tracks: [{\n      clips: [{\n        asset: {\n          type: 'html',\n          html: '<div style=\"background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);width:1920px;height:1080px;display:flex;flex-direction:column;justify-content:center;align-items:center;font-family:Arial,sans-serif;\"><h1 style=\"color:white;font-size:80px;text-align:center;margin:0;padding:0 50px;text-shadow:2px 2px 4px rgba(0,0,0,0.5);\">' + \\$json.title + '</h1><div style=\"width:80%;height:5px;background:white;margin:30px 0;border-radius:5px;\"></div><p style=\"color:white;font-size:40px;text-align:center;margin:0;\">🎬 AI Video Üretimi</p><p style=\"color:rgba(255,255,255,0.8);font-size:25px;text-align:center;margin-top:20px;\">Kanal: ' + (\\$json.channel || 'YouTube') + '</p></div>',\n          width: 1920,\n          height: 1080\n        },\n        start: 0,\n        length: 10\n      }]\n    }]\n  },\n  output: {\n    format: 'mp4',\n    resolution: 'hd'\n  }\n}) }}`,\n      options: { response: { response: { responseFormat: 'json' } } }\n    });\n    nodes.push(videoGenNode);\n    addConnection(connections, previousNodeName, videoGenNode.name);\n    previousNodeName = videoGenNode.name;\n    currentX += SPACING;\n    \n    // Video render durumunu kontrol et\n    const checkRenderNode = createNode('n8n-nodes-base.code', 'Video Render ID Al', [currentX, Y], {\n      jsCode: `const renderId = \\$json.response?.id || 'unknown';\nconst message = '🎬 Video üretiliyor! Render ID: ' + renderId + '\\\\\\\\nDurum: https://dashboard.shotstack.io/stage/renders/' + renderId;\nreturn [{ json: { message, renderId } }];`\n    });\n    nodes.push(checkRenderNode);\n    addConnection(connections, previousNodeName, checkRenderNode.name);\n    previousNodeName = checkRenderNode.name;\n    currentX += SPACING;\n  }\n  \n  // 9. TELEGRAM - Her YouTube workflow'una otomatik ekle!\n  const telegramNode = createNode('n8n-nodes-base.httpRequest', 'Send Telegram Message', [currentX, Y], {\n    method: 'POST',\n    url: '=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage',\n    sendBody: true,\n    bodyParameters: {\n      parameters: [\n        { name: 'chat_id', value: '1496380263' },\n        { name: 'text', value: '={{$json.message || \"YouTube Trend Analizi\"}}' }\n      ]\n    },\n    options: {}\n  });\n  nodes.push(telegramNode);\n  addConnection(connections, previousNodeName, telegramNode.name);\n  previousNodeName = telegramNode.name;\n  currentX += SPACING;\n}\n\n// === INSTAGRAM WORKFLOW ===\nelse if (isInstagram) {\n  // Instagram için yapay içerik üretimi\n  const instaPrepNode = createNode('n8n-nodes-base.code', 'Instagram Reel Prompt Hazırla', [currentX, Y], {\n    jsCode: `const topic = '${desc}'.replace(/instagram|reel|hazırla|üret/gi, '').trim() || 'genel içerik';\nreturn [{ json: { topic, prompt: \\`\\${topic} konusunda viral olabilecek 3 Instagram Reel fikri öner. Her biri için: başlık, açıklama, hashtag'ler.\\` } }];`\n  });\n  nodes.push(instaPrepNode);\n  addConnection(connections, previousNodeName, instaPrepNode.name);\n  previousNodeName = instaPrepNode.name;\n  currentX += SPACING;\n\n  const aiNode = createNode('n8n-nodes-base.httpRequest', 'Claude AI - Reel Fikirleri', [currentX, Y], {\n    method: 'POST',\n    url: 'https://api.anthropic.com/v1/messages',\n    sendHeaders: true,\n    headerParameters: {\n      parameters: [\n        { name: 'x-api-key', value: '={{$env.ANTHROPIC_API_KEY}}' },\n        { name: 'anthropic-version', value: '2023-06-01' },\n        { name: 'Content-Type', value: 'application/json' }\n      ]\n    },\n    sendBody: true,\n    specifyBody: 'json',\n    jsonBody: `={{ JSON.stringify({ model: 'claude-sonnet-4-5-20250929', max_tokens: 1024, messages: [{ role: 'user', content: $json.prompt }] }) }}`,\n    options: { response: { response: { responseFormat: 'json' } } }\n  });\n  nodes.push(aiNode);\n  addConnection(connections, previousNodeName, aiNode.name);\n  previousNodeName = aiNode.name;\n  currentX += SPACING;\n\n  const formatNode = createNode('n8n-nodes-base.code', 'Format AI Response', [currentX, Y], {\n    jsCode: `const aiText = $json.content?.[0]?.text || 'Öneri üretilemedi';\nreturn [{ json: { message: '📸 Instagram Reel Fikirleri:\\\\n\\\\n' + aiText } }];`\n  });\n  nodes.push(formatNode);\n  addConnection(connections, previousNodeName, formatNode.name);\n  previousNodeName = formatNode.name;\n  currentX += SPACING;\n}\n\n// === GMAIL WORKFLOW (Derinsu.json pattern) ===\nelse if (isGmail) {\n  // Gmail trigger zaten yukarıda eklendi\n  const getMessageNode = createNode('n8n-nodes-base.gmail', 'Get Email Details', [currentX, Y], {\n    operation: 'get',\n    messageId: '={{ $json.id }}',\n    simple: false,\n    options: {}\n  }, { credentials: { gmailOAuth2: { id: '4m3aMGjLm89egLIv', name: 'Gmail account 2' } } });\n  nodes.push(getMessageNode);\n  addConnection(connections, previousNodeName, getMessageNode.name);\n  previousNodeName = getMessageNode.name;\n  currentX += SPACING;\n\n  if (needsAI) {\n    // AI ile email özetleme\n    const aiNode = createNode('n8n-nodes-base.httpRequest', 'Claude AI - Email Özeti', [currentX, Y], {\n      method: 'POST',\n      url: 'https://api.anthropic.com/v1/messages',\n      sendHeaders: true,\n      headerParameters: {\n        parameters: [\n          { name: 'x-api-key', value: '={{$env.ANTHROPIC_API_KEY}}' },\n          { name: 'anthropic-version', value: '2023-06-01' },\n          { name: 'Content-Type', value: 'application/json' }\n        ]\n      },\n      sendBody: true,\n      specifyBody: 'json',\n      jsonBody: `={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 512,\n  messages: [{\n    role: 'user',\n    content: 'Konu: ' + $json.subject + '\\\\nKimden: ' + ($json.from?.value?.[0]?.address || '-') + '\\\\nİçerik: ' + ($json.textPlain || $json.snippet || '-') + '\\\\n\\\\nBu e-postayı özetle (1-2 cümle, Türkçe).'\n  }]\n}) }}`,\n      options: { response: { response: { responseFormat: 'json' } } }\n    });\n    nodes.push(aiNode);\n    addConnection(connections, previousNodeName, aiNode.name);\n    previousNodeName = aiNode.name;\n    currentX += SPACING;\n\n    const formatNode = createNode('n8n-nodes-base.code', 'Format Email Summary', [currentX, Y], {\n      jsCode: `const subject = $('Get Email Details').item.json.subject || '-';\nconst from = $('Get Email Details').item.json.from?.value?.[0]?.address || '-';\nconst summary = $json.content?.[0]?.text || 'Özet oluşturulamadı';\nconst message = '📧 Yeni Email:\\\\n👤 Kimden: ' + from + '\\\\n🧷 Konu: ' + subject + '\\\\n📝 Özet: ' + summary;\nreturn [{ json: { message } }];`\n    });\n    nodes.push(formatNode);\n    addConnection(connections, previousNodeName, formatNode.name);\n    previousNodeName = formatNode.name;\n    currentX += SPACING;\n  } else {\n    const simpleFormatNode = createNode('n8n-nodes-base.code', 'Simple Email Format', [currentX, Y], {\n      jsCode: `const subject = $json.subject || '-';\nconst from = $json.from?.value?.[0]?.address || '-';\nconst message = '📧 Yeni Email:\\\\n👤 Kimden: ' + from + '\\\\n🧷 Konu: ' + subject;\nreturn [{ json: { message } }];`\n    });\n    nodes.push(simpleFormatNode);\n    addConnection(connections, previousNodeName, simpleFormatNode.name);\n    previousNodeName = simpleFormatNode.name;\n    currentX += SPACING;\n  }\n}\n\n// === CRYPTO WORKFLOW ===\nelse if (isCrypto) {\n  const cryptoId = /bitcoin|btc/i.test(desc) ? 'bitcoin' : 'ethereum';\n  const cryptoName = cryptoId === 'bitcoin' ? 'BTC' : 'ETH';\n\n  const fetchNode = createNode('n8n-nodes-base.httpRequest', 'Fetch Crypto Price', [currentX, Y], {\n    method: 'GET',\n    url: `https://api.coingecko.com/api/v3/simple/price?ids=${cryptoId}&vs_currencies=try`,\n    options: { response: { response: { responseFormat: 'json' } } }\n  });\n  nodes.push(fetchNode);\n  addConnection(connections, previousNodeName, fetchNode.name);\n  previousNodeName = fetchNode.name;\n  currentX += SPACING;\n\n  const processNode = createNode('n8n-nodes-base.code', 'Process Crypto Data', [currentX, Y], {\n    jsCode: `const data = $json;\nconst cryptoName = Object.keys(data)[0];\nconst price = data[cryptoName].try;\nconst message = '💰 ' + cryptoName.toUpperCase() + ' fiyatı: ' + Number(price).toLocaleString('tr-TR') + ' TL';\nreturn [{ json: { message, price, cryptoName } }];`\n  });\n  nodes.push(processNode);\n  addConnection(connections, previousNodeName, processNode.name);\n  previousNodeName = processNode.name;\n  currentX += SPACING;\n}\n\n// === GENERIC AI REQUEST ===\nelse if (needsAI && !isYouTube && !isInstagram && !isGmail) {\n  const aiNode = createNode('n8n-nodes-base.httpRequest', 'Claude AI - Generic', [currentX, Y], {\n    method: 'POST',\n    url: 'https://api.anthropic.com/v1/messages',\n    sendHeaders: true,\n    headerParameters: {\n      parameters: [\n        { name: 'x-api-key', value: '={{$env.ANTHROPIC_API_KEY}}' },\n        { name: 'anthropic-version', value: '2023-06-01' },\n        { name: 'Content-Type', value: 'application/json' }\n      ]\n    },\n    sendBody: true,\n    specifyBody: 'json',\n    jsonBody: `={{ JSON.stringify({ model: 'claude-sonnet-4-5-20250929', max_tokens: 1024, messages: [{ role: 'user', content: '${desc}' }] }) }}`,\n    options: { response: { response: { responseFormat: 'json' } } }\n  });\n  nodes.push(aiNode);\n  addConnection(connections, previousNodeName, aiNode.name);\n  previousNodeName = aiNode.name;\n  currentX += SPACING;\n\n  const formatNode = createNode('n8n-nodes-base.code', 'Format AI Response', [currentX, Y], {\n    jsCode: `const aiText = $json.content?.[0]?.text || 'Cevap alınamadı';\nreturn [{ json: { message: aiText } }];`\n  });\n  nodes.push(formatNode);\n  addConnection(connections, previousNodeName, formatNode.name);\n  previousNodeName = formatNode.name;\n  currentX += SPACING;\n}\n\n// === TWILIO CALL (TWILIO ARAMA.json pattern) ===\nif (isTwilio) {\n  const twilioDataNode = createNode('n8n-nodes-base.code', 'Twilio Data Hazırla', [currentX, Y], {\n    jsCode: `const to = process.env.ALERT_TARGET_NUMBER || '+905454423820';\nconst from = process.env.TWILIO_PHONE_NUMBER || '+127223344653';\nconst messageText = $json.message || 'Bildirim';\nconst webhookUrl = 'https://argusbot.duckdns.org/webhook/argus_voice_agent';\n\nconst twiml = \\`\n<Response>\n  <Gather input=\"speech\" language=\"tr-TR\" method=\"POST\" action=\"\\${webhookUrl}\">\n    <Say language=\"tr-TR\">\\${messageText}</Say>\n  </Gather>\n</Response>\n\\`.trim();\n\nreturn [{ json: { to, from, twiml } }];`\n  });\n  nodes.push(twilioDataNode);\n  addConnection(connections, previousNodeName, twilioDataNode.name);\n  previousNodeName = twilioDataNode.name;\n  currentX += SPACING;\n\n  const twilioCallNode = createNode('n8n-nodes-base.httpRequest', 'Twilio Call', [currentX, Y], {\n    method: 'POST',\n    url: '=https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json',\n    authentication: 'genericCredentialType',\n    genericAuthType: 'httpBasicAuth',\n    sendBody: true,\n    contentType: 'raw',\n    rawContentType: '=application/x-www-form-urlencoded',\n    body: `={{ 'To=' + encodeURIComponent($json.to) + '&From=' + encodeURIComponent($json.from) + '&Twiml=' + encodeURIComponent($json.twiml) }}`,\n    options: {}\n  }, { credentials: { httpBasicAuth: { id: 'Tn2UknHXfLcUtpyN', name: 'Twilio Credentials' } } });\n  nodes.push(twilioCallNode);\n  addConnection(connections, previousNodeName, twilioCallNode.name);\n  previousNodeName = twilioCallNode.name;\n  currentX += SPACING;\n}\n\n// === TELEGRAM NOTIFICATION ===\nif (isTelegram) {\n  const telegramNode = createNode('n8n-nodes-base.httpRequest', 'Send Telegram Message', [currentX, Y], {\n    method: 'POST',\n    url: '=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage',\n    sendBody: true,\n    bodyParameters: {\n      parameters: [\n        { name: 'chat_id', value: '1496380263' },\n        { name: 'text', value: '={{$json.message || \"Bildirim\"}}' }\n      ]\n    },\n    options: {}\n  });\n  nodes.push(telegramNode);\n  addConnection(connections, previousNodeName, telegramNode.name);\n  previousNodeName = telegramNode.name;\n  currentX += SPACING;\n}\n\n// === FALLBACK: Basit işlem ===\nif (nodes.length === 1) {\n  const placeholderNode = createNode('n8n-nodes-base.code', 'Process Data', [currentX, Y], {\n    jsCode: `return [{ json: { message: 'Workflow başarıyla oluşturuldu!', description: '${desc}' } }];`\n  });\n  nodes.push(placeholderNode);\n  addConnection(connections, previousNodeName, placeholderNode.name);\n}\n\n// === WORKFLOW OLUŞTUR ===\nconst apiWorkflow = {\n  name,\n  nodes,\n  connections,\n  settings: { executionOrder: 'v1' }\n};\n\nreturn [{ json: { apiWorkflow } }];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        460,
-        300
-      ],
-      "id": "workflow-builder-main",
-      "name": "WORKFLOW BUILDER"
     },
     {
       "parameters": {
@@ -40,7 +27,7 @@
           "parameters": [
             {
               "name": "X-N8N-API-KEY",
-              "value": "={{$env.N8N_API_KEY}}"
+              "value": "DUMMY_N8N_API_KEY"
             },
             {
               "name": "Content-Type",
@@ -49,36 +36,43 @@
           ]
         },
         "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify($json.apiWorkflow) }}",
-        "options": {}
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.apiWorkflow.name }}"
+            },
+            {
+              "name": "nodes",
+              "value": "={{ $json.apiWorkflow.nodes }}"
+            },
+            {
+              "name": "connections",
+              "value": "={{ $json.apiWorkflow.connections }}"
+            },
+            {
+              "name": "settings",
+              "value": "={{ $json.apiWorkflow.settings }}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {}
+          }
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [
-        680,
-        300
+        272,
+        -352
       ],
-      "id": "n8n-api-create",
-      "name": "n8n API - Create Workflow"
+      "id": "5b1d85ec-080d-4bc9-a370-9233932c4186",
+      "name": "X-N8N-API-KEY"
     },
     {
       "parameters": {
-        "jsCode": "const item = $input.first().json;\nconst data = item.data || item;\n\nif (!data || !data.id) {\n  return [{ json: { ok: false, error: item.message || 'Workflow oluşturulamadı', raw: item } }];\n}\n\nreturn [{ json: { ok: true, workflowId: data.id, name: data.name, reply: `✅ Workflow oluşturuldu: ${data.name}\\nID: ${data.id}` } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        900,
-        300
-      ],
-      "id": "response-builder",
-      "name": "Response Builder"
-    },
-    {
-      "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ $json }}",
         "options": {
           "responseCode": 200
         }
@@ -86,11 +80,105 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        1120,
-        300
+        752,
+        -320
       ],
-      "id": "webhook-response",
-      "name": "Respond to Webhook"
+      "id": "a352105e-1d21-492b-b462-395c8c79d2b3",
+      "name": "Respond to Webhook1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "x-api-key",
+              "value": "DUMMY_ANTHROPIC_KEY"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json.claudeRequest }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -128,
+        -336
+      ],
+      "id": "2c019546-8347-4024-a1ec-239538f1b24e",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "jsCode": "\n\n// Claude HTTP cevabından workflow JSON'unu çekip\n// n8n API'nin anlayacağı apiWorkflow objesine çeviriyoruz.\n\nconst out = [];\n\nfor (const item of items) {\n  const data = item.json || {};\n\n  // 1) Claude messages cevabındaki text'i al\n  let rawText = \"\";\n\n  if (Array.isArray(data.content) && data.content.length > 0) {\n    const textPart =\n      data.content.find((p) => p.type === \"text\") || data.content[0];\n    rawText = textPart.text || \"\";\n  } else if (typeof data.completion === \"string\") {\n    rawText = data.completion;\n  } else if (typeof data.text === \"string\") {\n    rawText = data.text;\n  } else {\n    rawText = JSON.stringify(data);\n  }\n\n  // 2) Metnin içindeki ilk '{' ile son '}' arasını JSON kabul et\n  let wf;\n  try {\n    const start = rawText.indexOf(\"{\");\n    const end = rawText.lastIndexOf(\"}\");\n\n    if (start === -1 || end === -1 || end <= start) {\n      throw new Error(\"Claude yanıtında JSON obje bulunamadı\");\n    }\n\n    const jsonStr = rawText.slice(start, end + 1);\n    wf = JSON.parse(jsonStr);\n  } catch (err) {\n    out.push({\n      json: {\n        error: \"WORKFLOW_JSON_PARSE_FAILED\",\n        message: String(err),\n        rawText,\n      },\n    });\n    continue;\n  }\n\n  // 3) n8n workflow formatına çevir\n  const apiWorkflow = {\n    name: wf.name || \"ARGUS auto: Flow\",\n    // active BİLEREK YOK, n8n read-only diye ağlamasın\n    nodes: wf.nodes || [],\n    connections: wf.connections || {},\n    settings: wf.settings || {},\n  };\n\n  out.push({ json: { apiWorkflow } });\n}\n\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        -336
+      ],
+      "id": "8d2f6b99-da94-4f9a-a233-4ed14b66c459",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const item = items[0].json;\nconst data = item.data || item; // bazı sürümler data içinde döner\n\nif (!data || !data.id) {\n  return [\n    {\n      json: {\n        ok: false,\n        error: item.message || item.error || 'Workflow oluşturulamadı (id yok).',\n        raw: item\n      }\n    }\n  ];\n}\n\nreturn [\n  {\n    json: {\n      ok: true,\n      workflowId: data.id,\n      name: data.name,\n      url: `https://argusbot.duckdns.org/workflow/${data.id}`\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -320
+      ],
+      "id": "2ed90e95-4ce6-455b-85ac-0d7cfaadd1ef",
+      "name": "N8N DÖNÜŞ"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://argusbot.duckdns.org/webhook/argus_memory_write",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"userId\": \"ULAS\",\n  \"type\": \"command\",\n  \"text\": \"CMD: {{$json.text}}\",\n  \"meta\": \"{\\\"source\\\":\\\"telegram\\\",\\\"chatId\\\":\\\"{{$json.chat_id}}\\\"}\"\n}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        544,
+        -544
+      ],
+      "id": "a1fccfa8-ecc4-4146-9db0-0b4928079239",
+      "name": "WRITE_MEMORY_WORKFLOW.",
+      "retryOnFail": true,
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook'tan gelen isteği al\nconst req = $input.first().json;\nconst body = req.body || {};\nconst desc = body.description || 'Açıklama yok';\nconst name = body.workflowName || 'ARGUS auto: Akış';\n\nconst systemPrompt = [\n  \"Sen bir N8N workflow uzmanısın. Kullanıcı isteğine göre çalışan JSON workflow üret.\",\n  \"\",\n  \"KURALLAR:\",\n  \"1. SADECE JSON döndür\",\n  \"2. active: false\",\n  \"3. position: [240,300] başla, her node +200\",\n  \"\",\n  \"MEVCUT ENV VARIABLES:\",\n  \"TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER, ALERT_TARGET_NUMBER\",\n  \"TELEGRAM_BOT_TOKEN, YOUTUBE_API_KEY, ANTHROPIC_API_KEY, BINANCE_API_KEY\",\n  \"Kullanım: {{$env.VARIABLE_NAME}}\",\n  \"\",\n  \"NODE TİPLERİ:\",\n  \"\",\n  \"SCHEDULE: n8n-nodes-base.scheduleTrigger\",\n  \"Günlük 17:15: cronExpression: 15 17 * * *\",\n  \"\",\n  \"HTTP REQUEST: n8n-nodes-base.httpRequest\",\n  \"GET: method=GET, url=...\",\n  \"POST: method=POST, sendBody=true\",\n  \"\",\n  \"CODE: n8n-nodes-base.code\",\n  \"mode: runOnceForAllItems\",\n  \"jsCode: const items=$input.all(); ...\",\n  \"\",\n  \"TELEGRAM: n8n-nodes-base.telegram\",\n  \"operation: sendMessage\",\n  \"chatId, text: ={{$json.message}}\",\n  \"\",\n  \"TWILIO ARAMA (2 NODE ÇOK ÖNEMLİ!):\",\n  \"\",\n  \"Node 1 - Code (Twilio Data Hazırla):\",\n  \"jsCode içinde:\",\n  \"- process.env.ALERT_TARGET_NUMBER al\",\n  \"- process.env.TWILIO_PHONE_NUMBER al\",\n  \"- Twiml XML oluştur: <Response><Say language='tr-TR'>MESAJ</Say></Response>\",\n  \"- Return: {to: numara, from: numara, twiml: xml}\",\n  \"\",\n  \"Node 2 - HTTP Request (Twilio Call):\",\n  \"method: POST\",\n  \"url: =https://api.twilio.com/2010-04-01/Accounts/{{$env.TWILIO_ACCOUNT_SID}}/Calls.json\",\n  \"authentication: genericCredentialType, httpBasicAuth\",\n  \"sendBody: true\",\n  \"contentType: raw\",\n  \"rawContentType: =application/x-www-form-urlencoded\",\n  \"body: = ile başla, string concat kullan:\",\n  \"  'To=' + encodeURIComponent($json.to) +\",\n  \"  '&from=' + encodeURIComponent($json.from) +\",\n  \"  '&Twiml=' + encodeURIComponent($json.twiml)\",\n  \"\",\n  \"KRİPTO FİYAT:\",\n  \"CoinGecko API (key gereksiz):\",\n  \"https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try\",\n  \"\",\n  \"YOUTUBE:\",\n  \"https://www.googleapis.com/youtube/v3/search?q=QUERY&key={{$env.YOUTUBE_API_KEY}}\",\n  \"\",\n  \"CONNECTIONS:\",\n  \"Her node'u sırayla bağla:\",\n  'node1: {main: [[{node: node2, type: main, index: 0}]]}',\n  \"\",\n  \"WORKFLOW YAPISI:\",\n  \"1. Trigger (Schedule veya Manual)\",\n  \"2. Data Fetch (HTTP GET, API)\",\n  \"3. Data Process (Code node)\",\n  \"4. Action (Telegram, Twilio, etc)\",\n  \"\",\n  \"ÖRNEKLER:\",\n  \"BTC fiyat + ara: Schedule → GET CoinGecko → Code parse → Code twilio data → POST Twilio\",\n  \"YouTube ara: Manual → GET YouTube → Code parse → Telegram\",\n  \"Mail oku: Schedule → Gmail → Code → Telegram/Twilio\",\n  \"\",\n  \"ÖNEMLİ:\",\n  \"- Twilio için RAW form-urlencoded kullan\",\n  \"- Code node'da process.env ile ENV oku\",\n  \"- Body string concat: = ile başla\",\n  \"- encodeURIComponent kullan\",\n  \"\",\n  \"SADECE JSON DÖNDÜR!\"\n].join(\"\\n\");\n\nconst userPrompt = \"İstek: \" + desc + \"\\n\\nYukarıdaki kuralları uygula. Twilio için form-urlencoded raw body kullan. Code node'da process.env kullan. SADECE JSON döndür!\";\n\nreturn [{\n  json: {\n    workflowName: name,\n    claudeRequest: {\n      model: 'claude-sonnet-4-5-20250929',\n      max_tokens: 8192,\n      temperature: 0.3,\n      system: systemPrompt,\n      messages: [{\n        role: 'user',\n        content: [{type: 'text', text: userPrompt}]\n      }]\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -304,
+        -336
+      ],
+      "id": "494b6748-7d46-48d6-a0f5-a157e3f02097",
+      "name": "KURALLAR"
     }
   ],
   "pinData": {},
@@ -99,40 +187,67 @@
       "main": [
         [
           {
-            "node": "WORKFLOW BUILDER",
+            "node": "KURALLAR",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "WORKFLOW BUILDER": {
+    "X-N8N-API-KEY": {
       "main": [
         [
           {
-            "node": "n8n API - Create Workflow",
+            "node": "N8N DÖNÜŞ",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "n8n API - Create Workflow": {
+    "HTTP Request": {
       "main": [
         [
           {
-            "node": "Response Builder",
+            "node": "Code in JavaScript2",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Response Builder": {
+    "Code in JavaScript2": {
       "main": [
         [
           {
-            "node": "Respond to Webhook",
+            "node": "X-N8N-API-KEY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "N8N DÖNÜŞ": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WRITE_MEMORY_WORKFLOW.": {
+      "main": [
+        []
+      ]
+    },
+    "KURALLAR": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
             "type": "main",
             "index": 0
           }
@@ -144,9 +259,10 @@
   "settings": {
     "executionOrder": "v1",
     "timezone": "Europe/Istanbul",
-    "callerPolicy": "workflowsFromSameOwner"
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
   },
-  "versionId": "workflow-builder-v3-youtube",
+  "versionId": "0416f1b7-4546-4cad-ade0-a8b7e8bf9a3d",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
