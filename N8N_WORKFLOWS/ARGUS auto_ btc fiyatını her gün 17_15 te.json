@@ -1,0 +1,150 @@
+{
+  "name": "ARGUS auto: btc fiyatını her gün 17:15 te",
+  "nodes": [
+    {
+      "parameters": {
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=try",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        336,
+        240
+      ],
+      "id": "7di8hzzph532m70fux4gt7",
+      "name": "Fetch Crypto Price"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $json;\nconst cryptoName = Object.keys(data)[0];\nconst price = data[cryptoName].try;\nconst message = '💰 ' + cryptoName.toUpperCase() + ' Price: ' + Number(price).toLocaleString('tr-TR') + ' TL';\nreturn [{ json: { message, price, cryptoName } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        240
+      ],
+      "id": "bsx67lp75i5i138jl8ghwa",
+      "name": "Process Price Data"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "={{$json.message}}\n\n— ARGUS ShipControl\n",
+        "additionalFields": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.1,
+      "position": [
+        768,
+        48
+      ],
+      "id": "a0cd636e-c103-4eb2-a772-9790d84ffe60",
+      "name": "Telegram",
+      "webhookId": "84b9e7f6-6103-48c5-989a-7a25ebc6943d",
+      "notesInFlow": false,
+      "credentials": {
+        "telegramApi": {
+          "id": "vzjTtMvoxAX559sG",
+          "name": "Telegram account"
+        }
+      },
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0  */1  * * * *"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        144,
+        240
+      ],
+      "id": "f37232da-cd5a-48b2-a762-10c8e1d730f7",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.telegram.org/bot{{$env.TELEGRAM_BOT_TOKEN}}/sendMessage",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{   JSON.stringify({     chat_id: $env.TELEGRAM_CHAT_ID || 1496380263,     text: $json.message + \"\\n\\n— ARGUS ShipControl\",     parse_mode: \"Markdown\"   }) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        768,
+        240
+      ],
+      "id": "f1aeb184-f5d9-48f3-809a-299ab9a6ca73",
+      "name": "HTTP Request"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Fetch Crypto Price": {
+      "main": [
+        [
+          {
+            "node": "Process Price Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Process Price Data": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Fetch Crypto Price",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Europe/Istanbul"
+  },
+  "versionId": "7fbae73d-bade-47f3-a493-50f2e0369aa9",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "U8SnilbhK7SJHLdf",
+  "tags": []
+}

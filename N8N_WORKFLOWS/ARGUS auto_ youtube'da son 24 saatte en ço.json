@@ -1,0 +1,335 @@
+{
+  "name": "ARGUS auto: youtube'da son 24 saatte en ço",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        240,
+        304
+      ],
+      "id": "o9umuj6huhpd82llrj94tm",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "mostPopular"
+            },
+            {
+              "name": "regionCode",
+              "value": "TR"
+            },
+            {
+              "name": "maxResults",
+              "value": "20"
+            },
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "key",
+              "value": "={{$env.YOUTUBE_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        464,
+        304
+      ],
+      "id": "gdcqdp4174pjo8eyz7fcz",
+      "name": "YouTube API - Popüler Videolar"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $json.items || [];\nreturn items.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        688,
+        304
+      ],
+      "id": "1g8ac6mt20v21tm7xueywd",
+      "name": "Split Video Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "mns76lgzm3q8oqhqalp4g",
+              "name": "title",
+              "value": "={{$json.snippet.title}}",
+              "type": "string"
+            },
+            {
+              "id": "yhihxxbe39fywssn6aoel",
+              "name": "channel",
+              "value": "={{$json.snippet.channelTitle}}",
+              "type": "string"
+            },
+            {
+              "id": "yc78zh3uzgpi017nmp87",
+              "name": "description",
+              "value": "={{$json.snippet.description}}",
+              "type": "string"
+            },
+            {
+              "id": "nuwc9acd84jdzjpy6w0o1j",
+              "name": "viewCount",
+              "value": "={{Number($json.statistics.viewCount) || 0}}",
+              "type": "number"
+            },
+            {
+              "id": "lnhp9q3ukce7jlzs74c5p",
+              "name": "likeCount",
+              "value": "={{Number($json.statistics.likeCount) || 0}}",
+              "type": "number"
+            },
+            {
+              "id": "wjgw10xqcrlgu04pe9ju",
+              "name": "commentCount",
+              "value": "={{Number($json.statistics.commentCount) || 0}}",
+              "type": "number"
+            },
+            {
+              "id": "9ihjgxswlu8dpcxpb502ag",
+              "name": "videoId",
+              "value": "={{$json.id}}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        912,
+        304
+      ],
+      "id": "6u7b3gusp36zdqckzsogt",
+      "name": "Video Verilerini Düzenle"
+    },
+    {
+      "parameters": {
+        "jsCode": "const views = $json.viewCount || 0;\nconst likes = $json.likeCount || 0;\nconst comments = $json.commentCount || 0;\n\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\nconst score = (views * 0.5) + (likes * 30) + (comments * 50) + (engagementRate * 1000);\n\nreturn [{\n  json: {\n    ...$json,\n    engagementRate: engagementRate.toFixed(2),\n    score: Math.round(score)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1120,
+        304
+      ],
+      "id": "mdf5kluszioprq11lpcnzm",
+      "name": "Skor Hesapla"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "score",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [
+        1344,
+        304
+      ],
+      "id": "9choxwy2ll4bj8viapr77",
+      "name": "Skora Göre Sırala"
+    },
+    {
+      "parameters": {
+        "maxItems": 3
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        304
+      ],
+      "id": "wdgpzghqdokj408pwfijd",
+      "name": "İlk 3 Video"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 512,\n  messages: [{\n    role: 'user',\n    content: 'Video: ' + $json.title + '\\nKanal: ' + $json.channel + '\\nGörüntülenme: ' + $json.viewCount + '\\n\\nBu videoya benzer 2 içerik fikri öner (kısa başlıklar, Türkçe).'\n  }]\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1792,
+        304
+      ],
+      "id": "4ih7r0idggw579cfat30wi",
+      "name": "Claude AI - Video Analizi"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet message = '🎬 YouTube Trend Analizi\\n\\n';\n\nitems.forEach((item, i) => {\n  const title = item.json.title || '-';\n  const channel = item.json.channel || '-';\n  const score = item.json.score || 0;\n  const aiResponse = item.json.content?.[0]?.text || 'AI önerisi yok';\n\n  message += `📹 Video ${i+1}: ${title}\\n`;\n  message += `👤 Kanal: ${channel}\\n`;\n  message += `⭐ Skor: ${score}\\n`;\n  message += `💡 AI Önerisi: ${aiResponse}\\n\\n`;\n});\n\nreturn [{ json: { message } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2000,
+        304
+      ],
+      "id": "vzohmhlj71mf39m7kmama",
+      "name": "AI Cevabını Formatla"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "YouTube API - Popüler Videolar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "YouTube API - Popüler Videolar": {
+      "main": [
+        [
+          {
+            "node": "Split Video Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Video Items": {
+      "main": [
+        [
+          {
+            "node": "Video Verilerini Düzenle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Video Verilerini Düzenle": {
+      "main": [
+        [
+          {
+            "node": "Skor Hesapla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skor Hesapla": {
+      "main": [
+        [
+          {
+            "node": "Skora Göre Sırala",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Skora Göre Sırala": {
+      "main": [
+        [
+          {
+            "node": "İlk 3 Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "İlk 3 Video": {
+      "main": [
+        [
+          {
+            "node": "Claude AI - Video Analizi",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude AI - Video Analizi": {
+      "main": [
+        [
+          {
+            "node": "AI Cevabını Formatla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d533b5c8-bf08-40e7-9cdc-6be8359ed7f9",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "iRbIhgG6H26PisCj",
+  "tags": []
+}

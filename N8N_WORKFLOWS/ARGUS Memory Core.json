@@ -1,0 +1,53 @@
+{
+  "name": "ARGUS Memory Core",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -416,
+        -32
+      ],
+      "id": "f1a8362e-88fd-4043-8333-26d5d2cfed69",
+      "name": "When clicking 'Execute workflow'"
+    },
+    {
+      "parameters": {
+        "jsCode": "// ARGUS Memory Core - Global Static Data Store\n\n// 1) Operasyon tipini al (GET / SET / UPDATE_FIELD)\nconst operation = $json.operation || 'GET';\n\n// 2) Global static data objesini çek\nconst globalData = $getWorkflowStaticData('global');\n\n// 3) İlk kez çalışıyorsa, ARGUS_MEMORY'yi oluştur\nif (!globalData.argusMemory) {\n  globalData.argusMemory = {\n    project: 'ShipCrewAlert',\n    stage: 'MVP-Expire',\n    data_source: 'static_data',\n    rules: {\n      expiry_days: [90, 60, 30],\n      stock_rule: 'current_qty < min_qty',\n    },\n    no_go: [\n      'ERP yok',\n      'UI şov yok',\n      'Nozzle replace yok',\n    ],\n    last_action: 'init',\n    next_step: 'build first expire flow',\n  };\n}\n\n// 4) Operasyonlara göre davran\n\nif (operation === 'GET') {\n  // Sadece hafızayı döndür\n  return [\n    {\n      json: globalData.argusMemory,\n    },\n  ];\n}\n\nif (operation === 'SET') {\n  // Dışarıdan gelen newMemory ile komple değiştir\n  if (!$json.newMemory) {\n    throw new Error('SET operasyonu için newMemory alanı gerekiyor');\n  }\n  globalData.argusMemory = $json.newMemory;\n  return [\n    {\n      json: globalData.argusMemory,\n    },\n  ];\n}\n\nif (operation === 'UPDATE_FIELD') {\n  const field = $json.field;\n  const value = $json.value;\n\n  if (!field) {\n    throw new Error('UPDATE_FIELD için field gerekiyor');\n  }\n\n  if (!globalData.argusMemory) {\n    globalData.argusMemory = {};\n  }\n\n  globalData.argusMemory[field] = value;\n\n  return [\n    {\n      json: globalData.argusMemory,\n    },\n  ];\n}\n\n// Bilinmeyen operasyon gelirse:\nthrow new Error(`Bilinmeyen operation: ${operation}`);\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -192,
+        -32
+      ],
+      "id": "8a70bb3b-46ef-498c-80f5-1a190d5faec2",
+      "name": "ARGUS Memory GET/SET"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking 'Execute workflow'": {
+      "main": [
+        [
+          {
+            "node": "ARGUS Memory GET/SET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "73b81403-b148-4fcd-abd7-7d8ef95780e2",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "HfQAwpMLv00NnOYM",
+  "tags": []
+}
