@@ -1,0 +1,309 @@
+{
+  "name": "YouTube VIRAL Machine - Full Auto",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 6}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 400],
+      "id": "schedule",
+      "name": "Every 6 Hours"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "chart", "value": "mostPopular"},
+            {"name": "regionCode", "value": "TR"},
+            {"name": "maxResults", "value": "50"},
+            {"name": "part", "value": "snippet,statistics,contentDetails"},
+            {"name": "key", "value": "={{$env.YOUTUBE_API_KEY}}"}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [400, 400],
+      "id": "yt-trends",
+      "name": "YouTube Trends"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $json.items || [];\nreturn items.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 400],
+      "id": "split",
+      "name": "Split"
+    },
+    {
+      "parameters": {
+        "jsCode": "const publishedAt = new Date($json.snippet.publishedAt);\nconst now = new Date();\nconst hoursDiff = (now - publishedAt) / (1000 * 60 * 60);\n\nif (hoursDiff > 24) return [];\n\nconst views = Number($json.statistics.viewCount) || 0;\nconst likes = Number($json.statistics.likeCount) || 0;\nconst comments = Number($json.statistics.commentCount) || 0;\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\nconst ageBonus = hoursDiff < 12 ? 2 : 1;\nconst viralScore = (views * 0.5 * ageBonus) + (likes * 30) + (comments * 50) + (engagementRate * 1000);\n\nreturn [{\n  json: {\n    videoId: $json.id,\n    title: $json.snippet.title,\n    description: $json.snippet.description,\n    channel: $json.snippet.channelTitle,\n    thumbnail: $json.snippet.thumbnails?.maxres?.url || $json.snippet.thumbnails?.high?.url,\n    publishedAt: $json.snippet.publishedAt,\n    viewCount: views,\n    likeCount: likes,\n    commentCount: comments,\n    duration: $json.contentDetails?.duration || '',\n    engagementRate: engagementRate.toFixed(2),\n    viralScore: Math.round(viralScore),\n    hoursOld: hoursDiff.toFixed(1),\n    tags: $json.snippet.tags || [],\n    categoryId: $json.snippet.categoryId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 400],
+      "id": "filter-score",
+      "name": "Filter & Score"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [{"fieldName": "viralScore", "order": "descending"}]
+        }
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [1000, 400],
+      "id": "sort",
+      "name": "Sort"
+    },
+    {
+      "parameters": {"maxItems": 3},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [1200, 400],
+      "id": "top3",
+      "name": "Top 3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}"},
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 8000,\n  messages: [{\n    role: 'user',\n    content: `VİRAL VİDEO ANALİZİ:\n\nTrend Video:\n- Başlık: ${$json.title}\n- Kanal: ${$json.channel}\n- İzlenme: ${$json.viewCount}\n- Engagement: ${$json.engagementRate}%\n- Viral Score: ${$json.viralScore}\n- Süre: ${$json.hoursOld}h önce\n\nGÖREV: VİRAL BİR VİDEO İÇERİĞİ OLUŞTUR\n\n1. KILLER BAŞLIK (max 60 char, clickbait ama değerli)\n2. HOOK (ilk 30 saniye script - dikkat çekici)\n3. VİDEO SCRIPT (dakika bazında, 7-10 dk)\n4. AÇIKLAMA (YouTube description, SEO)\n5. HASHTAGS (15 adet, viral potential)\n6. KEYWORDS (20 adet)\n7. THUMBNAIL TEXT (büyük, bold, 3-5 kelime)\n8. THUMBNAIL PROMPT (Nano Banana için, İngilizce, clickbait)\n9. SHORTS VERSION (ilk 60 saniye için ayrı script)\n10. END SCREEN CTA (subscribe çağrısı)\n\nJSON formatında döndür:\n{\n  \"title\": \"...\",\n  \"hook\": \"İlk 30 saniye script\",\n  \"script\": {\n    \"minute0\": \"Hook + Intro\",\n    \"minute1\": \"...\",\n    \"minute2\": \"...\",\n    \"minute3\": \"...\",\n    \"minute4\": \"...\",\n    \"minute5\": \"...\",\n    \"minute6\": \"...\",\n    \"minute7\": \"Outro + CTA\"\n  },\n  \"description\": \"YouTube description\",\n  \"hashtags\": [],\n  \"keywords\": [],\n  \"thumbnailText\": \"BOLD TEXT\",\n  \"thumbnailPrompt\": \"English prompt for Nano Banana\",\n  \"shortsScript\": \"60 saniye için script\",\n  \"endScreenCTA\": \"Subscribe CTA\"\n}`\n  }]\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1400, 400],
+      "id": "ai-script",
+      "name": "AI: Create Script"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $json.content?.[0]?.text || '{}';\nconst original = $input.first().json;\n\nlet content = {};\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  content = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  content = { error: 'Parse failed' };\n}\n\nreturn [{\n  json: {\n    originalVideoId: original.videoId,\n    originalTitle: original.title,\n    originalViralScore: original.viralScore,\n    \n    title: content.title || 'Viral Video',\n    hook: content.hook || '',\n    script: content.script || {},\n    description: content.description || '',\n    hashtags: content.hashtags || [],\n    keywords: content.keywords || [],\n    thumbnailText: content.thumbnailText || '',\n    thumbnailPrompt: content.thumbnailPrompt || '',\n    shortsScript: content.shortsScript || '',\n    endScreenCTA: content.endScreenCTA || '',\n    \n    createdAt: new Date().toISOString()\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 400],
+      "id": "parse-script",
+      "name": "Parse Script"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-image:generateImages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{$env.GOOGLE_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  prompt: $json.thumbnailPrompt + ' | YouTube thumbnail, bold text: \\\"' + $json.thumbnailText + '\\\", shocked face, vibrant colors, 4K, professional, clickbait style',\n  negativePrompt: 'blurry, low quality, amateur',\n  numberOfImages: 1,\n  aspectRatio: '16:9',\n  outputFormat: 'png'\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1800, 300],
+      "id": "nano-banana-thumbnail",
+      "name": "Nano Banana: Thumbnail"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.heygen.com/v2/video/generate",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-Api-Key", "value": "={{$env.HEYGEN_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  video_inputs: [{\n    character: {\n      type: 'avatar',\n      avatar_id: 'Kristin_public_3_20240108',\n      avatar_style: 'normal'\n    },\n    voice: {\n      type: 'text',\n      input_text: Object.values($json.script).join(' '),\n      voice_id: 'tr-TR-AhmetNeural',\n      speed: 1.0\n    },\n    background: {\n      type: 'color',\n      value: '#FFFFFF'\n    }\n  }],\n  dimension: {\n    width: 1920,\n    height: 1080\n  },\n  aspect_ratio: '16:9',\n  test: false,\n  caption: true\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1800, 500],
+      "id": "heygen-video",
+      "name": "HeyGen: Generate Video"
+    },
+    {
+      "parameters": {
+        "jsCode": "const videoJobId = $json.data?.video_id;\nreturn [{ json: { videoJobId, status: 'processing' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 500],
+      "id": "get-job-id",
+      "name": "Get Job ID"
+    },
+    {
+      "parameters": {
+        "amount": 30,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2200, 500],
+      "id": "wait",
+      "name": "Wait 30s"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.heygen.com/v1/video_status.get?video_id={{$json.videoJobId}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "X-Api-Key", "value": "={{$env.HEYGEN_API_KEY}}"}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2400, 500],
+      "id": "check-status",
+      "name": "Check Video Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {"leftValue": "", "typeValidation": "strict"},
+          "conditions": [
+            {
+              "leftValue": "={{$json.data.status}}",
+              "rightValue": "completed",
+              "operator": {"type": "string", "operation": "equals"}
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2600, 500],
+      "id": "if-complete",
+      "name": "If Completed"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.data.video_url}}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2800, 400],
+      "id": "download-video",
+      "name": "Download Video"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$input.first().json.generatedImages[0].url}}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2000, 300],
+      "id": "download-thumb",
+      "name": "Download Thumbnail"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{$json.title}}",
+        "categoryId": "22",
+        "description": "={{$json.description}}",
+        "privacyStatus": "public",
+        "tags": "={{$json.keywords.join(',')}}"
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [3000, 400],
+      "id": "upload-yt",
+      "name": "YouTube Upload"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "media",
+        "caption": "={{$json.title}}\\n\\n{{$json.description.substring(0,200)}}...\\n\\n{{$json.hashtags.join(' ')}}"
+      },
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [3000, 600],
+      "id": "upload-ig",
+      "name": "Instagram Upload"
+    },
+    {
+      "parameters": {
+        "chatId": "={{$env.TELEGRAM_BOT_TOKEN}}",
+        "text": "=🔥 YENİ VİRAL VİDEO YAYINLANDI!\n\n📹 {{$json.title}}\n\n✅ YouTube: Yayında\n✅ Instagram: Yayında\n\n📊 Trend: {{$json.originalTitle}}\n🎯 Viral Score: {{$json.originalViralScore}}\n\n⏰ {{$json.createdAt}}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3200, 400],
+      "id": "notify",
+      "name": "Telegram Notify"
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {"main": [[{"node": "YouTube Trends", "type": "main", "index": 0}]]},
+    "YouTube Trends": {"main": [[{"node": "Split", "type": "main", "index": 0}]]},
+    "Split": {"main": [[{"node": "Filter & Score", "type": "main", "index": 0}]]},
+    "Filter & Score": {"main": [[{"node": "Sort", "type": "main", "index": 0}]]},
+    "Sort": {"main": [[{"node": "Top 3", "type": "main", "index": 0}]]},
+    "Top 3": {"main": [[{"node": "AI: Create Script", "type": "main", "index": 0}]]},
+    "AI: Create Script": {"main": [[{"node": "Parse Script", "type": "main", "index": 0}]]},
+    "Parse Script": {"main": [[
+      {"node": "Nano Banana: Thumbnail", "type": "main", "index": 0},
+      {"node": "HeyGen: Generate Video", "type": "main", "index": 0}
+    ]]},
+    "Nano Banana: Thumbnail": {"main": [[{"node": "Download Thumbnail", "type": "main", "index": 0}]]},
+    "HeyGen: Generate Video": {"main": [[{"node": "Get Job ID", "type": "main", "index": 0}]]},
+    "Get Job ID": {"main": [[{"node": "Wait 30s", "type": "main", "index": 0}]]},
+    "Wait 30s": {"main": [[{"node": "Check Video Status", "type": "main", "index": 0}]]},
+    "Check Video Status": {"main": [[{"node": "If Completed", "type": "main", "index": 0}]]},
+    "If Completed": {
+      "main": [
+        [{"node": "Download Video", "type": "main", "index": 0}],
+        [{"node": "Wait 30s", "type": "main", "index": 0}]
+      ]
+    },
+    "Download Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
+    "YouTube Upload": {"main": [[
+      {"node": "Instagram Upload", "type": "main", "index": 0},
+      {"node": "Telegram Notify", "type": "main", "index": 0}
+    ]]}
+  },
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false,
+  "id": "YouTubeViralMachine"
+}
