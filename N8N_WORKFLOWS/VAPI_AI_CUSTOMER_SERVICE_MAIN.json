@@ -1,0 +1,507 @@
+{
+  "name": "VAPI AI Customer Service - Main",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-customer-service",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1120,
+        240
+      ],
+      "id": "vapi-webhook-main",
+      "name": "VAPI Webhook",
+      "webhookId": "vapi-cs-webhook-001"
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json;\nconst body = req.body || req;\n\n// Vapi event tipini belirle\nconst eventType = body.message?.type || body.type || 'unknown';\n\nconst callId = body.call?.id || '';\nconst assistantId = body.assistant?.id || '';\nconst phoneNumber = body.call?.customer?.number || body.phoneNumber || '';\nconst timestamp = body.message?.timestamp || new Date().toISOString();\n\n// Event tipine göre işle\nlet eventData = {\n  eventType,\n  callId,\n  assistantId,\n  phoneNumber,\n  timestamp,\n  rawData: body\n};\n\n// Farklı event tipleri:\n// - assistant-request: Vapi asistandan cevap istiyor\n// - function-call: Tool/function çağrılıyor\n// - status-update: Call durumu güncellendi\n// - end-of-call-report: Arama bitti, rapor\n// - transcript: Konuşma metni\n// - hang: Arama kapatıldı\n\nswitch(eventType) {\n  case 'assistant-request':\n    // Vapi bizden asistan konfigürasyonu istiyor\n    eventData.needsConfig = true;\n    eventData.conversationHistory = body.message?.conversation || [];\n    break;\n    \n  case 'function-call':\n    // Tool/Function çağrıldı\n    eventData.functionName = body.message?.functionCall?.name || body.functionCall?.name || '';\n    eventData.parameters = body.message?.functionCall?.parameters || body.functionCall?.parameters || {};\n    eventData.toolCallId = body.message?.toolCallId || body.toolCallId || '';\n    break;\n    \n  case 'status-update':\n    // Call durumu\n    eventData.status = body.message?.status || body.status || '';\n    break;\n    \n  case 'end-of-call-report':\n    // Arama raporu\n    eventData.duration = body.message?.duration || 0;\n    eventData.endedReason = body.message?.endedReason || '';\n    eventData.transcript = body.message?.transcript || '';\n    eventData.summary = body.message?.summary || '';\n    eventData.cost = body.message?.cost || 0;\n    break;\n    \n  case 'transcript':\n    // Real-time transcript\n    eventData.transcriptText = body.message?.transcript || body.transcript || '';\n    eventData.role = body.message?.role || 'user';\n    break;\n    \n  case 'hang':\n    // Arama kapatıldı\n    eventData.endReason = body.message?.reason || 'user-hangup';\n    break;\n}\n\nreturn [{\n  json: eventData\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -920,
+        240
+      ],
+      "id": "parse-vapi-event",
+      "name": "Parse Vapi Event"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "route-assistant-request",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "assistant-request",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "route-function-call",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "function-call",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "route-end-call",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "end-of-call-report",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "route-transcript",
+              "leftValue": "={{ $json.eventType }}",
+              "rightValue": "transcript",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -720,
+        240
+      ],
+      "id": "route-by-event-type",
+      "name": "Route by Event Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vapi'ye döndüreceğimiz asistan konfigürasyonu\n\nconst assistantConfig = {\n  model: {\n    provider: \"openai\",\n    model: \"gpt-4-turbo\",\n    temperature: 0.7,\n    systemPrompt: `Sen ARGUS Müşteri Hizmetleri AI asistanısın.\n\nGörevin:\n- Müşterilere yardımcı olmak\n- Siparişleri sorgulamak\n- Destek talepleri oluşturmak\n- Sık sorulan soruları yanıtlamak\n- Gerektiğinde insana yönlendirmek\n\nKonuşma Tarzın:\n- Profesyonel ama samimi\n- Türkçe, anlaşılır ve doğal\n- Kısa ve öz cevaplar (telefonda konuşuyorsun)\n- Empati göster\n- Sabırlı ol\n\nKurallar:\n1. Müşteri bilgilerini asla paylaşma\n2. Emin olmadığın şeyleri uydurmak yerine \"Bir dakika kontrol edeyim\" de\n3. Çözemediğin sorunları insana yönlendir\n4. Her zaman profesyonel kal\n\nErişebildiğin Fonksiyonlar:\n- checkOrder: Sipariş durumu sorgula\n- createTicket: Destek talebi oluştur\n- getCustomerInfo: Müşteri bilgilerini getir\n- getFAQ: Sık sorulan soruları getir\n\nŞu an konuştuğun müşteri: {{ $json.phoneNumber || 'Bilinmiyor' }}\nArama ID: {{ $json.callId }}\nZaman: {{ $json.timestamp }}`\n  },\n  \n  voice: {\n    provider: \"11labs\",\n    voiceId: \"pNInz6obpgDQGcFmaJgB\", // Adam (Turkish)\n    stability: 0.5,\n    similarityBoost: 0.75,\n    speed: 1.0\n  },\n  \n  transcriber: {\n    provider: \"deepgram\",\n    model: \"nova-2\",\n    language: \"tr\"\n  },\n  \n  firstMessage: \"Merhaba, ARGUS müşteri hizmetlerine hoş geldiniz. Size nasıl yardımcı olabilirim?\",\n  \n  endCallMessage: \"ARGUS'u aradığınız için teşekkürler, iyi günler dilerim!\",\n  \n  endCallPhrases: [\n    \"görüşürüz\",\n    \"hoşçakal\",\n    \"kapat\",\n    \"tamam yeter\",\n    \"teşekkürler yeter\"\n  ],\n  \n  maxDurationSeconds: 600, // 10 dakika max\n  \n  backgroundSound: \"off\",\n  \n  backchannelingEnabled: true, // \"hmm\", \"evet\" gibi doğal sesler\n  \n  tools: [\n    {\n      type: \"function\",\n      function: {\n        name: \"checkOrder\",\n        description: \"Müşterinin sipariş durumunu sorgular. Sipariş numarası veya telefon numarası ile arama yapılabilir.\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            orderNumber: {\n              type: \"string\",\n              description: \"Sipariş numarası (örn: ARG-12345)\"\n            },\n            phoneNumber: {\n              type: \"string\",\n              description: \"Müşteri telefon numarası\"\n            }\n          },\n          required: []\n        },\n        async: true,\n        url: \"https://argusbot.duckdns.org/webhook/vapi-tool-checkorder\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"createTicket\",\n        description: \"Müşteri için destek talebi oluşturur. Sorun açıklaması ve öncelik seviyesi belirtilmelidir.\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            description: {\n              type: \"string\",\n              description: \"Sorun açıklaması\"\n            },\n            priority: {\n              type: \"string\",\n              enum: [\"low\", \"medium\", \"high\", \"urgent\"],\n              description: \"Öncelik seviyesi\"\n            },\n            category: {\n              type: \"string\",\n              enum: [\"technical\", \"billing\", \"shipping\", \"product\", \"other\"],\n              description: \"Talep kategorisi\"\n            }\n          },\n          required: [\"description\", \"priority\", \"category\"]\n        },\n        async: true,\n        url: \"https://argusbot.duckdns.org/webhook/vapi-tool-createticket\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"getCustomerInfo\",\n        description: \"Telefon numarasına göre müşteri bilgilerini getirir.\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            phoneNumber: {\n              type: \"string\",\n              description: \"Müşteri telefon numarası\"\n            }\n          },\n          required: [\"phoneNumber\"]\n        },\n        async: true,\n        url: \"https://argusbot.duckdns.org/webhook/vapi-tool-customerinfo\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"getFAQ\",\n        description: \"Sık sorulan sorular veritabanından bilgi getirir.\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            query: {\n              type: \"string\",\n              description: \"Arama sorgusu\"\n            }\n          },\n          required: [\"query\"]\n        },\n        async: true,\n        url: \"https://argusbot.duckdns.org/webhook/vapi-tool-faq\"\n      }\n    }\n  ],\n  \n  metadata: {\n    createdBy: \"n8n\",\n    version: \"1.0\",\n    callId: $json.callId\n  }\n};\n\nreturn [{\n  json: {\n    assistant: assistantConfig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        40
+      ],
+      "id": "build-assistant-config",
+      "name": "Build Assistant Config"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -280,
+        40
+      ],
+      "id": "respond-assistant-config",
+      "name": "Respond Assistant Config"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "func-checkorder",
+              "leftValue": "={{ $json.functionName }}",
+              "rightValue": "checkOrder",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "func-createticket",
+              "leftValue": "={{ $json.functionName }}",
+              "rightValue": "createTicket",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "func-customerinfo",
+              "leftValue": "={{ $json.functionName }}",
+              "rightValue": "getCustomerInfo",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "func-faq",
+              "leftValue": "={{ $json.functionName }}",
+              "rightValue": "getFAQ",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        -480,
+        240
+      ],
+      "id": "route-function-calls",
+      "name": "Route Function Calls"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Check Order Tool\nconst params = $json.parameters || {};\nconst orderNumber = params.orderNumber || '';\nconst phoneNumber = params.phoneNumber || $json.phoneNumber || '';\n\n// Simüle edilmiş sipariş veritabanı\n// Gerçekte burası bir veritabanı sorgusu olur\nconst mockOrders = [\n  {\n    orderNumber: 'ARG-12345',\n    phoneNumber: '+905454423820',\n    status: 'shipped',\n    statusText: 'Kargoya verildi',\n    trackingNumber: 'TRK123456789',\n    estimatedDelivery: '2025-12-20',\n    items: ['Ürün A', 'Ürün B'],\n    total: 1250.00\n  },\n  {\n    orderNumber: 'ARG-67890',\n    phoneNumber: '+905454423820',\n    status: 'processing',\n    statusText: 'Hazırlanıyor',\n    trackingNumber: null,\n    estimatedDelivery: '2025-12-21',\n    items: ['Ürün C'],\n    total: 850.00\n  }\n];\n\nlet result = {};\n\n// Sipariş numarasına göre ara\nif (orderNumber) {\n  const order = mockOrders.find(o => o.orderNumber === orderNumber);\n  if (order) {\n    result = {\n      success: true,\n      order: order,\n      message: `${orderNumber} numaralı siparişiniz ${order.statusText} durumunda. ${order.trackingNumber ? 'Kargo takip numarası: ' + order.trackingNumber : ''}`\n    };\n  } else {\n    result = {\n      success: false,\n      message: `${orderNumber} numaralı sipariş bulunamadı. Lütfen sipariş numaranızı kontrol edin.`\n    };\n  }\n}\n// Telefon numarasına göre ara\nelse if (phoneNumber) {\n  const orders = mockOrders.filter(o => o.phoneNumber === phoneNumber);\n  if (orders.length > 0) {\n    result = {\n      success: true,\n      orders: orders,\n      count: orders.length,\n      message: `Bu telefon numarasına kayıtlı ${orders.length} adet sipariş bulundu. En son sipariş: ${orders[0].orderNumber} - ${orders[0].statusText}`\n    };\n  } else {\n    result = {\n      success: false,\n      message: 'Bu telefon numarasına kayıtlı sipariş bulunamadı.'\n    };\n  }\n}\nelse {\n  result = {\n    success: false,\n    message: 'Sipariş sorgulamak için sipariş numarası veya telefon numarası gerekli.'\n  };\n}\n\nreturn [{\n  json: {\n    toolCallId: $json.toolCallId,\n    result: result\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        140
+      ],
+      "id": "tool-check-order",
+      "name": "Tool: Check Order"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create Ticket Tool\nconst params = $json.parameters || {};\nconst description = params.description || '';\nconst priority = params.priority || 'medium';\nconst category = params.category || 'other';\nconst phoneNumber = $json.phoneNumber || '';\nconst callId = $json.callId || '';\n\n// Ticket ID oluştur\nconst ticketId = 'TKT-' + Date.now().toString().slice(-8);\n\n// Gerçekte burası bir veritabanına veya ticketing sistemine kayıt yapar\n// (Zendesk, Freshdesk, vs.)\n\nconst ticket = {\n  id: ticketId,\n  description: description,\n  priority: priority,\n  category: category,\n  phoneNumber: phoneNumber,\n  callId: callId,\n  status: 'open',\n  createdAt: new Date().toISOString(),\n  assignedTo: null\n};\n\nconst result = {\n  success: true,\n  ticket: ticket,\n  message: `Destek talebiniz oluşturuldu. Talep numaranız: ${ticketId}. Ekibimiz en kısa sürede size dönüş yapacak.`\n};\n\n// Burada ticket'ı bir veritabanına kaydetmek için ek node eklenebilir\n// Örnek: PostgreSQL, MySQL, Airtable, Google Sheets, vs.\n\nreturn [{\n  json: {\n    toolCallId: $json.toolCallId,\n    result: result,\n    ticketData: ticket // Loglama için\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        240
+      ],
+      "id": "tool-create-ticket",
+      "name": "Tool: Create Ticket"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get Customer Info Tool\nconst params = $json.parameters || {};\nconst phoneNumber = params.phoneNumber || $json.phoneNumber || '';\n\n// Simüle edilmiş müşteri veritabanı\n// Gerçekte CRM'den gelir (Salesforce, HubSpot, vs.)\nconst mockCustomers = {\n  '+905454423820': {\n    id: 'CUST-001',\n    name: 'Ulaşım',\n    phoneNumber: '+905454423820',\n    email: 'ulasim@example.com',\n    accountType: 'premium',\n    totalOrders: 12,\n    totalSpent: 15680.00,\n    lastOrderDate: '2025-12-10',\n    tags: ['VIP', 'Early Adopter']\n  },\n  '+905551234567': {\n    id: 'CUST-002',\n    name: 'Ali Yılmaz',\n    phoneNumber: '+905551234567',\n    email: 'ali@example.com',\n    accountType: 'standard',\n    totalOrders: 3,\n    totalSpent: 2400.00,\n    lastOrderDate: '2025-11-15',\n    tags: []\n  }\n};\n\nlet result = {};\n\nif (!phoneNumber) {\n  result = {\n    success: false,\n    message: 'Telefon numarası gerekli.'\n  };\n} else {\n  const customer = mockCustomers[phoneNumber];\n  if (customer) {\n    result = {\n      success: true,\n      customer: customer,\n      message: `Merhaba ${customer.name}, sizi tanıyorum! ${customer.accountType === 'premium' ? 'Premium müşterimizsiniz.' : ''}`\n    };\n  } else {\n    result = {\n      success: false,\n      message: 'Bu telefon numarasına kayıtlı müşteri bulunamadı. Yeni müşteri olabilirsiniz.'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    toolCallId: $json.toolCallId,\n    result: result\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        340
+      ],
+      "id": "tool-customer-info",
+      "name": "Tool: Get Customer Info"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Get FAQ Tool\nconst params = $json.parameters || {};\nconst query = (params.query || '').toLowerCase();\n\n// FAQ Veritabanı\nconst faqs = [\n  {\n    question: 'Kargo ne zaman gelir?',\n    keywords: ['kargo', 'teslimat', 'ne zaman', 'gelir', 'ulaşır'],\n    answer: 'Standart kargolar 2-3 iş günü içinde teslim edilir. Hızlı kargo seçeneğinde ise 1 iş günü içinde elinizde olur.'\n  },\n  {\n    question: 'İade nasıl yapılır?',\n    keywords: ['iade', 'geri gönderme', 'değişim', 'ürün iade'],\n    answer: 'Ürünü teslim aldıktan sonra 14 gün içinde iade edebilirsiniz. Websitemizdeki İade Formu\\'nu doldurmanız yeterli. Kargo ücreti tarafımızdan karşılanır.'\n  },\n  {\n    question: 'Ödeme seçenekleri neler?',\n    keywords: ['ödeme', 'kredi kartı', 'havale', 'taksit', 'nakit'],\n    answer: 'Kredi kartı, banka kartı, havale/EFT ve kapıda ödeme seçeneklerimiz mevcut. Kredi kartında 9 taksit imkanı sunuyoruz.'\n  },\n  {\n    question: 'Müşteri hizmetlerine nasıl ulaşabilirim?',\n    keywords: ['iletişim', 'ulaşım', 'destek', 'müşteri hizmetleri', 'telefon'],\n    answer: 'Bize 7/24 0850 123 45 67 numaralı telefondan ulaşabilir veya info@argus.com adresine mail atabilirsiniz. Ayrıca canlı destek hattımız da mevcut.'\n  },\n  {\n    question: 'Garanti süresi ne kadar?',\n    keywords: ['garanti', 'garantili', 'süre', 'arıza'],\n    answer: 'Tüm ürünlerimiz 2 yıl garantilidir. Garanti kapsamında arızalı ürünler ücretsiz tamir edilir veya değiştirilir.'\n  }\n];\n\nlet result = {};\n\nif (!query) {\n  result = {\n    success: false,\n    message: 'Arama sorgusu gerekli.'\n  };\n} else {\n  // Sorguyla eşleşen FAQ'leri bul\n  const matches = faqs.filter(faq => \n    faq.keywords.some(keyword => query.includes(keyword)) ||\n    faq.question.toLowerCase().includes(query)\n  );\n\n  if (matches.length > 0) {\n    // En iyi eşleşmeyi döndür\n    const bestMatch = matches[0];\n    result = {\n      success: true,\n      faq: bestMatch,\n      totalMatches: matches.length,\n      message: bestMatch.answer\n    };\n  } else {\n    result = {\n      success: false,\n      message: 'Bu konuda hazır bir cevabım yok. Size daha detaylı yardımcı olmak için bir destek talebi oluşturabilirim.'\n    };\n  }\n}\n\nreturn [{\n  json: {\n    toolCallId: $json.toolCallId,\n    result: result\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        440
+      ],
+      "id": "tool-faq",
+      "name": "Tool: Get FAQ"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": $json.result } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -40,
+        240
+      ],
+      "id": "respond-function-result",
+      "name": "Respond Function Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "// End of Call Report - Conversation'ı kaydet\nconst callData = $json;\n\nconst callLog = {\n  callId: callData.callId,\n  phoneNumber: callData.phoneNumber,\n  duration: callData.duration,\n  endedReason: callData.endedReason,\n  transcript: callData.transcript,\n  summary: callData.summary,\n  cost: callData.cost,\n  timestamp: callData.timestamp,\n  savedAt: new Date().toISOString()\n};\n\n// Burada call log'u bir veritabanına kaydetmek için ek node eklenebilir\n// Örnek: PostgreSQL, MongoDB, Google Sheets, vs.\n\nconsole.log('Call ended:', callLog);\n\nreturn [{\n  json: callLog\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        440
+      ],
+      "id": "log-call-end",
+      "name": "Log Call End"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -280,
+        440
+      ],
+      "id": "respond-ok-log",
+      "name": "Respond OK"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Real-time transcript logging\nconst transcriptData = $json;\n\nconst logEntry = {\n  callId: transcriptData.callId,\n  text: transcriptData.transcriptText,\n  role: transcriptData.role,\n  timestamp: transcriptData.timestamp\n};\n\n// Burada transcript'i real-time bir veritabanına kaydetmek için ek node eklenebilir\n// Veya websocket ile frontend'e gönderilebilir\n\nconsole.log('Transcript:', logEntry);\n\nreturn [{\n  json: logEntry\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -480,
+        640
+      ],
+      "id": "log-transcript",
+      "name": "Log Transcript"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        -280,
+        640
+      ],
+      "id": "respond-ok-transcript",
+      "name": "Respond OK2"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "VAPI Webhook": {
+      "main": [
+        [
+          {
+            "node": "Parse Vapi Event",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Vapi Event": {
+      "main": [
+        [
+          {
+            "node": "Route by Event Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Event Type": {
+      "main": [
+        [
+          {
+            "node": "Build Assistant Config",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Route Function Calls",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Call End",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Log Transcript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Assistant Config": {
+      "main": [
+        [
+          {
+            "node": "Respond Assistant Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Function Calls": {
+      "main": [
+        [
+          {
+            "node": "Tool: Check Order",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tool: Create Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tool: Get Customer Info",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Tool: Get FAQ",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Check Order": {
+      "main": [
+        [
+          {
+            "node": "Respond Function Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Create Ticket": {
+      "main": [
+        [
+          {
+            "node": "Respond Function Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Get Customer Info": {
+      "main": [
+        [
+          {
+            "node": "Respond Function Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Tool: Get FAQ": {
+      "main": [
+        [
+          {
+            "node": "Respond Function Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Call End": {
+      "main": [
+        [
+          {
+            "node": "Respond OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Log Transcript": {
+      "main": [
+        [
+          {
+            "node": "Respond OK2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "vapi-cs-main-v1",
+  "meta": {
+    "instanceId": "vapi-customer-service-production"
+  },
+  "id": "VapiCSMain001",
+  "tags": [
+    {
+      "name": "vapi",
+      "id": "vapi-tag"
+    },
+    {
+      "name": "customer-service",
+      "id": "cs-tag"
+    }
+  ]
+}

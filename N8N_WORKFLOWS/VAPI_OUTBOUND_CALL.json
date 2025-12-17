@@ -1,0 +1,231 @@
+{
+  "name": "VAPI Outbound Call",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        240
+      ],
+      "id": "manual-trigger-call",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Outbound Call Configuration\n// Bu workflow ile müşterileri arayabilirsiniz\n\nconst callConfig = {\n  // Kimi arayacaksınız?\n  customerPhoneNumber: '+905454423820', // Müşteri telefon numarası\n  \n  // Vapi Credentials\n  vapiApiKey: 'YOUR_VAPI_API_KEY',\n  \n  // Hangi numaradan aranacak?\n  fromNumber: '+127223344653', // Twilio numaranız\n  \n  // Assistant ID (önceden oluşturduysanız)\n  assistantId: null, // null ise inline assistant kullanılır\n  \n  // Call özellikleri\n  firstMessage: 'Merhaba, ARGUS müşteri hizmetlerinden arıyorum. Size nasıl yardımcı olabilirim?',\n  \n  // Arama sebebi / context\n  callContext: {\n    reason: 'follow-up', // 'follow-up', 'survey', 'reminder', 'support'\n    orderId: 'ARG-12345',\n    customerName: 'Ulaşım',\n    notes: 'Siparişin kargoya verildiğini bildirmek için arıyoruz.'\n  },\n  \n  // Webhook URL (call events için)\n  serverUrl: 'https://argusbot.duckdns.org/webhook/vapi-customer-service',\n  \n  // Max call duration\n  maxDurationSeconds: 600\n};\n\nreturn [{\n  json: callConfig\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        240
+      ],
+      "id": "call-config",
+      "name": "Call Config"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Assistant configuration for this specific call\nconst config = $json;\n\nconst assistantConfig = {\n  model: {\n    provider: \"openai\",\n    model: \"gpt-4-turbo\",\n    temperature: 0.7,\n    systemPrompt: `Sen ARGUS müşteri hizmetleri AI asistanısın.\n\nBu aramada:\n- Müşteri: ${config.callContext.customerName}\n- Arama sebebi: ${config.callContext.reason}\n- Sipariş: ${config.callContext.orderId}\n- Notlar: ${config.callContext.notes}\n\nGörevin:\n1. Müşteriyi samimi bir şekilde karşıla\n2. Arama sebebini kısa ve net açıkla\n3. Müşterinin sorularını yanıtla\n4. Gerekirse ek bilgi topla\n5. Profesyonel bir şekilde aramayı bitir\n\nKurallar:\n- Kısa ve öz konuş (telefonda konuşuyorsun)\n- Türkçe, doğal ve samimi ol\n- Müşteriyi dinle ve empati göster\n- Emin olmadığın şeyleri söyleme\n- Gerekirse not al ve geri dön`\n  },\n  \n  voice: {\n    provider: \"11labs\",\n    voiceId: \"pNInz6obpgDQGcFmaJgB\",\n    stability: 0.5,\n    similarityBoost: 0.75,\n    speed: 1.0\n  },\n  \n  transcriber: {\n    provider: \"deepgram\",\n    model: \"nova-2\",\n    language: \"tr\"\n  },\n  \n  firstMessage: config.firstMessage,\n  \n  endCallMessage: \"ARGUS'u seçtiğiniz için teşekkürler, iyi günler!\",\n  \n  endCallPhrases: [\n    \"tamam teşekkürler\",\n    \"görüşürüz\",\n    \"hoşçakal\",\n    \"kapat\"\n  ],\n  \n  maxDurationSeconds: config.maxDurationSeconds,\n  \n  backgroundSound: \"off\",\n  backchannelingEnabled: true\n};\n\nreturn [{\n  json: {\n    ...config,\n    assistant: assistantConfig\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -240,
+        240
+      ],
+      "id": "build-assistant",
+      "name": "Build Assistant"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vapi.ai/call/phone",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.vapiApiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  phoneNumberId: null,\n  customer: {\n    number: $json.customerPhoneNumber\n  },\n  assistantId: $json.assistantId,\n  assistant: $json.assistantId ? undefined : $json.assistant,\n  phoneNumber: $json.fromNumber,\n  serverUrl: $json.serverUrl,\n  metadata: {\n    callReason: $json.callContext.reason,\n    orderId: $json.callContext.orderId,\n    customerName: $json.callContext.customerName,\n    initiatedBy: 'n8n',\n    timestamp: new Date().toISOString()\n  }\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -40,
+        240
+      ],
+      "id": "initiate-call",
+      "name": "Initiate Vapi Call"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nconsole.log('Outbound call initiated:', response);\n\nconst result = {\n  success: true,\n  callId: response.id,\n  status: response.status,\n  customerNumber: response.customer?.number,\n  message: `Arama başlatıldı!\\nCall ID: ${response.id}\\nDurum: ${response.status}\\nMüşteri: ${response.customer?.number}`\n};\n\nreturn [{\n  json: result\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        240
+      ],
+      "id": "parse-call-response",
+      "name": "Parse Call Response"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-trigger-outbound",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -640,
+        440
+      ],
+      "id": "webhook-trigger-call",
+      "name": "Webhook Trigger",
+      "webhookId": "vapi-outbound-trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook ile tetiklenen outbound call\n// Body'den parametreleri al\n\nconst req = $input.first().json;\nconst body = req.body || req;\n\nconst callConfig = {\n  customerPhoneNumber: body.phoneNumber || body.customerPhoneNumber,\n  vapiApiKey: body.vapiApiKey || 'YOUR_VAPI_API_KEY',\n  fromNumber: body.fromNumber || '+127223344653',\n  assistantId: body.assistantId || null,\n  firstMessage: body.firstMessage || 'Merhaba, ARGUS müşteri hizmetlerinden arıyorum.',\n  callContext: body.context || {\n    reason: body.reason || 'general',\n    orderId: body.orderId || null,\n    customerName: body.customerName || 'Müşteri',\n    notes: body.notes || ''\n  },\n  serverUrl: body.serverUrl || 'https://argusbot.duckdns.org/webhook/vapi-customer-service',\n  maxDurationSeconds: body.maxDuration || 600\n};\n\nreturn [{\n  json: callConfig\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -440,
+        440
+      ],
+      "id": "parse-webhook-trigger",
+      "name": "Parse Webhook"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        360,
+        440
+      ],
+      "id": "respond-webhook",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Call Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Config": {
+      "main": [
+        [
+          {
+            "node": "Build Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Assistant": {
+      "main": [
+        [
+          {
+            "node": "Initiate Vapi Call",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Initiate Vapi Call": {
+      "main": [
+        [
+          {
+            "node": "Parse Call Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Parse Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Webhook": {
+      "main": [
+        [
+          {
+            "node": "Build Assistant",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Call Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "vapi-outbound-v1",
+  "meta": {
+    "instanceId": "vapi-outbound-call"
+  },
+  "id": "VapiOutbound001",
+  "tags": [
+    {
+      "name": "vapi",
+      "id": "vapi-tag"
+    },
+    {
+      "name": "outbound",
+      "id": "outbound-tag"
+    }
+  ]
+}
