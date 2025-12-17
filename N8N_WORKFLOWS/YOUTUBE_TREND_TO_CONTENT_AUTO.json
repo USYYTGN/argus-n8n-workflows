@@ -1,0 +1,329 @@
+{
+  "name": "YouTube Trend → AI Content Creator & Publisher",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 400],
+      "id": "schedule-trigger",
+      "name": "Her 6 Saatte"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "mostPopular"
+            },
+            {
+              "name": "regionCode",
+              "value": "TR"
+            },
+            {
+              "name": "maxResults",
+              "value": "50"
+            },
+            {
+              "name": "part",
+              "value": "snippet,statistics,contentDetails"
+            },
+            {
+              "name": "key",
+              "value": "={{$env.YOUTUBE_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [460, 400],
+      "id": "fetch-trends",
+      "name": "YouTube: Get Trends"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $json.items || [];\nreturn items.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 400],
+      "id": "split-items",
+      "name": "Split Videos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Son 24 saat içinde yayınlanan videoları filtrele\nconst publishedAt = new Date($json.snippet.publishedAt);\nconst now = new Date();\nconst hoursDiff = (now - publishedAt) / (1000 * 60 * 60);\n\n// 24 saatten eski ise atla\nif (hoursDiff > 24) {\n  return [];\n}\n\n// Video verilerini düzenle\nconst views = Number($json.statistics.viewCount) || 0;\nconst likes = Number($json.statistics.likeCount) || 0;\nconst comments = Number($json.statistics.commentCount) || 0;\nconst duration = $json.contentDetails?.duration || '';\n\n// Engagement rate hesapla\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\n\n// Viral score hesapla (yeni videolar için ağırlıklı)\nconst ageBonus = hoursDiff < 12 ? 2 : 1;\nconst score = (views * 0.5 * ageBonus) + (likes * 30) + (comments * 50) + (engagementRate * 1000);\n\nreturn [{\n  json: {\n    videoId: $json.id,\n    title: $json.snippet.title,\n    description: $json.snippet.description,\n    channel: $json.snippet.channelTitle,\n    thumbnail: $json.snippet.thumbnails?.maxres?.url || $json.snippet.thumbnails?.high?.url,\n    publishedAt: $json.snippet.publishedAt,\n    viewCount: views,\n    likeCount: likes,\n    commentCount: comments,\n    duration: duration,\n    engagementRate: engagementRate.toFixed(2),\n    viralScore: Math.round(score),\n    hoursOld: hoursDiff.toFixed(1),\n    tags: $json.snippet.tags || [],\n    categoryId: $json.snippet.categoryId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "id": "filter-24h",
+      "name": "Filter: Last 24h + Score"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "viralScore",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [1120, 400],
+      "id": "sort-by-score",
+      "name": "Sort by Viral Score"
+    },
+    {
+      "parameters": {
+        "maxItems": 3
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [1340, 400],
+      "id": "top-3",
+      "name": "Top 3 Viral Videos"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": "={{$env.ANTHROPIC_API_KEY}}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 4096,\n  messages: [{\n    role: 'user',\n    content: `TREND VİDEO ANALİZİ:\n\nBaşlık: ${$json.title}\nKanal: ${$json.channel}\nGörüntülenme: ${$json.viewCount}\nBeğeni: ${$json.likeCount}\nYorum: ${$json.commentCount}\nYayın Süresi: ${$json.hoursOld} saat önce\nAçıklama: ${($json.description || '').substring(0, 500)}\n\nGÖREV:\nBu viral videoya benzer bir video içeriği oluştur.\n\n1. VİDEO BAŞLIĞI: Dikkat çekici, SEO uyumlu, Türkçe başlık (max 60 karakter)\n2. VİDEO AÇIKLAMASI: Detaylı açıklama (200-300 kelime)\n3. VİDEO SCRİPTİ: Dakika bazında video senaryosu (5-7 dakikalık içerik)\n4. HASHTAG'LER: 10 adet Instagram/YouTube hashtag\n5. THUMBNAIL PROMPT: AI görsel oluşturucu için İngilizce prompt\n6. KEYWORDs: 15 adet YouTube keyword\n\nJSON formatında döndür:\n{\n  \"title\": \"...\",\n  \"description\": \"...\",\n  \"script\": {\n    \"intro\": \"...\",\n    \"minute1\": \"...\",\n    \"minute2\": \"...\",\n    \"minute3\": \"...\",\n    \"minute4\": \"...\",\n    \"minute5\": \"...\",\n    \"outro\": \"...\"\n  },\n  \"hashtags\": [],\n  \"thumbnailPrompt\": \"...\",\n  \"keywords\": [],\n  \"category\": \"...\"\n}`\n  }]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1560, 400],
+      "id": "ai-content-creator",
+      "name": "AI: Create Content"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $json.content?.[0]?.text || '{}';\nconst originalVideo = $input.first().json;\n\nlet contentPlan = {};\ntry {\n  // JSON'u ayıkla (```json ... ``` formatında gelebilir)\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    contentPlan = JSON.parse(jsonMatch[0]);\n  }\n} catch (e) {\n  console.error('AI JSON parse error:', e);\n  contentPlan = { error: 'Parse failed', raw: aiResponse };\n}\n\nreturn [{\n  json: {\n    // Original trend video\n    originalVideoId: originalVideo.videoId,\n    originalTitle: originalVideo.title,\n    originalViralScore: originalVideo.viralScore,\n    \n    // AI generated content\n    newTitle: contentPlan.title || 'Başlık oluşturulamadı',\n    newDescription: contentPlan.description || '',\n    script: contentPlan.script || {},\n    hashtags: contentPlan.hashtags || [],\n    thumbnailPrompt: contentPlan.thumbnailPrompt || '',\n    keywords: contentPlan.keywords || [],\n    category: contentPlan.category || 'Entertainment',\n    \n    // Metadata\n    createdAt: new Date().toISOString(),\n    status: 'ready_for_production'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400],
+      "id": "parse-content",
+      "name": "Parse AI Content"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'dall-e-3',\n  prompt: $json.thumbnailPrompt + ' | YouTube thumbnail style, high quality, 1920x1080, vibrant colors, text overlay',\n  n: 1,\n  size: '1792x1024',\n  quality: 'hd'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2000, 400],
+      "id": "generate-thumbnail",
+      "name": "AI: Generate Thumbnail"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.data[0].url}}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2220, 400],
+      "id": "download-thumbnail",
+      "name": "Download Thumbnail"
+    },
+    {
+      "parameters": {
+        "jsCode": "const content = $input.first().json;\nconst thumbnail = $input.last().binary;\n\n// Full content package\nreturn [{\n  json: {\n    ...content,\n    thumbnailReady: true,\n    thumbnailUrl: thumbnail?.data?.url || null\n  },\n  binary: thumbnail\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 400],
+      "id": "merge-content",
+      "name": "Merge Content & Thumbnail"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{$json.newTitle}}",
+        "categoryId": "22",
+        "description": "={{$json.newDescription}}\\n\\n🏷️ Tags:\\n{{$json.hashtags.join(' ')}}\\n\\n🔑 Keywords:\\n{{$json.keywords.join(', ')}}\\n\\n---\\nOriginal trend: {{$json.originalTitle}}",
+        "privacyStatus": "public",
+        "videoDescription": "Upload to YouTube",
+        "tags": "={{$json.keywords.join(',')}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [2660, 300],
+      "id": "upload-youtube",
+      "name": "YouTube: Upload Video",
+      "credentials": {
+        "youTubeOAuth2Api": {
+          "id": "youtube-oauth",
+          "name": "YouTube OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "media",
+        "operation": "upload",
+        "mediaType": "image",
+        "caption": "={{$json.newTitle}}\\n\\n{{$json.newDescription.substring(0, 200)}}...\\n\\n{{$json.hashtags.join(' ')}}\\n\\n🎬 Full video on YouTube!",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.instagram",
+      "typeVersion": 1,
+      "position": [2660, 500],
+      "id": "upload-instagram",
+      "name": "Instagram: Upload Post",
+      "credentials": {
+        "instagramOAuth2Api": {
+          "id": "instagram-oauth",
+          "name": "Instagram OAuth"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const uploadResults = $input.all();\n\nconst summary = {\n  contentTitle: uploadResults[0].json.newTitle,\n  originalTrend: uploadResults[0].json.originalTitle,\n  youtubeUploaded: uploadResults.some(r => r.json.videoId),\n  instagramUploaded: uploadResults.some(r => r.json.mediaId),\n  timestamp: new Date().toISOString(),\n  hashtags: uploadResults[0].json.hashtags,\n  keywords: uploadResults[0].json.keywords\n};\n\nreturn [{ json: summary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2880, 400],
+      "id": "summary",
+      "name": "Upload Summary"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "chatId": "={{$env.TELEGRAM_BOT_TOKEN}}",
+        "text": "=🎬 YENİ İÇERİK YAYINLANDI!\n\n📹 Başlık: {{$json.contentTitle}}\n\n🔥 Trend Kaynak: {{$json.originalTrend}}\n\n✅ YouTube: {{$json.youtubeUploaded ? 'Yayında' : 'Başarısız'}}\n✅ Instagram: {{$json.instagramUploaded ? 'Yayında' : 'Başarısız'}}\n\n🏷️ Hashtags:\n{{$json.hashtags.slice(0, 5).join(' ')}}\n\n⏰ {{$json.timestamp}}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3100, 400],
+      "id": "notify-telegram",
+      "name": "Telegram: Notify"
+    }
+  ],
+  "connections": {
+    "Her 6 Saatte": {
+      "main": [[{ "node": "YouTube: Get Trends", "type": "main", "index": 0 }]]
+    },
+    "YouTube: Get Trends": {
+      "main": [[{ "node": "Split Videos", "type": "main", "index": 0 }]]
+    },
+    "Split Videos": {
+      "main": [[{ "node": "Filter: Last 24h + Score", "type": "main", "index": 0 }]]
+    },
+    "Filter: Last 24h + Score": {
+      "main": [[{ "node": "Sort by Viral Score", "type": "main", "index": 0 }]]
+    },
+    "Sort by Viral Score": {
+      "main": [[{ "node": "Top 3 Viral Videos", "type": "main", "index": 0 }]]
+    },
+    "Top 3 Viral Videos": {
+      "main": [[{ "node": "AI: Create Content", "type": "main", "index": 0 }]]
+    },
+    "AI: Create Content": {
+      "main": [[{ "node": "Parse AI Content", "type": "main", "index": 0 }]]
+    },
+    "Parse AI Content": {
+      "main": [[{ "node": "AI: Generate Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "AI: Generate Thumbnail": {
+      "main": [[{ "node": "Download Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "Download Thumbnail": {
+      "main": [[{ "node": "Merge Content & Thumbnail", "type": "main", "index": 0 }]]
+    },
+    "Merge Content & Thumbnail": {
+      "main": [
+        [
+          { "node": "YouTube: Upload Video", "type": "main", "index": 0 },
+          { "node": "Instagram: Upload Post", "type": "main", "index": 0 }
+        ]
+      ]
+    },
+    "YouTube: Upload Video": {
+      "main": [[{ "node": "Upload Summary", "type": "main", "index": 0 }]]
+    },
+    "Instagram: Upload Post": {
+      "main": [[{ "node": "Upload Summary", "type": "main", "index": 0 }]]
+    },
+    "Upload Summary": {
+      "main": [[{ "node": "Telegram: Notify", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "id": "YouTubeTrendAuto",
+  "tags": []
+}
