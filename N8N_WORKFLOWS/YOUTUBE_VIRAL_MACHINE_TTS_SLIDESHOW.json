@@ -231,7 +231,7 @@
     },
     {
       "parameters": {
-        "jsCode": "const metadata = $input.all().find(item => item.json.title)?.json || {};\nreturn [{ json: metadata, binary: $binary }];"
+        "jsCode": "// Video binary data from Read Video File\nconst videoBinary = $binary;\n\n// Metadata from Parse node (came through Merge Files)\nconst allInputs = $input.all();\nconst parseData = allInputs.find(item => item.json.title && item.json.description) || {};\n\nif (!parseData.json || !parseData.json.title) {\n  throw new Error('Metadata bulunamadı! Parse node çıktısı Merge Files a ulaşmamış olabilir.');\n}\n\nreturn [{\n  json: {\n    title: parseData.json.title,\n    description: parseData.json.description,\n    keywords: parseData.json.keywords || [],\n    hashtags: parseData.json.hashtags || []\n  },\n  binary: videoBinary\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -267,7 +267,8 @@
     "AI Script": {"main": [[{"node": "Parse", "type": "main", "index": 0}]]},
     "Parse": {"main": [[
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
-      {"node": "Generate Thumbnail", "type": "main", "index": 0}
+      {"node": "Generate Thumbnail", "type": "main", "index": 0},
+      {"node": "Merge Files", "type": "main", "index": 2}
     ]]},
     "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
     "Generate Thumbnail": {"main": [[{"node": "Extract Image URL", "type": "main", "index": 0}]]},
