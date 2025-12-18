@@ -231,24 +231,26 @@
     },
     {
       "parameters": {
-        "jsCode": "// DEBUG: Gelen inputları kontrol et\nconst inputs = $input.all();\n\n// Debug bilgisi\nconsole.log('📊 Toplam input sayısı:', inputs.length);\ninputs.forEach((input, index) => {\n  console.log(`Input ${index}:`, {\n    hasJson: !!input.json,\n    hasBinary: !!input.binary,\n    jsonKeys: input.json ? Object.keys(input.json) : [],\n    title: input.json?.title,\n    description: input.json?.description\n  });\n});\n\n// Find video binary (from Read Video File)\nconst videoInput = inputs.find(item => item.binary?.data) || {};\nconst videoBinary = videoInput.binary || {};\n\n// Find metadata (from Parse) - try different approaches\nlet metadata = null;\n\n// Attempt 1: Find by title and description\nconst parseInput = inputs.find(item => item.json?.title && item.json?.description);\nif (parseInput) {\n  metadata = parseInput.json;\n}\n\n// Attempt 2: Check if metadata is in the FIRST input\nif (!metadata && inputs[0]?.json?.title) {\n  metadata = inputs[0].json;\n}\n\n// Attempt 3: Check LAST input\nif (!metadata && inputs[inputs.length - 1]?.json?.title) {\n  metadata = inputs[inputs.length - 1].json;\n}\n\nif (!metadata || !metadata.title) {\n  const debugInfo = inputs.map((inp, i) => `Input${i}: json=${JSON.stringify(inp.json || {})}, hasBinary=${!!inp.binary}`);\n  throw new Error(`❌ Metadata bulunamadı!\\n\\nDebug:\\n${debugInfo.join('\\n')}`);\n}\n\nif (!videoBinary.data) {\n  throw new Error('❌ Video binary data bulunamadı!');\n}\n\nreturn [{\n  json: {\n    title: metadata.title,\n    description: metadata.description || '',\n    keywords: metadata.keywords || [],\n    hashtags: metadata.hashtags || []\n  },\n  binary: videoBinary\n}];"
+        "mode": "combine",
+        "combineBy": "combineAll",
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
       "position": [3200, 400],
-      "id": "prepare-upload",
-      "name": "Prepare Upload"
+      "id": "merge-metadata",
+      "name": "Merge Metadata & Video"
     },
     {
       "parameters": {
         "authentication": "oAuth2",
         "resource": "video",
         "operation": "upload",
-        "title": "={{$json.title}}",
+        "title": "={{$item(0).json.title}}",
         "categoryId": "22",
-        "description": "={{$json.description}}",
+        "description": "={{$item(0).json.description}}",
         "privacyStatus": "public",
-        "tags": "={{$json.keywords.join(',')}}"
+        "tags": "={{$item(0).json.keywords.join(',')}}"
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
@@ -268,7 +270,7 @@
     "Parse": {"main": [[
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
       {"node": "Generate Thumbnail", "type": "main", "index": 0},
-      {"node": "Prepare Upload", "type": "main", "index": 1}
+      {"node": "Merge Metadata & Video", "type": "main", "index": 0}
     ]]},
     "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
     "Generate Thumbnail": {"main": [[{"node": "Extract Image URL", "type": "main", "index": 0}]]},
@@ -278,8 +280,8 @@
     "Save Thumbnail": {"main": [[{"node": "Merge Files", "type": "main", "index": 1}]]},
     "Merge Files": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
     "FFmpeg: Create Video": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
-    "Read Video File": {"main": [[{"node": "Prepare Upload", "type": "main", "index": 0}]]},
-    "Prepare Upload": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
+    "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
+    "Merge Metadata & Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},
