@@ -238,6 +238,29 @@
     },
     {
       "parameters": {
+        "resource": "message",
+        "operation": "sendVideo",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "binaryData": true,
+        "binaryPropertyName": "data",
+        "additionalFields": {
+          "caption": "=🎬 YENİ VİDEO HAZIR!\n\n📌 Başlık: {{$json.title}}\n\n📝 Script: {{$json.script.substring(0, 200)}}...\n\n✅ YAYINLA yazarsan YouTube'a upload edilecek\n❌ İPTAL yazarsan silinecek"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [3400, 400],
+      "id": "telegram-send",
+      "name": "Telegram: Send Preview",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
         "authentication": "oAuth2",
         "resource": "video",
         "operation": "upload",
@@ -249,7 +272,7 @@
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [3400, 400],
+      "position": [4200, 300],
       "id": "upload",
       "name": "YouTube Upload"
     }
@@ -275,7 +298,8 @@
     "Merge Files": {"main": [[{"node": "FFmpeg: Add Voiceover", "type": "main", "index": 0}]]},
     "FFmpeg: Add Voiceover": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
     "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
-    "Merge Metadata & Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
+    "Merge Metadata & Video": {"main": [[{"node": "Telegram: Send Preview", "type": "main", "index": 0}]]},
+    "Telegram: Send Preview": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},
