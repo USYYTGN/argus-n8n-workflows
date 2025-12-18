@@ -87,7 +87,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 4096,\n  messages: [{\n    role: 'user',\n    content: `VİRAL VİDEO: ${$json.title}\n\nBu videoya benzer KISA (60 saniye) bir video script'i yaz.\n\nJSON formatında:\n{\n  \"title\": \"Clickbait başlık (max 60 char)\",\n  \"script\": \"60 saniyelik konuşma metni (dakika başı işaretle)\",\n  \"description\": \"YouTube açıklama\",\n  \"hashtags\": [\"tag1\", \"tag2\", ...],\n  \"keywords\": [\"keyword1\", ...],\n  \"thumbnailPrompt\": \"Thumbnail için prompt\"\n}`\n  }]\n}) }}"
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 4096,\n  messages: [{\n    role: 'user',\n    content: `VİRAL VİDEO: ${$json.title}\n\nBu videoya benzer KISA (60 saniye) bir video script'i yaz. TÜRKÇE yaz!\n\nJSON formatında:\n{\n  \"title\": \"Clickbait başlık (max 60 char, TÜRKÇE)\",\n  \"script\": \"60 saniyelik TÜRKÇE konuşma metni (enerjik ve ilgi çekici)\",\n  \"description\": \"YouTube açıklama (TÜRKÇE)\",\n  \"hashtags\": [\"#tag1\", \"#tag2\", ...],\n  \"keywords\": [\"keyword1\", ...],\n  \"thumbnailPrompt\": \"Professional, cinematic, realistic photograph (NOT anime, NOT cartoon). Describe a real photo that would make people click.\"\n}`\n  }]\n}) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
@@ -108,12 +108,12 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/onwK4e9ZLuTAKqWW03F9",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  text: $json.script,\n  model_id: 'eleven_turbo_v2',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.75\n  }\n}) }}",
+        "jsonBody": "={{ JSON.stringify({\n  text: $json.script,\n  model_id: 'eleven_multilingual_v2',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.8,\n    style: 0.5,\n    use_speaker_boost: true\n  }\n}) }}",
         "options": {
           "response": {"response": {"responseFormat": "file"}}
         }
@@ -143,7 +143,7 @@
         },
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'dall-e-3',\n  prompt: $json.thumbnailPrompt + ' | YouTube thumbnail, 16:9, vibrant, clickbait',\n  n: 1,\n  size: '1792x1024',\n  quality: 'hd'\n}) }}"
+        "jsonBody": "={{ JSON.stringify({\n  model: 'dall-e-3',\n  prompt: $json.thumbnailPrompt + ' | Cinematic, professional, high quality, realistic photo, vibrant colors, YouTube thumbnail style, 16:9 aspect ratio, NO anime, NO cartoon, photorealistic',\n  n: 1,\n  size: '1792x1024',\n  quality: 'hd',\n  style: 'natural'\n}) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
