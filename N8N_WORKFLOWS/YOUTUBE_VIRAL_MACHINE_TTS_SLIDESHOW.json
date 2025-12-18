@@ -228,7 +228,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Combine metadata from Parse with video binary from Read Video File\nconst inputs = $input.all();\n\nconsole.log('DEBUG: Total inputs:', inputs.length);\ninputs.forEach((inp, i) => {\n  console.log(`Input ${i}:`, {\n    hasJson: !!inp.json,\n    hasBinary: !!inp.binary,\n    jsonKeys: inp.json ? Object.keys(inp.json) : []\n  });\n});\n\n// Try different ways to find metadata\nlet metadata = inputs.find(item => item.json && item.json.title && item.json.script);\nif (!metadata) {\n  metadata = inputs.find(item => item.json && item.json.title);\n}\nif (!metadata) {\n  metadata = inputs.find(item => item.json && Object.keys(item.json).length > 3);\n}\n\n// Find Video binary\nlet videoBinary = inputs.find(item => item.binary && item.binary.data);\n\nif (!metadata || !metadata.json) {\n  throw new Error('❌ Metadata bulunamadı! Parse çıktısı gelmiyor. Debug: ' + JSON.stringify(inputs.map(i => ({json: Object.keys(i.json || {}), binary: !!i.binary}))));\n}\n\nif (!videoBinary || !videoBinary.binary || !videoBinary.binary.data) {\n  throw new Error('❌ Video binary bulunamadı!');\n}\n\n// Return combined data\nreturn [{\n  json: {\n    title: metadata.json.title || 'Viral Video',\n    description: metadata.json.description || 'Viral video content',\n    keywords: metadata.json.keywords || ['viral', 'trending'],\n    script: metadata.json.script || 'Video script'\n  },\n  binary: {\n    data: videoBinary.binary.data\n  }\n}];"
+        "jsCode": "// Get metadata directly from Parse node (no timing issues)\nconst parseData = $('Parse').first().json;\n\n// Get video binary from current input (Read Video File)\nconst videoBinary = $input.first().binary;\n\nconsole.log('DEBUG Parse metadata:', {\n  hasTitle: !!parseData.title,\n  hasScript: !!parseData.script,\n  hasDescription: !!parseData.description\n});\n\nconsole.log('DEBUG Video binary:', {\n  hasBinary: !!videoBinary,\n  hasData: !!(videoBinary && videoBinary.data)\n});\n\nif (!parseData || !parseData.title) {\n  throw new Error('❌ Metadata bulunamadı! Parse node verisi okunamadı.');\n}\n\nif (!videoBinary || !videoBinary.data) {\n  throw new Error('❌ Video binary bulunamadı! Read Video File çıktısı yok.');\n}\n\n// Return combined data\nreturn [{\n  json: {\n    title: parseData.title,\n    description: parseData.description,\n    keywords: parseData.keywords || ['viral', 'trending'],\n    script: parseData.script\n  },\n  binary: {\n    data: videoBinary.data\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -264,9 +264,7 @@
     "AI Script": {"main": [[{"node": "Parse", "type": "main", "index": 0}]]},
     "Parse": {"main": [[
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
-      {"node": "Pexels Search", "type": "main", "index": 0},
-      {"node": "Merge Files", "type": "main", "index": 2},
-      {"node": "Merge Metadata & Video", "type": "main", "index": 0}
+      {"node": "Pexels Search", "type": "main", "index": 0}
     ]]},
     "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
     "Pexels Search": {"main": [[{"node": "Extract Video URL", "type": "main", "index": 0}]]},
