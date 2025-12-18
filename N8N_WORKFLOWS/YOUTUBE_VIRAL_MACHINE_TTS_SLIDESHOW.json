@@ -132,24 +132,55 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.openai.com/v1/images/generations",
+        "method": "GET",
+        "url": "=https://api.pexels.com/videos/search?query={{$json.videoKeywords[0]}}&per_page=1&orientation=landscape",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}"},
-            {"name": "Content-Type", "value": "application/json"}
+            {"name": "Authorization", "value": "={{$env.PEXELS_API_KEY}}"}
           ]
         },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  model: 'dall-e-3',\n  prompt: $json.thumbnailPrompt + ' | Cinematic, professional, high quality, realistic photo, vibrant colors, YouTube thumbnail style, 16:9 aspect ratio, NO anime, NO cartoon, photorealistic',\n  n: 1,\n  size: '1792x1024',\n  quality: 'hd',\n  style: 'natural'\n}) }}"
+        "options": {}
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
       "position": [1800, 500],
-      "id": "thumbnail",
-      "name": "Generate Thumbnail"
+      "id": "pexels-search",
+      "name": "Pexels Search"
+    },
+    {
+      "parameters": {
+        "jsCode": "const videoUrl = $json.videos?.[0]?.video_files?.find(f => f.quality === 'hd' && f.width === 1920)?.link || $json.videos?.[0]?.video_files?.[0]?.link;\nif (!videoUrl) throw new Error('No Pexels video found!');\nreturn [{ json: { videoUrl } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 500],
+      "id": "extract-video-url",
+      "name": "Extract Video URL"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.videoUrl}}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2200, 500],
+      "id": "download-video",
+      "name": "Download Video"
+    },
+    {
+      "parameters": {
+        "fileName": "/tmp/pexels_video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [2400, 500],
+      "id": "save-pexels-video",
+      "name": "Save Pexels Video"
     },
     {
       "parameters": {
@@ -164,40 +195,6 @@
     },
     {
       "parameters": {
-        "jsCode": "const imageUrl = $json.data?.[0]?.url;\nif (!imageUrl) throw new Error('No image URL found');\nreturn [{ json: { imageUrl } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2000, 500],
-      "id": "extract-url",
-      "name": "Extract Image URL"
-    },
-    {
-      "parameters": {
-        "url": "={{$json.imageUrl}}",
-        "options": {
-          "response": {"response": {"responseFormat": "file"}}
-        }
-      },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [2200, 500],
-      "id": "download-image",
-      "name": "Download Image"
-    },
-    {
-      "parameters": {
-        "fileName": "/tmp/thumbnail.png",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.writeBinaryFile",
-      "typeVersion": 1,
-      "position": [2400, 500],
-      "id": "save-thumbnail",
-      "name": "Save Thumbnail"
-    },
-    {
-      "parameters": {
         "mode": "combine",
         "combineBy": "combineAll"
       },
@@ -209,14 +206,14 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -y -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -filter_complex \"[0:v]scale=1920:1080,zoompan=z='min(zoom+0.0015,1.5)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=30[v]\" -map \"[v]\" -map 1:a -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k -pix_fmt yuv420p -shortest -t 60 /tmp/video.mp4",
+        "command": "=ffmpeg -y -i /tmp/pexels_video.mp4 -i /tmp/audio.mp3 -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest /tmp/video.mp4",
         "options": {}
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
       "position": [2800, 400],
       "id": "ffmpeg",
-      "name": "FFmpeg: Create Video"
+      "name": "FFmpeg: Add Voiceover"
     },
     {
       "parameters": {
@@ -267,17 +264,17 @@
     "AI Script": {"main": [[{"node": "Parse", "type": "main", "index": 0}]]},
     "Parse": {"main": [[
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
-      {"node": "Generate Thumbnail", "type": "main", "index": 0},
+      {"node": "Pexels Search", "type": "main", "index": 0},
       {"node": "Merge Metadata & Video", "type": "main", "index": 0}
     ]]},
     "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
-    "Generate Thumbnail": {"main": [[{"node": "Extract Image URL", "type": "main", "index": 0}]]},
+    "Pexels Search": {"main": [[{"node": "Extract Video URL", "type": "main", "index": 0}]]},
+    "Extract Video URL": {"main": [[{"node": "Download Video", "type": "main", "index": 0}]]},
+    "Download Video": {"main": [[{"node": "Save Pexels Video", "type": "main", "index": 0}]]},
     "Save Audio": {"main": [[{"node": "Merge Files", "type": "main", "index": 0}]]},
-    "Extract Image URL": {"main": [[{"node": "Download Image", "type": "main", "index": 0}]]},
-    "Download Image": {"main": [[{"node": "Save Thumbnail", "type": "main", "index": 0}]]},
-    "Save Thumbnail": {"main": [[{"node": "Merge Files", "type": "main", "index": 1}]]},
-    "Merge Files": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
-    "FFmpeg: Create Video": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
+    "Save Pexels Video": {"main": [[{"node": "Merge Files", "type": "main", "index": 1}]]},
+    "Merge Files": {"main": [[{"node": "FFmpeg: Add Voiceover", "type": "main", "index": 0}]]},
+    "FFmpeg: Add Voiceover": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
     "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
     "Merge Metadata & Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
   },
