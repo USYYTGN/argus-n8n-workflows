@@ -112,7 +112,7 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            {"name": "xi-api-key", "value": "={{$env.ELEVENLABS_API_KEY}}"},
+            {"name": "xi-api-key", "value": "={{($env.ELEVENLABS_API_KEY || '').toString().trim()}}"},
             {"name": "Content-Type", "value": "application/json"}
           ]
         },
@@ -152,12 +152,68 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest /tmp/video.mp4",
+        "fileName": "/tmp/audio.mp3",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [2000, 300],
+      "id": "save-audio",
+      "name": "Save Audio"
+    },
+    {
+      "parameters": {
+        "jsCode": "const imageUrl = $json.data?.[0]?.url;\nif (!imageUrl) throw new Error('No image URL found');\nreturn [{ json: { imageUrl } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2000, 500],
+      "id": "extract-url",
+      "name": "Extract Image URL"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.imageUrl}}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2200, 500],
+      "id": "download-image",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "fileName": "/tmp/thumbnail.png",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [2400, 500],
+      "id": "save-thumbnail",
+      "name": "Save Thumbnail"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [2600, 400],
+      "id": "merge-files",
+      "name": "Merge Files"
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -y -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest /tmp/video.mp4",
         "options": {}
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [2000, 400],
+      "position": [2800, 400],
       "id": "ffmpeg",
       "name": "FFmpeg: Create Video"
     },
@@ -168,9 +224,19 @@
       },
       "type": "n8n-nodes-base.readBinaryFile",
       "typeVersion": 1,
-      "position": [2200, 400],
+      "position": [3000, 400],
       "id": "read-video",
       "name": "Read Video File"
+    },
+    {
+      "parameters": {
+        "jsCode": "const metadata = $input.all().find(item => item.json.title)?.json || {};\nreturn [{ json: metadata, binary: $binary }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3200, 400],
+      "id": "prepare-upload",
+      "name": "Prepare Upload"
     },
     {
       "parameters": {
@@ -185,7 +251,7 @@
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [2400, 400],
+      "position": [3400, 400],
       "id": "upload",
       "name": "YouTube Upload"
     }
@@ -202,10 +268,16 @@
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
       {"node": "Generate Thumbnail", "type": "main", "index": 0}
     ]]},
-    "ElevenLabs TTS": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
-    "Generate Thumbnail": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
+    "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
+    "Generate Thumbnail": {"main": [[{"node": "Extract Image URL", "type": "main", "index": 0}]]},
+    "Save Audio": {"main": [[{"node": "Merge Files", "type": "main", "index": 0}]]},
+    "Extract Image URL": {"main": [[{"node": "Download Image", "type": "main", "index": 0}]]},
+    "Download Image": {"main": [[{"node": "Save Thumbnail", "type": "main", "index": 0}]]},
+    "Save Thumbnail": {"main": [[{"node": "Merge Files", "type": "main", "index": 1}]]},
+    "Merge Files": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
     "FFmpeg: Create Video": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
-    "Read Video File": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
+    "Read Video File": {"main": [[{"node": "Prepare Upload", "type": "main", "index": 0}]]},
+    "Prepare Upload": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},
