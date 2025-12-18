@@ -209,7 +209,7 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -y -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest /tmp/video.mp4",
+        "command": "=ffmpeg -y -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -filter_complex \"[0:v]scale=1920:1080,zoompan=z='min(zoom+0.0015,1.5)':d=1:x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1920x1080:fps=30[v]\" -map \"[v]\" -map 1:a -c:v libx264 -preset medium -crf 23 -c:a aac -b:a 192k -pix_fmt yuv420p -shortest -t 60 /tmp/video.mp4",
         "options": {}
       },
       "type": "n8n-nodes-base.executeCommand",
