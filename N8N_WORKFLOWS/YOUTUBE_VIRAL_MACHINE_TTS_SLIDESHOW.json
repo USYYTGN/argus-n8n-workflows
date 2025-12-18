@@ -265,6 +265,7 @@
     "Parse": {"main": [[
       {"node": "ElevenLabs TTS", "type": "main", "index": 0},
       {"node": "Pexels Search", "type": "main", "index": 0},
+      {"node": "Merge Files", "type": "main", "index": 2},
       {"node": "Merge Metadata & Video", "type": "main", "index": 0}
     ]]},
     "ElevenLabs TTS": {"main": [[{"node": "Save Audio", "type": "main", "index": 0}]]},
