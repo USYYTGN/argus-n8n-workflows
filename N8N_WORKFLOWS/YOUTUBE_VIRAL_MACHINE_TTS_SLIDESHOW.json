@@ -107,24 +107,10 @@
     },
     {
       "parameters": {
-        "method": "POST",
-        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
-        "sendHeaders": true,
-        "headerParameters": {
-          "parameters": [
-            {"name": "xi-api-key", "value": "={{($env.ELEVENLABS_API_KEY || '').toString().trim()}}"},
-            {"name": "Content-Type", "value": "application/json"}
-          ]
-        },
-        "sendBody": true,
-        "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  text: $json.script,\n  model_id: 'eleven_turbo_v2',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.75\n  }\n}) }}",
-        "options": {
-          "response": {"response": {"responseFormat": "file"}}
-        }
+        "jsCode": "// ElevenLabs TTS API Call with Code Node (bypasses n8n header issues)\nconst script = $json.script || 'Test audio';\nconst apiKey = $env.ELEVENLABS_API_KEY || '';\n\nif (!apiKey) {\n  throw new Error('ELEVENLABS_API_KEY bulunamadı! Lütfen API anahtarını workflow settings içine yapıştır.');\n}\n\n// API Call\nconst response = await fetch('https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB', {\n  method: 'POST',\n  headers: {\n    'xi-api-key': apiKey.trim(),\n    'Content-Type': 'application/json'\n  },\n  body: JSON.stringify({\n    text: script,\n    model_id: 'eleven_turbo_v2',\n    voice_settings: {\n      stability: 0.5,\n      similarity_boost: 0.75\n    }\n  })\n});\n\nif (!response.ok) {\n  const errorText = await response.text();\n  throw new Error(`ElevenLabs API Error ${response.status}: ${errorText}`);\n}\n\n// Convert to binary\nconst audioBuffer = await response.arrayBuffer();\nconst audioData = Buffer.from(audioBuffer);\n\nreturn {\n  json: { success: true, size: audioData.length },\n  binary: { data: audioData }\n};"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1800, 300],
       "id": "tts",
       "name": "ElevenLabs TTS"
