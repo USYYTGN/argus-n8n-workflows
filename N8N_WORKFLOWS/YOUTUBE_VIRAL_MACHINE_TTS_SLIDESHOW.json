@@ -107,13 +107,28 @@
     },
     {
       "parameters": {
-        "jsCode": "// ========================================\n// BURAYA API KEY'İNİ YAPIŞTIR (Satır 4):\n// ========================================\nconst ELEVENLABS_API_KEY = 'BURAYA_API_KEYINI_YAPIŞTIR';\n// ========================================\n\nconst script = $json.script || 'Test audio';\nconst apiKey = ELEVENLABS_API_KEY !== 'BURAYA_API_KEYINI_YAPISHTIR' ? ELEVENLABS_API_KEY : ($env.ELEVENLABS_API_KEY || '');\n\nif (!apiKey || apiKey === 'BURAYA_API_KEYINI_YAPISHTIR') {\n  throw new Error('❌ ELEVENLABS_API_KEY tanımlı değil! Yukarıda Satır 4 e API key ini yapıştır.');\n}\n\n// Use n8n's built-in HTTP helper\nconst response = await $http.request({\n  method: 'POST',\n  url: 'https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB',\n  headers: {\n    'xi-api-key': apiKey.trim(),\n    'Content-Type': 'application/json'\n  },\n  body: {\n    text: script,\n    model_id: 'eleven_turbo_v2',\n    voice_settings: {\n      stability: 0.5,\n      similarity_boost: 0.75\n    }\n  },\n  json: true,\n  returnFullResponse: true,\n  encoding: null\n});\n\nif (response.statusCode !== 200) {\n  throw new Error(`ElevenLabs API Error ${response.statusCode}: ${response.body}`);\n}\n\n// Return binary data\nreturn {\n  json: { success: true, size: response.body.length },\n  binary: { data: response.body }\n};"
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  text: $json.script,\n  model_id: 'eleven_turbo_v2',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.75\n  }\n}) }}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
       "position": [1800, 300],
       "id": "tts",
-      "name": "ElevenLabs TTS"
+      "name": "ElevenLabs TTS",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "ELEVENLABS_CREDENTIAL_ID",
+          "name": "ElevenLabs API"
+        }
+      }
     },
     {
       "parameters": {
