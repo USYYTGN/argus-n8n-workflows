@@ -1,0 +1,213 @@
+{
+  "name": "YouTube VIRAL Machine - TTS + Slideshow",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{"field": "hours", "hoursInterval": 6}]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [200, 400],
+      "id": "schedule",
+      "name": "Every 6 Hours"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {"name": "chart", "value": "mostPopular"},
+            {"name": "regionCode", "value": "TR"},
+            {"name": "maxResults", "value": "50"},
+            {"name": "part", "value": "snippet,statistics,contentDetails"},
+            {"name": "key", "value": "={{$env.YOUTUBE_API_KEY}}"}
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [400, 400],
+      "id": "yt-trends",
+      "name": "YouTube Trends"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $json.items || [];\nreturn items.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 400],
+      "id": "split",
+      "name": "Split"
+    },
+    {
+      "parameters": {
+        "jsCode": "const publishedAt = new Date($json.snippet.publishedAt);\nconst now = new Date();\nconst hoursDiff = (now - publishedAt) / (1000 * 60 * 60);\n\nif (hoursDiff > 72) return [];\n\nconst views = Number($json.statistics.viewCount) || 0;\nconst likes = Number($json.statistics.likeCount) || 0;\nconst comments = Number($json.statistics.commentCount) || 0;\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\nconst ageBonus = hoursDiff < 12 ? 2 : 1;\nconst viralScore = (views * 0.5 * ageBonus) + (likes * 30) + (comments * 50) + (engagementRate * 1000);\n\nreturn [{\n  json: {\n    videoId: $json.id,\n    title: $json.snippet.title,\n    description: $json.snippet.description,\n    channel: $json.snippet.channelTitle,\n    thumbnail: $json.snippet.thumbnails?.maxres?.url || $json.snippet.thumbnails?.high?.url,\n    viewCount: views,\n    likeCount: likes,\n    commentCount: comments,\n    viralScore: Math.round(viralScore),\n    hoursOld: hoursDiff.toFixed(1),\n    tags: $json.snippet.tags || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 400],
+      "id": "filter",
+      "name": "Filter & Score"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [{"fieldName": "viralScore", "order": "descending"}]
+        }
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [1000, 400],
+      "id": "sort",
+      "name": "Sort"
+    },
+    {
+      "parameters": {"maxItems": 1},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [1200, 400],
+      "id": "top1",
+      "name": "Top 1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "x-api-key", "value": "={{$env.ANTHROPIC_API_KEY}}"},
+            {"name": "anthropic-version", "value": "2023-06-01"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'claude-sonnet-4-5-20250929',\n  max_tokens: 4096,\n  messages: [{\n    role: 'user',\n    content: `VİRAL VİDEO: ${$json.title}\n\nBu videoya benzer KISA (60 saniye) bir video script'i yaz.\n\nJSON formatında:\n{\n  \"title\": \"Clickbait başlık (max 60 char)\",\n  \"script\": \"60 saniyelik konuşma metni (dakika başı işaretle)\",\n  \"description\": \"YouTube açıklama\",\n  \"hashtags\": [\"tag1\", \"tag2\", ...],\n  \"keywords\": [\"keyword1\", ...],\n  \"thumbnailPrompt\": \"Thumbnail için prompt\"\n}`\n  }]\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1400, 400],
+      "id": "ai-script",
+      "name": "AI Script"
+    },
+    {
+      "parameters": {
+        "jsCode": "const aiResponse = $json.content?.[0]?.text || '{}';\nconst original = $input.first().json;\n\nlet content = {};\ntry {\n  const jsonMatch = aiResponse.match(/\\{[\\s\\S]*\\}/);\n  content = jsonMatch ? JSON.parse(jsonMatch[0]) : {};\n} catch (e) {\n  content = {};\n}\n\nreturn [{\n  json: {\n    originalVideoId: original.videoId,\n    title: content.title || 'Viral Video',\n    script: content.script || 'Script burada...',\n    description: content.description || '',\n    hashtags: content.hashtags || [],\n    keywords: content.keywords || [],\n    thumbnailPrompt: content.thumbnailPrompt || 'YouTube thumbnail'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1600, 400],
+      "id": "parse",
+      "name": "Parse"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.elevenlabs.io/v1/text-to-speech/pNInz6obpgDQGcFmaJgB",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "xi-api-key", "value": "={{$env.ELEVENLABS_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  text: $json.script,\n  model_id: 'eleven_turbo_v2',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.75\n  }\n}) }}",
+        "options": {
+          "response": {"response": {"responseFormat": "file"}}
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1800, 300],
+      "id": "tts",
+      "name": "ElevenLabs TTS"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/images/generations",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {"name": "Authorization", "value": "=Bearer {{$env.OPENAI_API_KEY}}"},
+            {"name": "Content-Type", "value": "application/json"}
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  model: 'dall-e-3',\n  prompt: $json.thumbnailPrompt + ' | YouTube thumbnail, 16:9, vibrant, clickbait',\n  n: 1,\n  size: '1792x1024',\n  quality: 'hd'\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1800, 500],
+      "id": "thumbnail",
+      "name": "Generate Thumbnail"
+    },
+    {
+      "parameters": {
+        "command": "=ffmpeg -loop 1 -i /tmp/thumbnail.png -i /tmp/audio.mp3 -c:v libx264 -tune stillimage -c:a aac -b:a 192k -pix_fmt yuv420p -shortest /tmp/video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2000, 400],
+      "id": "ffmpeg",
+      "name": "FFmpeg: Create Video"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [2200, 400],
+      "id": "read-video",
+      "name": "Read Video File"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{$json.title}}",
+        "categoryId": "22",
+        "description": "={{$json.description}}",
+        "privacyStatus": "public",
+        "tags": "={{$json.keywords.join(',')}}"
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [2400, 400],
+      "id": "upload",
+      "name": "YouTube Upload"
+    }
+  ],
+  "connections": {
+    "Every 6 Hours": {"main": [[{"node": "YouTube Trends", "type": "main", "index": 0}]]},
+    "YouTube Trends": {"main": [[{"node": "Split", "type": "main", "index": 0}]]},
+    "Split": {"main": [[{"node": "Filter & Score", "type": "main", "index": 0}]]},
+    "Filter & Score": {"main": [[{"node": "Sort", "type": "main", "index": 0}]]},
+    "Sort": {"main": [[{"node": "Top 1", "type": "main", "index": 0}]]},
+    "Top 1": {"main": [[{"node": "AI Script", "type": "main", "index": 0}]]},
+    "AI Script": {"main": [[{"node": "Parse", "type": "main", "index": 0}]]},
+    "Parse": {"main": [[
+      {"node": "ElevenLabs TTS", "type": "main", "index": 0},
+      {"node": "Generate Thumbnail", "type": "main", "index": 0}
+    ]]},
+    "ElevenLabs TTS": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
+    "Generate Thumbnail": {"main": [[{"node": "FFmpeg: Create Video", "type": "main", "index": 0}]]},
+    "FFmpeg: Create Video": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
+    "Read Video File": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
+  },
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}
