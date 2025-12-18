@@ -231,12 +231,10 @@
     },
     {
       "parameters": {
-        "mode": "combine",
-        "combineBy": "combineAll",
-        "options": {}
+        "jsCode": "// Combine metadata from Parse with video binary from Read Video File\nconst inputs = $input.all();\n\n// Find Parse data (has title, description, keywords)\nlet metadata = inputs.find(item => item.json && item.json.title && item.json.script);\n\n// Find Video binary (has binary.data)\nlet videoBinary = inputs.find(item => item.binary && item.binary.data);\n\nif (!metadata || !metadata.json) {\n  throw new Error('❌ Metadata bulunamadı!');\n}\n\nif (!videoBinary || !videoBinary.binary || !videoBinary.binary.data) {\n  throw new Error('❌ Video binary bulunamadı!');\n}\n\n// Return combined data\nreturn [{\n  json: {\n    title: metadata.json.title,\n    description: metadata.json.description || 'Viral video',\n    keywords: metadata.json.keywords || [],\n    script: metadata.json.script\n  },\n  binary: {\n    data: videoBinary.binary.data\n  }\n}];"
       },
-      "type": "n8n-nodes-base.merge",
-      "typeVersion": 3,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [3200, 400],
       "id": "merge-metadata",
       "name": "Merge Metadata & Video"
@@ -246,11 +244,11 @@
         "authentication": "oAuth2",
         "resource": "video",
         "operation": "upload",
-        "title": "={{$item(0).json.title}}",
+        "title": "={{$json.title}}",
         "categoryId": "22",
-        "description": "={{$item(0).json.description}}",
+        "description": "={{$json.description}}",
         "privacyStatus": "public",
-        "tags": "={{$item(0).json.keywords.join(',')}}"
+        "tags": "={{$json.keywords ? $json.keywords.join(',') : ''}}"
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
