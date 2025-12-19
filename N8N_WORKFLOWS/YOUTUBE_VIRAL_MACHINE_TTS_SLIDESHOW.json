@@ -289,10 +289,21 @@
     },
     {
       "parameters": {
-        "jsCode": "// Save metadata to file for later use\nconst fs = require('fs');\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync('/tmp/pending_metadata.json', JSON.stringify(metadata, null, 2));\n\nreturn $input.all();"
+        "jsCode": "// Prepare metadata as JSON text for saving\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nconst jsonText = JSON.stringify(metadata, null, 2);\n\n// Return with binary data\nreturn [{\n  json: $json,\n  binary: {\n    data: Buffer.from(jsonText, 'utf-8')\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
+      "position": [4000, 300],
+      "id": "prepare-metadata",
+      "name": "Prepare Metadata JSON"
+    },
+    {
+      "parameters": {
+        "fileName": "/tmp/pending_metadata.json",
+        "propertyName": "data"
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
       "position": [4000, 400],
       "id": "save-metadata",
       "name": "Save Metadata to File"
@@ -362,7 +373,8 @@
     "Merge Metadata & Video": {"main": [[{"node": "Create Compressed Preview", "type": "main", "index": 0}]]},
     "Create Compressed Preview": {"main": [[{"node": "Read Preview Video", "type": "main", "index": 0}]]},
     "Read Preview Video": {"main": [[{"node": "Telegram: Send Preview", "type": "main", "index": 0}]]},
-    "Telegram: Send Preview": {"main": [[{"node": "Save Metadata to File", "type": "main", "index": 0}]]},
+    "Telegram: Send Preview": {"main": [[{"node": "Prepare Metadata JSON", "type": "main", "index": 0}]]},
+    "Prepare Metadata JSON": {"main": [[{"node": "Save Metadata to File", "type": "main", "index": 0}]]},
     "Save Metadata to File": {"main": [[{"node": "Save Video to File", "type": "main", "index": 0}]]},
     "Save Video to File": {"main": [[{"node": "Telegram: Wait for Response", "type": "main", "index": 0}]]}
   },
