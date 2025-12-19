@@ -299,8 +299,8 @@
     },
     {
       "parameters": {
-        "filePath": "/tmp/pending_video.mp4",
-        "binaryPropertyName": "data"
+        "fileName": "/tmp/pending_video.mp4",
+        "propertyName": "data"
       },
       "type": "n8n-nodes-base.writeBinaryFile",
       "typeVersion": 1,
