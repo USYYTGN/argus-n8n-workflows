@@ -3,39 +3,16 @@
   "nodes": [
     {
       "parameters": {
-        "updates": ["message"]
+        "httpMethod": "POST",
+        "path": "youtube-approve",
+        "options": {}
       },
-      "type": "n8n-nodes-base.telegramTrigger",
+      "type": "n8n-nodes-base.webhook",
       "typeVersion": 1,
       "position": [240, 300],
-      "id": "telegram-trigger",
-      "name": "Telegram Trigger",
-      "webhookId": "youtube-approver-v2",
-      "credentials": {
-        "telegramApi": {
-          "id": "TELEGRAM_CREDENTIAL_ID",
-          "name": "Telegram Bot"
-        }
-      },
-      "continueOnFail": true
-    },
-    {
-      "parameters": {
-        "conditions": {
-          "string": [
-            {
-              "value1": "={{$json.message.text}}",
-              "operation": "equals",
-              "value2": "YAYINLA"
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.if",
-      "typeVersion": 1,
-      "position": [460, 300],
-      "id": "check-yayinla",
-      "name": "IF: YAYINLA?"
+      "webhookId": "youtube-approve-webhook",
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger"
     },
     {
       "parameters": {
@@ -43,7 +20,7 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 200],
+      "position": [460, 300],
       "id": "read-metadata",
       "name": "Read Saved Metadata"
     },
@@ -53,7 +30,7 @@
       },
       "type": "n8n-nodes-base.readBinaryFile",
       "typeVersion": 1,
-      "position": [900, 200],
+      "position": [680, 300],
       "id": "read-video",
       "name": "Read Saved Video"
     },
@@ -70,7 +47,7 @@
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [1120, 200],
+      "position": [900, 300],
       "id": "upload",
       "name": "YouTube Upload"
     },
@@ -134,16 +111,11 @@
     }
   ],
   "connections": {
-    "Telegram Trigger": {"main": [[{"node": "IF: YAYINLA?", "type": "main", "index": 0}]]},
-    "IF: YAYINLA?": {"main": [
-      [{"node": "Read Saved Metadata", "type": "main", "index": 0}],
-      [{"node": "Telegram: Cancelled", "type": "main", "index": 0}]
-    ]},
+    "Webhook Trigger": {"main": [[{"node": "Read Saved Metadata", "type": "main", "index": 0}]]},
     "Read Saved Metadata": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
     "Read Saved Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
     "YouTube Upload": {"main": [[{"node": "Telegram: Upload Success", "type": "main", "index": 0}]]},
-    "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]},
-    "Telegram: Cancelled": {"main": [[{"node": "Cleanup on Cancel", "type": "main", "index": 0}]]}
+    "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},

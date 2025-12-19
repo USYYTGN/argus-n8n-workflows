@@ -313,11 +313,21 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
-        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n💬 YAYINLA yazarsan YouTube'a upload edilecek\n💬 İPTAL yazarsan silinecek\n\n⏳ Kararını bekliyorum..."
+        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Ne yapalım?\n\n👇 Butona bas ya da link'i aç:",
+        "additionalFields": {
+          "reply_markup": {
+            "inline_keyboard": [[
+              {
+                "text": "✅ YAYINLA",
+                "url": "https://argusbot.duckdns.org/webhook/youtube-approve"
+              }
+            ]]
+          }
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [4000, 400],
+      "position": [4200, 400],
       "id": "telegram-wait-response",
       "name": "Telegram: Wait for Response",
       "credentials": {
