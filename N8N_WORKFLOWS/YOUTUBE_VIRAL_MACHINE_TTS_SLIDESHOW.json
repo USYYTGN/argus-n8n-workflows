@@ -238,6 +238,28 @@
     },
     {
       "parameters": {
+        "command": "=ffmpeg -y -i /tmp/video.mp4 -vf scale=640:-2 -c:v libx264 -crf 28 -preset fast -c:a aac -b:a 96k /tmp/preview.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [3400, 300],
+      "id": "create-preview",
+      "name": "Create Compressed Preview"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/preview.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [3600, 300],
+      "id": "read-preview",
+      "name": "Read Preview Video"
+    },
+    {
+      "parameters": {
         "resource": "message",
         "operation": "sendVideo",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
@@ -252,7 +274,7 @@
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [3400, 400],
+      "position": [3800, 300],
       "id": "telegram-send",
       "name": "Telegram: Send Preview",
       "credentials": {
@@ -327,7 +349,9 @@
     "Merge Files": {"main": [[{"node": "FFmpeg: Add Voiceover", "type": "main", "index": 0}]]},
     "FFmpeg: Add Voiceover": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
     "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
-    "Merge Metadata & Video": {"main": [[{"node": "Telegram: Send Preview", "type": "main", "index": 0}]]},
+    "Merge Metadata & Video": {"main": [[{"node": "Create Compressed Preview", "type": "main", "index": 0}]]},
+    "Create Compressed Preview": {"main": [[{"node": "Read Preview Video", "type": "main", "index": 0}]]},
+    "Read Preview Video": {"main": [[{"node": "Telegram: Send Preview", "type": "main", "index": 0}]]},
     "Telegram: Send Preview": {"main": [[{"node": "Save Metadata to File", "type": "main", "index": 0}]]},
     "Save Metadata to File": {"main": [[{"node": "Save Video to File", "type": "main", "index": 0}]]},
     "Save Video to File": {"main": [[{"node": "Telegram: Wait for Response", "type": "main", "index": 0}]]}
