@@ -1,0 +1,151 @@
+{
+  "name": "YouTube Upload Approver",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": ["message"]
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "webhookId": "youtube-approver",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.message.text}}",
+              "operation": "equals",
+              "value2": "YAYINLA"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "id": "check-yayinla",
+      "name": "IF: YAYINLA?"
+    },
+    {
+      "parameters": {
+        "functionCode": "// Read saved metadata from file\nconst fs = require('fs');\n\nif (!fs.existsSync('/tmp/pending_metadata.json')) {\n  throw new Error('❌ Bekleyen video bulunamadı! Önce video üret.');\n}\n\nconst metadata = JSON.parse(fs.readFileSync('/tmp/pending_metadata.json', 'utf8'));\n\nreturn [{\n  json: metadata\n}];"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [680, 200],
+      "id": "read-metadata",
+      "name": "Read Saved Metadata"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/pending_video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "id": "read-video",
+      "name": "Read Saved Video"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{$json.title}}",
+        "categoryId": "22",
+        "description": "={{$json.description}}",
+        "privacyStatus": "public",
+        "tags": "={{$json.keywords ? $json.keywords.join(',') : ''}}"
+      },
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [1120, 200],
+      "id": "upload",
+      "name": "YouTube Upload"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.message.chat.id}}",
+        "text": "=✅ Video YouTube'a upload edildi!\n\n📌 Başlık: {{$('Read Saved Metadata').first().json.title}}\n\n🎬 Video başarıyla yayınlandı!"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1340, 200],
+      "id": "telegram-success",
+      "name": "Telegram: Upload Success",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [1560, 200],
+      "id": "cleanup",
+      "name": "Cleanup Temp Files"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$json.message.chat.id}}",
+        "text": "❌ İptal edildi. Video silinecek."
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [680, 400],
+      "id": "telegram-cancel",
+      "name": "Telegram: Cancelled",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "functionCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [900, 400],
+      "id": "cleanup-cancel",
+      "name": "Cleanup on Cancel"
+    }
+  ],
+  "connections": {
+    "Telegram Trigger": {"main": [[{"node": "IF: YAYINLA?", "type": "main", "index": 0}]]},
+    "IF: YAYINLA?": {"main": [
+      [{"node": "Read Saved Metadata", "type": "main", "index": 0}],
+      [{"node": "Telegram: Cancelled", "type": "main", "index": 0}]
+    ]},
+    "Read Saved Metadata": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
+    "Read Saved Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
+    "YouTube Upload": {"main": [[{"node": "Telegram: Upload Success", "type": "main", "index": 0}]]},
+    "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]},
+    "Telegram: Cancelled": {"main": [[{"node": "Cleanup on Cancel", "type": "main", "index": 0}]]}
+  },
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}

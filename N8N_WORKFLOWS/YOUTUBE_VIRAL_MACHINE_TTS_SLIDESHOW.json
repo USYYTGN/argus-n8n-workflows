@@ -267,20 +267,43 @@
     },
     {
       "parameters": {
-        "authentication": "oAuth2",
-        "resource": "video",
-        "operation": "upload",
-        "title": "={{$json.title}}",
-        "categoryId": "22",
-        "description": "={{$json.description}}",
-        "privacyStatus": "public",
-        "tags": "={{$json.keywords ? $json.keywords.join(',') : ''}}"
+        "functionCode": "// Save metadata to file for later use\nconst fs = require('fs');\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync('/tmp/pending_metadata.json', JSON.stringify(metadata, null, 2));\n\nreturn $input.all();"
       },
-      "type": "n8n-nodes-base.youTube",
+      "type": "n8n-nodes-base.function",
       "typeVersion": 1,
-      "position": [4200, 300],
-      "id": "upload",
-      "name": "YouTube Upload"
+      "position": [3600, 400],
+      "id": "save-metadata",
+      "name": "Save Metadata to File"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/pending_video.mp4",
+        "binaryPropertyName": "data"
+      },
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [3800, 400],
+      "id": "save-video",
+      "name": "Save Video to File"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n💬 YAYINLA yazarsan YouTube'a upload edilecek\n💬 İPTAL yazarsan silinecek\n\n⏳ Kararını bekliyorum..."
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [4000, 400],
+      "id": "telegram-wait-response",
+      "name": "Telegram: Wait for Response",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
     }
   ],
   "connections": {
@@ -305,7 +328,9 @@
     "FFmpeg: Add Voiceover": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
     "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
     "Merge Metadata & Video": {"main": [[{"node": "Telegram: Send Preview", "type": "main", "index": 0}]]},
-    "Telegram: Send Preview": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]}
+    "Telegram: Send Preview": {"main": [[{"node": "Save Metadata to File", "type": "main", "index": 0}]]},
+    "Save Metadata to File": {"main": [[{"node": "Save Video to File", "type": "main", "index": 0}]]},
+    "Save Video to File": {"main": [[{"node": "Telegram: Wait for Response", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},
