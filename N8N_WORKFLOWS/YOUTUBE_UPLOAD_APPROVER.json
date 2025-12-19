@@ -38,18 +38,17 @@
     },
     {
       "parameters": {
-        "functionCode": "// Read saved metadata from file\nconst fs = require('fs');\n\nif (!fs.existsSync('/tmp/pending_metadata.json')) {\n  throw new Error('❌ Bekleyen video bulunamadı! Önce video üret.');\n}\n\nconst metadata = JSON.parse(fs.readFileSync('/tmp/pending_metadata.json', 'utf8'));\n\nreturn [{\n  json: metadata\n}];"
+        "jsCode": "// Read saved metadata from file\nconst fs = require('fs');\n\nif (!fs.existsSync('/tmp/pending_metadata.json')) {\n  throw new Error('❌ Bekleyen video bulunamadı! Önce video üret.');\n}\n\nconst metadata = JSON.parse(fs.readFileSync('/tmp/pending_metadata.json', 'utf8'));\n\nreturn [{\n  json: metadata\n}];"
       },
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [680, 200],
       "id": "read-metadata",
       "name": "Read Saved Metadata"
     },
     {
       "parameters": {
-        "filePath": "/tmp/pending_video.mp4",
-        "options": {}
+        "filePath": "/tmp/pending_video.mp4"
       },
       "type": "n8n-nodes-base.readBinaryFile",
       "typeVersion": 1,
@@ -95,10 +94,10 @@
     },
     {
       "parameters": {
-        "functionCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nreturn $input.all();"
+        "jsCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nif (fs.existsSync('/tmp/preview.mp4')) {\n  fs.unlinkSync('/tmp/preview.mp4');\n}\n\nreturn $input.all();"
       },
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [1560, 200],
       "id": "cleanup",
       "name": "Cleanup Temp Files"
@@ -124,10 +123,10 @@
     },
     {
       "parameters": {
-        "functionCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nreturn $input.all();"
+        "jsCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nif (fs.existsSync('/tmp/preview.mp4')) {\n  fs.unlinkSync('/tmp/preview.mp4');\n}\n\nreturn $input.all();"
       },
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [900, 400],
       "id": "cleanup-cancel",
       "name": "Cleanup on Cancel"

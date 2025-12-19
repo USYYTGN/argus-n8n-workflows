@@ -289,11 +289,11 @@
     },
     {
       "parameters": {
-        "functionCode": "// Save metadata to file for later use\nconst fs = require('fs');\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync('/tmp/pending_metadata.json', JSON.stringify(metadata, null, 2));\n\nreturn $input.all();"
+        "jsCode": "// Save metadata to file for later use\nconst fs = require('fs');\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync('/tmp/pending_metadata.json', JSON.stringify(metadata, null, 2));\n\nreturn $input.all();"
       },
-      "type": "n8n-nodes-base.function",
-      "typeVersion": 1,
-      "position": [3600, 400],
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4000, 400],
       "id": "save-metadata",
       "name": "Save Metadata to File"
     },
