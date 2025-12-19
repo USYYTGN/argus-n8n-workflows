@@ -10,13 +10,14 @@
       "position": [240, 300],
       "id": "telegram-trigger",
       "name": "Telegram Trigger",
-      "webhookId": "youtube-approver",
+      "webhookId": "youtube-approver-v2",
       "credentials": {
         "telegramApi": {
           "id": "TELEGRAM_CREDENTIAL_ID",
           "name": "Telegram Bot"
         }
-      }
+      },
+      "continueOnFail": true
     },
     {
       "parameters": {
