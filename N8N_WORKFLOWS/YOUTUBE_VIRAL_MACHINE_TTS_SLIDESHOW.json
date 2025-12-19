@@ -245,6 +245,9 @@
         "binaryPropertyName": "data",
         "additionalFields": {
           "caption": "=🎬 YENİ VİDEO HAZIR!\n\n📌 Başlık: {{$json.title}}\n\n📝 Script: {{$json.script.substring(0, 200)}}...\n\n✅ YAYINLA yazarsan YouTube'a upload edilecek\n❌ İPTAL yazarsan silinecek"
+        },
+        "options": {
+          "timeout": 120000
         }
       },
       "type": "n8n-nodes-base.telegram",
@@ -257,7 +260,10 @@
           "id": "TELEGRAM_CREDENTIAL_ID",
           "name": "Telegram Bot"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 5000
     },
     {
       "parameters": {
