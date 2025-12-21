@@ -1,0 +1,91 @@
+{
+  "name": "TEST: Environment Variables Check",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test if n8n can access environment variables\n\nconst envVars = {\n  GOOGLE_AI_STUDIO: process.env.GOOGLE_AI_STUDIO || 'NOT FOUND',\n  ANTHROPIC_API_KEY: process.env.ANTHROPIC_API_KEY || 'NOT FOUND',\n  GEMINI_API_KEY: process.env.GEMINI_API_KEY || 'NOT FOUND',\n  TELEGRAM_CHAT_ID: process.env.TELEGRAM_CHAT_ID || 'NOT FOUND',\n  YOUTUBE_API_KEY: process.env.YOUTUBE_API_KEY || 'NOT FOUND'\n};\n\n// Mask sensitive data (show only first 10 chars)\nconst maskedVars = {};\nfor (const [key, value] of Object.entries(envVars)) {\n  if (value !== 'NOT FOUND') {\n    maskedVars[key] = value.substring(0, 10) + '...';\n  } else {\n    maskedVars[key] = value;\n  }\n}\n\nconsole.log('🔐 Environment Variables Status:');\nconsole.log(JSON.stringify(maskedVars, null, 2));\n\nreturn [{\n  json: {\n    status: 'Environment Variables Check',\n    variables: maskedVars,\n    allFound: !Object.values(envVars).includes('NOT FOUND'),\n    missing: Object.keys(envVars).filter(k => envVars[k] === 'NOT FOUND')\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "id": "check-env",
+      "name": "Check Environment Variables"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.allFound}}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [680, 300],
+      "id": "check-result",
+      "name": "All Variables Found?"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=✅ ALL ENV VARIABLES FOUND!\n\n{{ JSON.stringify($('Check Environment Variables').first().json.variables, null, 2) }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 200],
+      "id": "telegram-success",
+      "name": "Telegram: Success",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=⚠️ MISSING ENV VARIABLES!\n\nMissing:\n{{ $('Check Environment Variables').first().json.missing.join('\\n') }}"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [900, 400],
+      "id": "telegram-warning",
+      "name": "Telegram: Warning",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {"main": [[{"node": "Check Environment Variables", "type": "main", "index": 0}]]},
+    "Check Environment Variables": {"main": [[{"node": "All Variables Found?", "type": "main", "index": 0}]]},
+    "All Variables Found?": {
+      "main": [
+        [{"node": "Telegram: Success", "type": "main", "index": 0}],
+        [{"node": "Telegram: Warning", "type": "main", "index": 0}]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {"executionOrder": "v1"},
+  "active": false
+}
