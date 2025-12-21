@@ -335,24 +335,16 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
-        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Butona tıkla:\n👇👇👇",
+        "text": "=✅ Video kaydedildi ve hazır!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Ne yapmak istersin?",
         "additionalFields": {
-          "append_ndc": true,
-          "reply_markup": {
-            "inline_keyboard": [[
-              {
-                "text": "✅ YAYINLA",
-                "url": "https://argusbot.duckdns.org/webhook/youtube-approve"
-              }
-            ]]
-          }
+          "reply_markup": "={{ JSON.stringify({inline_keyboard: [[{text: '✅ YAYINLA', url: 'https://argusbot.duckdns.org/webhook/youtube-approve'}, {text: '❌ İPTAL', url: 'https://argusbot.duckdns.org/webhook/youtube-cancel'}]]}) }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
-      "typeVersion": 1,
+      "typeVersion": 1.2,
       "position": [4200, 400],
       "id": "telegram-wait-response",
-      "name": "Telegram: Wait for Response",
+      "name": "Telegram: Approval Buttons",
       "credentials": {
         "telegramApi": {
           "id": "TELEGRAM_CREDENTIAL_ID",
