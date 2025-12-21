@@ -16,6 +16,19 @@
     },
     {
       "parameters": {
+        "httpMethod": "GET",
+        "path": "youtube-cancel",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 500],
+      "webhookId": "youtube-cancel-webhook",
+      "id": "webhook-cancel",
+      "name": "Webhook Cancel"
+    },
+    {
+      "parameters": {
         "filePath": "/tmp/pending_metadata.json"
       },
       "type": "n8n-nodes-base.readBinaryFile",
@@ -140,12 +153,14 @@
   ],
   "connections": {
     "Webhook Trigger": {"main": [[{"node": "Read Metadata File", "type": "main", "index": 0}]]},
+    "Webhook Cancel": {"main": [[{"node": "Telegram: Cancelled", "type": "main", "index": 0}]]},
     "Read Metadata File": {"main": [[{"node": "Parse Metadata JSON", "type": "main", "index": 0}]]},
     "Parse Metadata JSON": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
     "Read Saved Video": {"main": [[{"node": "Fix Video MIME Type", "type": "main", "index": 0}]]},
     "Fix Video MIME Type": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
     "YouTube Upload": {"main": [[{"node": "Telegram: Upload Success", "type": "main", "index": 0}]]},
-    "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]}
+    "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]},
+    "Telegram: Cancelled": {"main": [[{"node": "Cleanup on Cancel", "type": "main", "index": 0}]]}
   },
   "pinData": {},
   "settings": {"executionOrder": "v1"},
