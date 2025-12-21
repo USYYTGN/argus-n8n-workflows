@@ -206,7 +206,7 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -y -i /tmp/pexels_video.mp4 -i /tmp/audio.mp3 -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest /tmp/video.mp4",
+        "command": "=ffmpeg -y -i /tmp/audio.mp3 -stream_loop -1 -i /tmp/pexels_video.mp4 -map 1:v -map 0:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest /tmp/video.mp4",
         "options": {}
       },
       "type": "n8n-nodes-base.executeCommand",
@@ -266,7 +266,7 @@
         "binaryData": true,
         "binaryPropertyName": "data",
         "additionalFields": {
-          "caption": "=🎬 YENİ VİDEO HAZIR!\n\n📌 Başlık: {{$json.title}}\n\n📝 Script: {{$json.script.substring(0, 200)}}...\n\n✅ YAYINLA yazarsan YouTube'a upload edilecek\n❌ İPTAL yazarsan silinecek"
+          "caption": "=🎬 YENİ VİDEO HAZIR!\n\n📌 Başlık: {{$('Parse').first().json.title}}\n\n📝 Script: {{$('Parse').first().json.script.substring(0, 200)}}...\n\n✅ YAYINLA yazarsan YouTube'a upload edilecek\n❌ İPTAL yazarsan silinecek"
         },
         "options": {
           "timeout": 120000
@@ -289,7 +289,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare metadata as JSON text for saving\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nconst jsonText = JSON.stringify(metadata, null, 2);\n\n// Return with correct binary data structure for n8n\nreturn [{\n  json: $json,\n  binary: {\n    data: {\n      data: Buffer.from(jsonText, 'utf-8'),\n      mimeType: 'application/json',\n      fileName: 'pending_metadata.json'\n    }\n  }\n}];"
+        "jsCode": "// Get metadata from Parse node\nconst parseData = $('Parse').first().json;\n\n// Prepare metadata as JSON text for saving\nconst metadata = {\n  title: parseData.title,\n  description: parseData.description,\n  keywords: parseData.keywords,\n  script: parseData.script,\n  timestamp: new Date().toISOString()\n};\n\nconst jsonText = JSON.stringify(metadata, null, 2);\n\n// Return with correct binary data structure for n8n\nreturn [{\n  json: metadata,  // Pass metadata in json for next node\n  binary: {\n    data: {\n      data: Buffer.from(jsonText, 'utf-8'),\n      mimeType: 'application/json',\n      fileName: 'pending_metadata.json'\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -324,16 +324,9 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
-        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Ne yapalım?\n\n👇 Butona bas ya da link'i aç:",
+        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Ne yapalım?\n\n👇 Butona tıkla:",
         "additionalFields": {
-          "reply_markup": {
-            "inline_keyboard": [[
-              {
-                "text": "✅ YAYINLA",
-                "url": "https://argusbot.duckdns.org/webhook/youtube-approve"
-              }
-            ]]
-          }
+          "reply_markup": "={{ JSON.stringify({inline_keyboard: [[{text: '✅ YAYINLA', url: 'https://argusbot.duckdns.org/webhook/youtube-approve'}]]}) }}"
         }
       },
       "type": "n8n-nodes-base.telegram",
