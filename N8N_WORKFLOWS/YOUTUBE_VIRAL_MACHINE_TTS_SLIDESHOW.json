@@ -289,7 +289,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Prepare metadata as JSON text for saving\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nconst jsonText = JSON.stringify(metadata, null, 2);\n\n// Return with binary data\nreturn [{\n  json: $json,\n  binary: {\n    data: Buffer.from(jsonText, 'utf-8')\n  }\n}];"
+        "jsCode": "// Prepare metadata as JSON text for saving\nconst metadata = {\n  title: $json.title,\n  description: $json.description,\n  keywords: $json.keywords,\n  script: $json.script,\n  timestamp: new Date().toISOString()\n};\n\nconst jsonText = JSON.stringify(metadata, null, 2);\n\n// Return with correct binary data structure for n8n\nreturn [{\n  json: $json,\n  binary: {\n    data: {\n      data: Buffer.from(jsonText, 'utf-8'),\n      mimeType: 'application/json',\n      fileName: 'pending_metadata.json'\n    }\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
