@@ -16,13 +16,23 @@
     },
     {
       "parameters": {
-        "jsCode": "// Read saved metadata from file\nconst fs = require('fs');\n\nif (!fs.existsSync('/tmp/pending_metadata.json')) {\n  throw new Error('❌ Bekleyen video bulunamadı! Önce video üret.');\n}\n\nconst metadata = JSON.parse(fs.readFileSync('/tmp/pending_metadata.json', 'utf8'));\n\nreturn [{\n  json: metadata\n}];"
+        "filePath": "/tmp/pending_metadata.json"
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "read-metadata-file",
+      "name": "Read Metadata File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse JSON from binary data\nconst binaryData = $input.first().binary.data;\nconst jsonText = binaryData.toString('utf-8');\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [460, 300],
-      "id": "read-metadata",
-      "name": "Read Saved Metadata"
+      "id": "parse-metadata",
+      "name": "Parse Metadata JSON"
     },
     {
       "parameters": {
@@ -72,10 +82,11 @@
     },
     {
       "parameters": {
-        "jsCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nif (fs.existsSync('/tmp/preview.mp4')) {\n  fs.unlinkSync('/tmp/preview.mp4');\n}\n\nreturn $input.all();"
+        "command": "rm -f /tmp/pending_video.mp4 /tmp/pending_metadata.json /tmp/preview.mp4",
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [1560, 200],
       "id": "cleanup",
       "name": "Cleanup Temp Files"
@@ -101,18 +112,20 @@
     },
     {
       "parameters": {
-        "jsCode": "// Clean up temp files\nconst fs = require('fs');\n\nif (fs.existsSync('/tmp/pending_video.mp4')) {\n  fs.unlinkSync('/tmp/pending_video.mp4');\n}\n\nif (fs.existsSync('/tmp/pending_metadata.json')) {\n  fs.unlinkSync('/tmp/pending_metadata.json');\n}\n\nif (fs.existsSync('/tmp/preview.mp4')) {\n  fs.unlinkSync('/tmp/preview.mp4');\n}\n\nreturn $input.all();"
+        "command": "rm -f /tmp/pending_video.mp4 /tmp/pending_metadata.json /tmp/preview.mp4",
+        "options": {}
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
       "position": [900, 400],
       "id": "cleanup-cancel",
       "name": "Cleanup on Cancel"
     }
   ],
   "connections": {
-    "Webhook Trigger": {"main": [[{"node": "Read Saved Metadata", "type": "main", "index": 0}]]},
-    "Read Saved Metadata": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
+    "Webhook Trigger": {"main": [[{"node": "Read Metadata File", "type": "main", "index": 0}]]},
+    "Read Metadata File": {"main": [[{"node": "Parse Metadata JSON", "type": "main", "index": 0}]]},
+    "Parse Metadata JSON": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
     "Read Saved Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
     "YouTube Upload": {"main": [[{"node": "Telegram: Upload Success", "type": "main", "index": 0}]]},
     "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]}
