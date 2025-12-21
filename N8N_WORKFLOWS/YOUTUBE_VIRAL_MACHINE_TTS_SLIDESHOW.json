@@ -335,9 +335,17 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
-        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Ne yapalım?\n\n👇 Butona tıkla:",
+        "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Butona tıkla:\n👇👇👇",
         "additionalFields": {
-          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"✅ YAYINLA\",\"url\":\"https://argusbot.duckdns.org/webhook/youtube-approve\"}]]}"
+          "append_ndc": true,
+          "reply_markup": {
+            "inline_keyboard": [[
+              {
+                "text": "✅ YAYINLA",
+                "url": "https://argusbot.duckdns.org/webhook/youtube-approve"
+              }
+            ]]
+          }
         }
       },
       "type": "n8n-nodes-base.telegram",
