@@ -1,0 +1,190 @@
+{
+  "name": "TEST: AI Agents Only (Claude Sonnet 4.5)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "topic",
+              "name": "topic",
+              "type": "string",
+              "value": "Satisfying soap cutting ASMR with colorful patterns"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [460, 300],
+      "id": "set-topic",
+      "name": "Set Topic"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.topic}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Sen viral video fikirleri üreten bir AI'sın. Kullanıcının verdiği konuya göre TEK BİR viral video fikri üret.\n\n**Kurallar:**\n1. Sadece 1 fikir üret\n2. Fikir: Maksimum 13 kelime, viral ve ilgi çekici\n3. Caption: Kısa, çarpıcı, 1 emoji ve tam 12 hashtag\n4. Environment: Maksimum 20 kelime, görsel ortam tanımı\n5. Sound: Maksimum 15 kelime, ses/müzik tanımı\n6. Duration: Video süresi önerisi (15-60 saniye)\n7. Style: Görsel stil (cinematic, ASMR, satisfying, vb)\n\n**Çıktı Formatı (JSON):**\n```json\n{\n  \"idea\": \"13 kelimelik fikir\",\n  \"caption\": \"caption emoji ile\",\n  \"hashtags\": [\"hashtag1\", \"hashtag2\", \"hashtag3\", \"hashtag4\", \"hashtag5\", \"hashtag6\", \"hashtag7\", \"hashtag8\", \"hashtag9\", \"hashtag10\", \"hashtag11\", \"hashtag12\"],\n  \"environment\": \"görsel ortam maksimum 20 kelime\",\n  \"sound\": \"ses tanımı maksimum 15 kelime\",\n  \"duration\": 30,\n  \"style\": \"cinematic, ASMR, satisfying\"\n}\n```\n\n**Önemli:**\n- VİRAL olmalı: trend sesler, tatmin edici görseller\n- BASİT olmalı: Net, odaklı sahneler\n- TÜRK kitleye uygun: Türk izleyici için çekici içerik\n- SADECE geçerli JSON döndür, başka metin yok"
+        },
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Claude Sonnet 4.5"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [680, 300],
+      "id": "ai-agent-1",
+      "name": "AI Agent 1: Fikir Üret"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Agent 1 output\nconst response = $json.output || $json.text || JSON.stringify($json);\n\nconsole.log('🎨 AI Agent 1 Response:', response);\n\nlet parsed;\ntry {\n  const jsonMatch = response.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    parsed = JSON.parse(response);\n  }\n} catch (e) {\n  console.error('❌ JSON parse hatası:', e);\n  throw new Error('AI Agent 1 geçerli JSON döndürmedi: ' + response);\n}\n\nif (!parsed.idea || !parsed.caption || !parsed.environment) {\n  throw new Error('❌ Gerekli alanlar eksik');\n}\n\nconsole.log('✅ Video fikri:', parsed.idea);\n\nreturn [{\n  json: {\n    ...parsed,\n    topic: $('Set Topic').first().json.topic\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "id": "parse-idea",
+      "name": "Parse Fikir"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Konu: {{$json.topic}}\n\nFikir: {{$json.idea}}\n\nOrtam: {{$json.environment}}\n\nSes: {{$json.sound}}\n\nStil: {{$json.style}}\n\nSüre: {{$json.duration}} saniye",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "Sen AI video generation için detaylı prompt yazan bir uzmansın (Gemini Veo 3 için).\n\n**Görevin:**\nVerilen video fikrine göre, Veo 3'ün kullanabileceği detaylı sinematik sahne tanımları yaz.\n\n**Gereksinimler:**\n1. Video süresine göre 1-3 sahne oluştur\n2. Her sahne 1000-2000 karakter olmalı\n3. Sinematik dil kullan (kamera açıları, ışık, hareket, renkler)\n4. Ne GÖRÜLEBİLECEĞİNE odaklan, soyut kavramlar değil\n5. Sahneler arası akıcı geçişler\n6. ASMR dostu ve tatmin edici\n\n**Çıktı Formatı (JSON):**\n```json\n{\n  \"scenes\": [\n    {\n      \"sceneNumber\": 1,\n      \"duration\": 15,\n      \"prompt\": \"Detaylı görsel tanım (1000-2000 karakter). Kamera hareketi, ışık, renkler, dokular, aksiyon dahil. Örnek: Keskin bir bıçak parlak mor sabun barını keserken yakın çekim, kamera yavaşça hareket ediyor, yumuşak doğal ışık sabunun parlak yüzeyini vurguluyor, kesimin tatmin edici ASMR sesleri...\"\n    }\n  ],\n  \"overallStyle\": \"cinematic, 4K, ASMR, satisfying\",\n  \"cameraWork\": \"smooth tracking shots, close-ups, macro\",\n  \"lighting\": \"soft natural light, studio setup\",\n  \"colorPalette\": \"vibrant, saturated colors\"\n}\n```\n\n**Önemli:**\n- GÖRSEL ve SPESİFİK promptlar\n- Her sahne kendi içinde tam olmalı ama doğal akmalı\n- Toplam süre istenen video süresiyle eşleşmeli\n- AI video generatorların anlayacağı dil kullan\n- SADECE geçerli JSON döndür"
+        },
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Claude Sonnet 4.5"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1120, 300],
+      "id": "ai-agent-2",
+      "name": "AI Agent 2: Detaylı Promptlar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Agent 2 output\nconst response = $json.output || $json.text || JSON.stringify($json);\nconst ideaData = $('Parse Fikir').first().json;\n\nconsole.log('🎬 AI Agent 2 Response:', response);\n\nlet parsed;\ntry {\n  const jsonMatch = response.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    parsed = JSON.parse(response);\n  }\n} catch (e) {\n  console.error('❌ JSON parse hatası:', e);\n  throw new Error('AI Agent 2 geçerli JSON döndürmedi: ' + response);\n}\n\nif (!parsed.scenes || parsed.scenes.length === 0) {\n  throw new Error('❌ Sahne bulunamadı');\n}\n\nconsole.log('✅', parsed.scenes.length, 'sahne oluşturuldu');\n\n// Tüm sahne promptlarını birleştir\nconst combinedPrompt = parsed.scenes\n  .map((scene, i) => `Sahne ${i + 1} (${scene.duration}s): ${scene.prompt}`)\n  .join('\\n\\n');\n\nreturn [{\n  json: {\n    ...ideaData,\n    scenes: parsed.scenes,\n    overallStyle: parsed.overallStyle,\n    cameraWork: parsed.cameraWork,\n    lighting: parsed.lighting,\n    colorPalette: parsed.colorPalette,\n    veo3Prompt: combinedPrompt,\n    totalScenes: parsed.scenes.length,\n    testComplete: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 300],
+      "id": "parse-prompts",
+      "name": "Parse Promptlar"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=✅ **AI AGENT TESTİ TAMAMLANDI**\n\n📌 **Konu:** {{$json.topic}}\n\n💡 **Fikir:** {{$json.idea}}\n\n📝 **Caption:** {{$json.caption}}\n\n🏷️ **Hashtags:**\n{{$json.hashtags.map(h => '#' + h).join(' ')}}\n\n🎨 **Stil:** {{$json.style}}\n⏱️ **Süre:** {{$json.duration}} saniye\n🎞️ **Sahne Sayısı:** {{$json.totalScenes}}\n\n📸 **Kamera:** {{$json.cameraWork}}\n💡 **Işık:** {{$json.lighting}}\n🎨 **Renk:** {{$json.colorPalette}}\n\n---\n**🎬 VEO 3 PROMPTU:**\n\n{{$json.veo3Prompt.substring(0, 500)}}...\n\n_(Tam prompt {{$json.veo3Prompt.length}} karakter)_\n\n---\n✅ Claude AI Agent'ları çalışıyor!\n✅ Video generation için hazır!\n\nŞimdi Veo 3'e bu promptu gönderebilirsin.",
+        "options": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1560, 300],
+      "id": "telegram-result",
+      "name": "Telegram: Sonuç",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Set Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Topic": {
+      "main": [
+        [
+          {
+            "node": "AI Agent 1: Fikir Üret",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent 1: Fikir Üret": {
+      "main": [
+        [
+          {
+            "node": "Parse Fikir",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Fikir": {
+      "main": [
+        [
+          {
+            "node": "AI Agent 2: Detaylı Promptlar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent 2: Detaylı Promptlar": {
+      "main": [
+        [
+          {
+            "node": "Parse Promptlar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Promptlar": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Sonuç",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

@@ -160,45 +160,6 @@
     },
     {
       "parameters": {
-        "rule": {
-          "interval": [
-            {
-              "triggerAtSecond": 30
-            }
-          ]
-        }
-      },
-      "type": "n8n-nodes-base.scheduleTrigger",
-      "typeVersion": 1.2,
-      "position": [240, 600],
-      "id": "poll-trigger",
-      "name": "Poll Every 30s",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// NOTE: This is a placeholder for Veo 3 operation polling\n// In production, you would:\n// 1. Save operation name to database/file\n// 2. Use this scheduler to poll Google API for completion\n// 3. Download completed video\n// 4. Continue to approval flow\n\n// Example polling code:\n/*\nconst operationName = await getStoredOperation();\nconst response = await fetch(\n  `https://generativelanguage.googleapis.com/v1beta/${operationName}`,\n  { headers: { 'x-goog-api-key': process.env.GOOGLE_AI_STUDIO } }\n);\n\nif (response.done) {\n  // Video ready - download and continue\n  const videoUrl = response.result.videoUrl;\n  // ... proceed to download and approval\n}\n*/\n\nreturn [{ json: { note: 'Polling logic placeholder' } }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [460, 600],
-      "id": "poll-operation",
-      "name": "Poll Veo 3 Operation Status",
-      "disabled": true
-    },
-    {
-      "parameters": {
-        "jsCode": "// Save metadata for approval workflow\nconst metadata = $json;\n\nconst fs = require('fs');\nconst metadataPath = '/tmp/pending_ai_video_metadata.json';\n\nconst dataToSave = {\n  title: metadata.idea,\n  description: metadata.caption + '\\n\\nHashtags: ' + metadata.hashtags.join(' '),\n  keywords: metadata.hashtags,\n  topic: metadata.topic,\n  duration: metadata.duration,\n  style: metadata.style,\n  scenes: metadata.scenes,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync(metadataPath, JSON.stringify(dataToSave, null, 2));\n\nconsole.log('💾 Metadata saved to:', metadataPath);\n\nreturn [{ json: metadata }];"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [2220, 400],
-      "id": "save-metadata",
-      "name": "Save Metadata for Approval",
-      "disabled": true
-    },
-    {
-      "parameters": {
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
