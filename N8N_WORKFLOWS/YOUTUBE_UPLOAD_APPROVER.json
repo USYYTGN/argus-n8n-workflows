@@ -76,7 +76,10 @@
         "resource": "message",
         "operation": "sendMessage",
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
-        "text": "=✅ Video YouTube'a upload edildi!\n\n📌 Başlık: {{$('Parse Metadata JSON').first().json.title}}\n\n🎬 Video başarıyla yayınlandı!"
+        "text": "=✅ Video YouTube'a upload edildi!\n\n📌 Başlık: {{$('Parse Metadata JSON').first().json.title}}\n\n🎬 Video başarıyla yayınlandı!",
+        "options": {
+          "timeout": 30000
+        }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
@@ -88,7 +91,10 @@
           "id": "TELEGRAM_CREDENTIAL_ID",
           "name": "Telegram Bot"
         }
-      }
+      },
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000
     },
     {
       "parameters": {
