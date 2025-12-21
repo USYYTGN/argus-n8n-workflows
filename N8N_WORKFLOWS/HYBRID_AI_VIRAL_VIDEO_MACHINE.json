@@ -1,0 +1,316 @@
+{
+  "name": "HYBRID AI Viral Video Machine (Veo 3 + Claude)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 400],
+      "id": "manual-trigger",
+      "name": "Manual Trigger: Start"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "topic",
+              "name": "topic",
+              "type": "string",
+              "value": "Satisfying knife cutting through colorful objects"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.3,
+      "position": [460, 400],
+      "id": "set-topic",
+      "name": "Set Video Topic"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.topic}}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an AI designed to generate **one immersive, realistic viral video idea** based on a user-provided topic.\n\n**Your Task:**\n1. Create ONE highly viral video concept that would perform well on YouTube, TikTok, and Instagram\n2. The idea should be visually satisfying, ASMR-friendly, and trend-worthy\n3. Focus on content that Gemini Veo 3 can generate (realistic AI video generation)\n\n**Rules:**\n1. Return only one idea\n2. Idea: Maximum 13 words, punchy and viral-worthy\n3. Caption: Short, engaging, viral-friendly with one emoji and exactly 12 hashtags\n4. Environment: Maximum 20 words describing the visual setting\n5. Sound: Maximum 15 words for audio/music description\n6. Duration: Recommended video length (15-60 seconds)\n7. Style: Visual style keywords (cinematic, ASMR, satisfying, etc.)\n\n**Output Format (JSON):**\n```json\n{\n  \"idea\": \"your 13-word max idea here\",\n  \"caption\": \"your caption with emoji\",\n  \"hashtags\": [\"hashtag1\", \"hashtag2\", \"hashtag3\", \"hashtag4\", \"hashtag5\", \"hashtag6\", \"hashtag7\", \"hashtag8\", \"hashtag9\", \"hashtag10\", \"hashtag11\", \"hashtag12\"],\n  \"environment\": \"visual setting description max 20 words\",\n  \"sound\": \"audio description max 15 words\",\n  \"duration\": 30,\n  \"style\": \"cinematic, ASMR, satisfying\"\n}\n```\n\n**Important:**\n- Make it VIRAL: think trending sounds, satisfying visuals, shareable content\n- Keep it SIMPLE: Veo 3 works best with clear, focused scenes\n- Make it TURKISH-FRIENDLY: Content should work for Turkish audience\n- Return ONLY valid JSON, no additional text"
+        },
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Claude Sonnet 4.5"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [680, 400],
+      "id": "ai-agent-1",
+      "name": "AI Agent 1: Generate Creative Idea"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Agent 1 output\nconst response = $json.output || $json.text || JSON.stringify($json);\n\nconsole.log('🎨 AI Agent 1 Response:', response);\n\nlet parsed;\ntry {\n  // Try to extract JSON from response\n  const jsonMatch = response.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    parsed = JSON.parse(response);\n  }\n} catch (e) {\n  console.error('❌ Failed to parse AI Agent 1 output:', e);\n  throw new Error('AI Agent 1 did not return valid JSON: ' + response);\n}\n\n// Validate required fields\nif (!parsed.idea || !parsed.caption || !parsed.environment) {\n  throw new Error('❌ Missing required fields in AI Agent 1 output');\n}\n\nconsole.log('✅ Parsed video idea:', parsed.idea);\n\nreturn [{\n  json: {\n    ...parsed,\n    topic: $('Set Video Topic').first().json.topic\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 400],
+      "id": "parse-idea",
+      "name": "Parse Creative Idea"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Topic: {{$json.topic}}\n\nIdea: {{$json.idea}}\n\nEnvironment: {{$json.environment}}\n\nSound: {{$json.sound}}\n\nStyle: {{$json.style}}\n\nDuration: {{$json.duration}} seconds",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are an expert video prompt engineer specialized in creating detailed scene descriptions for AI video generation (Gemini Veo 3).\n\n**Your Task:**\nBased on the video idea provided, create detailed cinematic prompts that Veo 3 can use to generate stunning video content.\n\n**Requirements:**\n1. Create between 1-3 scene descriptions (depending on video duration)\n2. Each scene should be 1000-2000 characters\n3. Use cinematic, visual language (camera angles, lighting, movement, colors)\n4. Focus on what CAN be seen, not abstract concepts\n5. Include smooth transitions between scenes\n6. Make it ASMR-friendly and satisfying to watch\n\n**Output Format (JSON):**\n```json\n{\n  \"scenes\": [\n    {\n      \"sceneNumber\": 1,\n      \"duration\": 15,\n      \"prompt\": \"Detailed visual description here (1000-2000 chars). Include camera movement, lighting, colors, textures, action. Example: Close-up shot of a sharp knife gliding through vibrant purple soap bar, camera slowly tracking the blade's movement, soft natural lighting highlighting the soap's glossy surface, satisfying ASMR sounds of the cut...\"\n    },\n    {\n      \"sceneNumber\": 2,\n      \"duration\": 15,\n      \"prompt\": \"Next scene description...\"\n    }\n  ],\n  \"overallStyle\": \"cinematic, 4K, ASMR, satisfying\",\n  \"cameraWork\": \"smooth tracking shots, close-ups, macro photography\",\n  \"lighting\": \"soft natural light, studio setup\",\n  \"colorPalette\": \"vibrant, saturated colors\"\n}\n```\n\n**Important:**\n- Make prompts VISUAL and SPECIFIC\n- Each scene should be self-contained but flow naturally\n- Total scene duration should match requested video duration\n- Use language that AI video generators understand well\n- Return ONLY valid JSON, no additional text"
+        },
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "",
+          "cachedResultName": "Claude Sonnet 4.5"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.7,
+      "position": [1120, 400],
+      "id": "ai-agent-2",
+      "name": "AI Agent 2: Generate Video Prompts"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse AI Agent 2 output and prepare for Veo 3\nconst response = $json.output || $json.text || JSON.stringify($json);\nconst ideaData = $('Parse Creative Idea').first().json;\n\nconsole.log('🎬 AI Agent 2 Response:', response);\n\nlet parsed;\ntry {\n  const jsonMatch = response.match(/\\{[\\s\\S]*\\}/);\n  if (jsonMatch) {\n    parsed = JSON.parse(jsonMatch[0]);\n  } else {\n    parsed = JSON.parse(response);\n  }\n} catch (e) {\n  console.error('❌ Failed to parse AI Agent 2 output:', e);\n  throw new Error('AI Agent 2 did not return valid JSON: ' + response);\n}\n\nif (!parsed.scenes || parsed.scenes.length === 0) {\n  throw new Error('❌ No scenes found in AI Agent 2 output');\n}\n\nconsole.log('✅ Generated', parsed.scenes.length, 'scenes');\n\n// Combine all scene prompts for Veo 3\nconst combinedPrompt = parsed.scenes\n  .map((scene, i) => `Scene ${i + 1} (${scene.duration}s): ${scene.prompt}`)\n  .join('\\n\\n');\n\nreturn [{\n  json: {\n    ...ideaData,\n    scenes: parsed.scenes,\n    overallStyle: parsed.overallStyle,\n    cameraWork: parsed.cameraWork,\n    lighting: parsed.lighting,\n    colorPalette: parsed.colorPalette,\n    veo3Prompt: combinedPrompt,\n    totalScenes: parsed.scenes.length\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 400],
+      "id": "parse-prompts",
+      "name": "Parse Video Prompts"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3:generateVideo",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{process.env.GOOGLE_AI_STUDIO || process.env.GEMINI_API_KEY}}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"prompt\": {{JSON.stringify($json.veo3Prompt)}},\n  \"parameters\": {\n    \"resolution\": \"1080p\",\n    \"duration\": {{$json.duration}},\n    \"aspectRatio\": \"9:16\",\n    \"style\": {{JSON.stringify($json.overallStyle)}}\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1560, 400],
+      "id": "generate-veo3",
+      "name": "Generate Video with Veo 3"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Handle Veo 3 response\nconst veoResponse = $json;\nconst metadata = $('Parse Video Prompts').first().json;\n\nconsole.log('🎬 Veo 3 Response:', JSON.stringify(veoResponse, null, 2));\n\n// Veo 3 API typically returns operation name for long-running operations\nif (veoResponse.name) {\n  // Long-running operation - need to poll for completion\n  return [{\n    json: {\n      ...metadata,\n      veo3Operation: veoResponse.name,\n      status: 'generating',\n      message: '⏳ Video generation started. This may take 2-5 minutes...'\n    }\n  }];\n} else if (veoResponse.video || veoResponse.videoUrl) {\n  // Direct response with video\n  return [{\n    json: {\n      ...metadata,\n      videoUrl: veoResponse.videoUrl || veoResponse.video,\n      status: 'completed',\n      message: '✅ Video generated successfully!'\n    }\n  }];\n} else if (veoResponse.error) {\n  throw new Error('❌ Veo 3 Error: ' + JSON.stringify(veoResponse.error));\n} else {\n  throw new Error('❌ Unexpected Veo 3 response format: ' + JSON.stringify(veoResponse));\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 400],
+      "id": "handle-veo3-response",
+      "name": "Handle Veo 3 Response"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=🎬 **AI VIRAL VIDEO GENERATION STARTED**\n\n📌 **Topic:** {{$json.topic}}\n\n💡 **Idea:** {{$json.idea}}\n\n📝 **Caption:** {{$json.caption}}\n\n🎨 **Style:** {{$json.style}}\n\n⏱️ **Duration:** {{$json.duration}} seconds\n\n🎞️ **Scenes:** {{$json.totalScenes}}\n\n{{$json.message}}\n\n_This workflow uses:_\n• Claude Sonnet 4.5 for creative AI agents\n• Gemini Veo 3 for video generation\n• Multi-platform publishing (YouTube/TikTok/Instagram)",
+        "options": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2000, 400],
+      "id": "telegram-status",
+      "name": "Telegram: Generation Status",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtSecond": 30
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 600],
+      "id": "poll-trigger",
+      "name": "Poll Every 30s",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// NOTE: This is a placeholder for Veo 3 operation polling\n// In production, you would:\n// 1. Save operation name to database/file\n// 2. Use this scheduler to poll Google API for completion\n// 3. Download completed video\n// 4. Continue to approval flow\n\n// Example polling code:\n/*\nconst operationName = await getStoredOperation();\nconst response = await fetch(\n  `https://generativelanguage.googleapis.com/v1beta/${operationName}`,\n  { headers: { 'x-goog-api-key': process.env.GOOGLE_AI_STUDIO } }\n);\n\nif (response.done) {\n  // Video ready - download and continue\n  const videoUrl = response.result.videoUrl;\n  // ... proceed to download and approval\n}\n*/\n\nreturn [{ json: { note: 'Polling logic placeholder' } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 600],
+      "id": "poll-operation",
+      "name": "Poll Veo 3 Operation Status",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "jsCode": "// Save metadata for approval workflow\nconst metadata = $json;\n\nconst fs = require('fs');\nconst metadataPath = '/tmp/pending_ai_video_metadata.json';\n\nconst dataToSave = {\n  title: metadata.idea,\n  description: metadata.caption + '\\n\\nHashtags: ' + metadata.hashtags.join(' '),\n  keywords: metadata.hashtags,\n  topic: metadata.topic,\n  duration: metadata.duration,\n  style: metadata.style,\n  scenes: metadata.scenes,\n  timestamp: new Date().toISOString()\n};\n\nfs.writeFileSync(metadataPath, JSON.stringify(dataToSave, null, 2));\n\nconsole.log('💾 Metadata saved to:', metadataPath);\n\nreturn [{ json: metadata }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2220, 400],
+      "id": "save-metadata",
+      "name": "Save Metadata for Approval",
+      "disabled": true
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "❌ **VIDEO GENERATION FAILED**\n\nError occurred during the process.\n\nPlease check:\n1. Gemini API key is valid\n2. Veo 3 access is enabled\n3. API quota is not exceeded\n\nError details in workflow execution log.",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [2000, 600],
+      "id": "telegram-error",
+      "name": "Telegram: Error Notification",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger: Start": {
+      "main": [
+        [
+          {
+            "node": "Set Video Topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Video Topic": {
+      "main": [
+        [
+          {
+            "node": "AI Agent 1: Generate Creative Idea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent 1: Generate Creative Idea": {
+      "main": [
+        [
+          {
+            "node": "Parse Creative Idea",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Creative Idea": {
+      "main": [
+        [
+          {
+            "node": "AI Agent 2: Generate Video Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent 2: Generate Video Prompts": {
+      "main": [
+        [
+          {
+            "node": "Parse Video Prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Video Prompts": {
+      "main": [
+        [
+          {
+            "node": "Generate Video with Veo 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Video with Veo 3": {
+      "main": [
+        [
+          {
+            "node": "Handle Veo 3 Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Handle Veo 3 Response": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Generation Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

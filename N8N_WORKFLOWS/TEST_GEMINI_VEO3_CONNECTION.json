@@ -1,0 +1,148 @@
+{
+  "name": "TEST: Gemini Veo 3 API Connection",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Test Gemini API connection\nconst apiKey = process.env.GOOGLE_AI_STUDIO || process.env.GEMINI_API_KEY;\n\nif (!apiKey) {\n  throw new Error('❌ GOOGLE_AI_STUDIO or GEMINI_API_KEY not found in environment variables!');\n}\n\nconsole.log('🔑 API Key found:', apiKey.substring(0, 10) + '...');\n\nreturn [{\n  json: {\n    status: 'API Key Found',\n    keyPreview: apiKey.substring(0, 10) + '...',\n    keyLength: apiKey.length,\n    nextStep: 'Will test Gemini API connection'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300],
+      "id": "check-api-key",
+      "name": "Check API Key"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "={{process.env.GOOGLE_AI_STUDIO || process.env.GEMINI_API_KEY}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "id": "test-gemini-api",
+      "name": "Test Gemini API"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini models response and find Veo 3\nconst models = $json.models || [];\n\nconst veo3Models = models.filter(m => \n  m.name && m.name.toLowerCase().includes('veo')\n);\n\nconst allModels = models.map(m => ({\n  name: m.name,\n  displayName: m.displayName,\n  description: m.description\n}));\n\nconsole.log('📊 Total models found:', models.length);\nconsole.log('🎬 Veo models found:', veo3Models.length);\n\nreturn [{\n  json: {\n    success: true,\n    totalModels: models.length,\n    veo3Available: veo3Models.length > 0,\n    veo3Models: veo3Models.map(m => m.name),\n    allModels: allModels.slice(0, 10), // First 10 models\n    message: veo3Models.length > 0 \n      ? `✅ Veo 3 API access confirmed! Found ${veo3Models.length} Veo model(s)` \n      : '⚠️ Gemini API works but Veo 3 not found in available models'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 300],
+      "id": "parse-models",
+      "name": "Parse Available Models"
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=🧪 **GEMINI API TEST RESULT**\n\n{{$json.message}}\n\n📊 **Statistics:**\n- Total models: {{$json.totalModels}}\n- Veo 3 available: {{$json.veo3Available ? 'YES ✅' : 'NO ❌'}}\n\n{{$json.veo3Available ? '🎬 **Veo Models:**\\n' + $json.veo3Models.join('\\n') : ''}}\n\n📋 **First 10 Models:**\n{{$json.allModels.map(m => `• ${m.displayName || m.name}`).join('\\n')}}",
+        "options": {
+          "parse_mode": "Markdown"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 300],
+      "id": "telegram-result",
+      "name": "Telegram: Test Result",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "message",
+        "operation": "sendMessage",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=❌ **GEMINI API TEST FAILED**\n\nError: {{$json.error || 'Unknown error'}}\n\n🔧 **Troubleshooting:**\n1. Check if GOOGLE_AI_STUDIO env var is set\n2. Verify API key is valid\n3. Check if Gemini API is enabled in Google Cloud\n\nError details:\n```\n{{JSON.stringify($json, null, 2)}}\n```"
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1,
+      "position": [1120, 500],
+      "id": "telegram-error",
+      "name": "Telegram: Error",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Check API Key",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check API Key": {
+      "main": [
+        [
+          {
+            "node": "Test Gemini API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Test Gemini API": {
+      "main": [
+        [
+          {
+            "node": "Parse Available Models",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Available Models": {
+      "main": [
+        [
+          {
+            "node": "Telegram: Test Result",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}
