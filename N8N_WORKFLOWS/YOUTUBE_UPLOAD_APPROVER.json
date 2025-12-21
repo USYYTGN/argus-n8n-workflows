@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse JSON from binary data\nconst binaryData = $input.first().binary.data;\nconst jsonText = binaryData.toString('utf-8');\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
+        "jsCode": "// Parse JSON from binary data\nconst input = $input.first();\nconst binaryData = input.binary.data?.data || input.binary.data;\nconst jsonText = Buffer.isBuffer(binaryData) ? binaryData.toString('utf-8') : JSON.stringify(binaryData);\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
