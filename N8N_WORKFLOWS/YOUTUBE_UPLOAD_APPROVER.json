@@ -34,7 +34,6 @@
           "string": [
             {
               "value1": "={{$json.action}}",
-              "operation": "equals",
               "value2": "approve"
             }
           ]
