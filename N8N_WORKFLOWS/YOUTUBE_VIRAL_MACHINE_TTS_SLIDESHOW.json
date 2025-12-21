@@ -217,7 +217,7 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -y -i /tmp/audio.mp3 -stream_loop -1 -i /tmp/pexels_video.mp4 -map 1:v -map 0:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest /tmp/video.mp4",
+        "command": "=ffmpeg -y -i /tmp/audio.mp3 -stream_loop -1 -i /tmp/pexels_video.mp4 -map 1:v -map 0:a -c:v libx264 -preset medium -profile:v high -level 4.0 -pix_fmt yuv420p -crf 23 -c:a aac -b:a 192k -ar 48000 -ac 2 -shortest -movflags +faststart /tmp/video.mp4",
         "options": {}
       },
       "type": "n8n-nodes-base.executeCommand",
