@@ -46,6 +46,16 @@
     },
     {
       "parameters": {
+        "jsCode": "// Fix MIME type for YouTube - it requires 'video/mp4' not 'application/mp4'\nconst input = $input.first();\nconst metadata = $('Parse Metadata JSON').first().json;\n\nif (!input.binary || !input.binary.data) {\n  throw new Error('❌ Video binary data bulunamadı!');\n}\n\n// Get the binary data and fix MIME type\nconst binaryData = input.binary.data;\nconst fixedBinary = {\n  data: {\n    ...binaryData,\n    mimeType: 'video/mp4',  // YouTube requires exactly 'video/mp4'\n    fileName: 'video.mp4'\n  }\n};\n\nconsole.log('🎬 Video MIME type fixed:', fixedBinary.data.mimeType);\n\nreturn [{\n  json: metadata,  // Pass metadata for YouTube upload\n  binary: fixedBinary\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300],
+      "id": "fix-mime",
+      "name": "Fix Video MIME Type"
+    },
+    {
+      "parameters": {
         "authentication": "oAuth2",
         "resource": "video",
         "operation": "upload",
@@ -57,7 +67,7 @@
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [900, 300],
+      "position": [1020, 300],
       "id": "upload",
       "name": "YouTube Upload"
     },
@@ -126,7 +136,8 @@
     "Webhook Trigger": {"main": [[{"node": "Read Metadata File", "type": "main", "index": 0}]]},
     "Read Metadata File": {"main": [[{"node": "Parse Metadata JSON", "type": "main", "index": 0}]]},
     "Parse Metadata JSON": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
-    "Read Saved Video": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
+    "Read Saved Video": {"main": [[{"node": "Fix Video MIME Type", "type": "main", "index": 0}]]},
+    "Fix Video MIME Type": {"main": [[{"node": "YouTube Upload", "type": "main", "index": 0}]]},
     "YouTube Upload": {"main": [[{"node": "Telegram: Upload Success", "type": "main", "index": 0}]]},
     "Telegram: Upload Success": {"main": [[{"node": "Cleanup Temp Files", "type": "main", "index": 0}]]}
   },
