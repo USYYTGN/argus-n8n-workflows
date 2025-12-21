@@ -75,8 +75,8 @@
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
-        "chatId": "={{$json.message.chat.id}}",
-        "text": "=✅ Video YouTube'a upload edildi!\n\n📌 Başlık: {{$('Read Saved Metadata').first().json.title}}\n\n🎬 Video başarıyla yayınlandı!"
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
+        "text": "=✅ Video YouTube'a upload edildi!\n\n📌 Başlık: {{$('Parse Metadata JSON').first().json.title}}\n\n🎬 Video başarıyla yayınlandı!"
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
@@ -105,7 +105,7 @@
       "parameters": {
         "resource": "message",
         "operation": "sendMessage",
-        "chatId": "={{$json.message.chat.id}}",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
         "text": "❌ İptal edildi. Video silinecek."
       },
       "type": "n8n-nodes-base.telegram",
