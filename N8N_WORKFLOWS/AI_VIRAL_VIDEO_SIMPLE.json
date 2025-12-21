@@ -55,7 +55,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 2048,\n  \"temperature\": 0.7,\n  \"system\": \"Sen viral video fikirleri üreten bir AI'sın. Kullanıcının verdiği konuya göre TEK BİR viral video fikri üret.\\n\\n**Kurallar:**\\n1. Sadece 1 fikir üret\\n2. Fikir: Maksimum 13 kelime, viral ve ilgi çekici\\n3. Caption: Kısa, çarpıcı, 1 emoji ve tam 12 hashtag\\n4. Environment: Maksimum 20 kelime, görsel ortam tanımı\\n5. Sound: Maksimum 15 kelime, ses/müzik tanımı\\n6. Duration: Video süresi önerisi (15-60 saniye)\\n7. Style: Görsel stil (cinematic, ASMR, satisfying, vb)\\n\\n**SADECE bu JSON formatını döndür, başka hiçbir şey yazma:**\\n{\\n  \\\"idea\\\": \\\"13 kelimelik fikir\\\",\\n  \\\"caption\\\": \\\"caption emoji ile\\\",\\n  \\\"hashtags\\\": [\\\"viral\\\", \\\"asmr\\\", \\\"satisfying\\\", \\\"trending\\\", \\\"fyp\\\", \\\"kesfet\\\", \\\"video\\\", \\\"short\\\", \\\"reels\\\", \\\"tiktok\\\", \\\"youtube\\\", \\\"instagram\\\"],\\n  \\\"environment\\\": \\\"görsel ortam maksimum 20 kelime\\\",\\n  \\\"sound\\\": \\\"ses tanımı maksimum 15 kelime\\\",\\n  \\\"duration\\\": 30,\\n  \\\"style\\\": \\\"cinematic, ASMR, satisfying\\\"\\n}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"Konu: {{$json.topic}}\\n\\nBu konu için viral bir video fikri üret. SADECE JSON döndür.\"\n    }\n  ]\n}",
-        "options": {}
+        "options": {
+          "timeout": 60000
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -99,7 +101,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"model\": \"claude-sonnet-4-20250514\",\n  \"max_tokens\": 4096,\n  \"temperature\": 0.8,\n  \"system\": \"Sen AI video generation için detaylı prompt yazan bir uzmansın (Gemini Veo 3 için).\\n\\n**Görevin:**\\nVerilen video fikrine göre, Veo 3'ün kullanabileceği detaylı sinematik sahne tanımları yaz.\\n\\n**Gereksinimler:**\\n1. Video süresine göre 1-3 sahne oluştur (15s video = 1 sahne, 30s = 2 sahne, 60s = 3 sahne)\\n2. Her sahne 800-1500 karakter olmalı\\n3. Sinematik dil kullan (kamera açıları, ışık, hareket, renkler)\\n4. Ne GÖRÜLEBİLECEĞİNE odaklan\\n5. ASMR dostu ve tatmin edici\\n\\n**SADECE bu JSON formatını döndür:**\\n{\\n  \\\"scenes\\\": [\\n    {\\n      \\\"sceneNumber\\\": 1,\\n      \\\"duration\\\": 15,\\n      \\\"prompt\\\": \\\"Detaylı görsel tanım (800-1500 karakter). Örnek: Keskin bir bıçak parlak mor sabun barını keserken macro çekim, kamera yavaşça sağa pan yapıyor, yumuşak stüdyo ışığı sabunun ipeksi yüzeyini parlat ıyor, bıçak yavaş ve akıcı hareketle sabunu ikiye ayırıyor, kesilen yüzeylerin pürüzsüz dokusu görülüyor, arka planda bulanık renkli sabunlar, 4K çözünürlük, sinematik depth of field...\\\"\\n    }\\n  ],\\n  \\\"overallStyle\\\": \\\"cinematic, 4K, ASMR, satisfying, macro photography\\\",\\n  \\\"cameraWork\\\": \\\"smooth slow motion, close-ups, macro shots, gentle pan\\\",\\n  \\\"lighting\\\": \\\"soft studio light, natural daylight, highlights on textures\\\",\\n  \\\"colorPalette\\\": \\\"vibrant saturated colors, pastel tones\\\"\\n}\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"**Video Fikri:**\\n{{$json.idea}}\\n\\n**Konu:** {{$json.topic}}\\n**Ortam:** {{$json.environment}}\\n**Ses:** {{$json.sound}}\\n**Stil:** {{$json.style}}\\n**Süre:** {{$json.duration}} saniye\\n\\nBu fikir için Veo 3'e verilecek detaylı sahne promptları üret. SADECE JSON döndür.\"\n    }\n  ]\n}",
-        "options": {}
+        "options": {
+          "timeout": 90000
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
@@ -166,7 +170,9 @@
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [{\n      \"text\": {{JSON.stringify($json.veo3Prompt)}}\n    }]\n  }],\n  \"generationConfig\": {\n    \"temperature\": 0.9,\n    \"maxOutputTokens\": 2048\n  }\n}",
-        "options": {}
+        "options": {
+          "timeout": 120000
+        }
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
