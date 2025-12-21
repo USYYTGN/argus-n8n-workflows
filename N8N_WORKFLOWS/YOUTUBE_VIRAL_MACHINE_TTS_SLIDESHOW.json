@@ -206,6 +206,17 @@
     },
     {
       "parameters": {
+        "command": "echo '🎵 AUDIO:' && ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 /tmp/audio.mp3 && echo '🎬 PEXELS VIDEO:' && ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 /tmp/pexels_video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [2700, 400],
+      "id": "debug-durations",
+      "name": "DEBUG: Check File Durations"
+    },
+    {
+      "parameters": {
         "command": "=ffmpeg -y -i /tmp/audio.mp3 -stream_loop -1 -i /tmp/pexels_video.mp4 -map 1:v -map 0:a -c:v libx264 -preset fast -crf 23 -c:a aac -b:a 192k -shortest /tmp/video.mp4",
         "options": {}
       },
@@ -360,7 +371,8 @@
     "Download Video": {"main": [[{"node": "Save Pexels Video", "type": "main", "index": 0}]]},
     "Save Audio": {"main": [[{"node": "Merge Files", "type": "main", "index": 0}]]},
     "Save Pexels Video": {"main": [[{"node": "Merge Files", "type": "main", "index": 1}]]},
-    "Merge Files": {"main": [[{"node": "FFmpeg: Add Voiceover", "type": "main", "index": 0}]]},
+    "Merge Files": {"main": [[{"node": "DEBUG: Check File Durations", "type": "main", "index": 0}]]},
+    "DEBUG: Check File Durations": {"main": [[{"node": "FFmpeg: Add Voiceover", "type": "main", "index": 0}]]},
     "FFmpeg: Add Voiceover": {"main": [[{"node": "Read Video File", "type": "main", "index": 0}]]},
     "Read Video File": {"main": [[{"node": "Merge Metadata & Video", "type": "main", "index": 1}]]},
     "Merge Metadata & Video": {"main": [[{"node": "Create Compressed Preview", "type": "main", "index": 0}]]},
