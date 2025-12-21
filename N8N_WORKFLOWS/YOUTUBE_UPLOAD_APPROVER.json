@@ -3,29 +3,48 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "GET",
-        "path": "youtube-approve",
-        "options": {}
+        "updates": ["message"]
       },
-      "type": "n8n-nodes-base.webhook",
+      "type": "n8n-nodes-base.telegramTrigger",
       "typeVersion": 1,
-      "position": [240, 300],
-      "webhookId": "youtube-approve-webhook",
-      "id": "webhook-trigger",
-      "name": "Webhook Trigger"
+      "position": [240, 400],
+      "webhookId": "telegram-approval-trigger",
+      "id": "telegram-trigger",
+      "name": "Telegram Trigger",
+      "credentials": {
+        "telegramApi": {
+          "id": "TELEGRAM_CREDENTIAL_ID",
+          "name": "Telegram Bot"
+        }
+      }
     },
     {
       "parameters": {
-        "httpMethod": "GET",
-        "path": "youtube-cancel",
-        "options": {}
+        "jsCode": "// Check if message is YAYINLA or İPTAL\nconst messageText = $json.message?.text?.trim().toUpperCase() || '';\n\nconsole.log('📩 Received message:', messageText);\n\nif (messageText === 'YAYINLA') {\n  return [{ json: { action: 'approve', chatId: $json.message.chat.id } }];\n} else if (messageText === 'İPTAL' || messageText === 'IPTAL') {\n  return [{ json: { action: 'cancel', chatId: $json.message.chat.id } }];\n} else {\n  // Ignore other messages\n  return [];\n}"
       },
-      "type": "n8n-nodes-base.webhook",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 400],
+      "id": "check-message",
+      "name": "Check Message Text"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{$json.action}}",
+              "operation": "equals",
+              "value2": "approve"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.if",
       "typeVersion": 1,
-      "position": [240, 500],
-      "webhookId": "youtube-cancel-webhook",
-      "id": "webhook-cancel",
-      "name": "Webhook Cancel"
+      "position": [680, 400],
+      "id": "route-action",
+      "name": "Route Action"
     },
     {
       "parameters": {
@@ -33,17 +52,17 @@
       },
       "type": "n8n-nodes-base.readBinaryFile",
       "typeVersion": 1,
-      "position": [240, 300],
+      "position": [900, 300],
       "id": "read-metadata-file",
       "name": "Read Metadata File"
     },
     {
       "parameters": {
-        "jsCode": "// Parse JSON from binary data - handle base64 encoding\nconst input = $input.first();\nlet binaryData = input.binary.data?.data || input.binary.data;\n\nlet jsonText;\n\n// Check if it's a base64 string (starts with letters/numbers, no special chars)\nif (typeof binaryData === 'string' && /^[A-Za-z0-9+/=]+$/.test(binaryData)) {\n  // Decode from base64\n  const buffer = Buffer.from(binaryData, 'base64');\n  jsonText = buffer.toString('utf-8');\n} else if (Buffer.isBuffer(binaryData)) {\n  jsonText = binaryData.toString('utf-8');\n} else if (typeof binaryData === 'object') {\n  jsonText = JSON.stringify(binaryData);\n} else {\n  jsonText = String(binaryData);\n}\n\nconsole.log('DEBUG jsonText:', jsonText);\n\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
+        "jsCode": "// Parse JSON from binary data - handle base64 encoding\nconst input = $input.first();\nlet binaryData = input.binary.data?.data || input.binary.data;\n\nlet jsonText;\n\n// Check if it's a base64 string\nif (typeof binaryData === 'string' && /^[A-Za-z0-9+/=]+$/.test(binaryData)) {\n  const buffer = Buffer.from(binaryData, 'base64');\n  jsonText = buffer.toString('utf-8');\n} else if (Buffer.isBuffer(binaryData)) {\n  jsonText = binaryData.toString('utf-8');\n} else if (typeof binaryData === 'object') {\n  jsonText = JSON.stringify(binaryData);\n} else {\n  jsonText = String(binaryData);\n}\n\nconsole.log('DEBUG jsonText:', jsonText);\n\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300],
+      "position": [1120, 300],
       "id": "parse-metadata",
       "name": "Parse Metadata JSON"
     },
@@ -53,17 +72,17 @@
       },
       "type": "n8n-nodes-base.readBinaryFile",
       "typeVersion": 1,
-      "position": [680, 300],
+      "position": [1340, 300],
       "id": "read-video",
       "name": "Read Saved Video"
     },
     {
       "parameters": {
-        "jsCode": "// Fix MIME type for YouTube - it requires 'video/mp4' not 'application/mp4'\nconst input = $input.first();\nconst metadata = $('Parse Metadata JSON').first().json;\n\nif (!input.binary || !input.binary.data) {\n  throw new Error('❌ Video binary data bulunamadı!');\n}\n\n// Get the binary data and fix MIME type\nconst binaryData = input.binary.data;\nconst fixedBinary = {\n  data: {\n    ...binaryData,\n    mimeType: 'video/mp4',  // YouTube requires exactly 'video/mp4'\n    fileName: 'video.mp4'\n  }\n};\n\nconsole.log('🎬 Video MIME type fixed:', fixedBinary.data.mimeType);\n\nreturn [{\n  json: metadata,  // Pass metadata for YouTube upload\n  binary: fixedBinary\n}];"
+        "jsCode": "// Fix MIME type for YouTube - it requires 'video/mp4' not 'application/mp4'\nconst input = $input.first();\nconst metadata = $('Parse Metadata JSON').first().json;\n\nif (!input.binary || !input.binary.data) {\n  throw new Error('❌ Video binary data bulunamadı!');\n}\n\n// Get the binary data and fix MIME type\nconst binaryData = input.binary.data;\nconst fixedBinary = {\n  data: {\n    ...binaryData,\n    mimeType: 'video/mp4',\n    fileName: 'video.mp4'\n  }\n};\n\nconsole.log('🎬 Video MIME type fixed:', fixedBinary.data.mimeType);\n\nreturn [{\n  json: metadata,\n  binary: fixedBinary\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 300],
+      "position": [1560, 300],
       "id": "fix-mime",
       "name": "Fix Video MIME Type"
     },
@@ -80,7 +99,7 @@
       },
       "type": "n8n-nodes-base.youTube",
       "typeVersion": 1,
-      "position": [1020, 300],
+      "position": [1780, 300],
       "id": "upload",
       "name": "YouTube Upload"
     },
@@ -96,7 +115,7 @@
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [1340, 200],
+      "position": [2000, 300],
       "id": "telegram-success",
       "name": "Telegram: Upload Success",
       "credentials": {
@@ -116,7 +135,7 @@
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [1560, 200],
+      "position": [2220, 300],
       "id": "cleanup",
       "name": "Cleanup Temp Files"
     },
@@ -129,7 +148,7 @@
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1,
-      "position": [680, 400],
+      "position": [900, 500],
       "id": "telegram-cancel",
       "name": "Telegram: Cancelled",
       "credentials": {
@@ -146,14 +165,20 @@
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [900, 400],
+      "position": [1120, 500],
       "id": "cleanup-cancel",
       "name": "Cleanup on Cancel"
     }
   ],
   "connections": {
-    "Webhook Trigger": {"main": [[{"node": "Read Metadata File", "type": "main", "index": 0}]]},
-    "Webhook Cancel": {"main": [[{"node": "Telegram: Cancelled", "type": "main", "index": 0}]]},
+    "Telegram Trigger": {"main": [[{"node": "Check Message Text", "type": "main", "index": 0}]]},
+    "Check Message Text": {"main": [[{"node": "Route Action", "type": "main", "index": 0}]]},
+    "Route Action": {
+      "main": [
+        [{"node": "Read Metadata File", "type": "main", "index": 0}],
+        [{"node": "Telegram: Cancelled", "type": "main", "index": 0}]
+      ]
+    },
     "Read Metadata File": {"main": [[{"node": "Parse Metadata JSON", "type": "main", "index": 0}]]},
     "Parse Metadata JSON": {"main": [[{"node": "Read Saved Video", "type": "main", "index": 0}]]},
     "Read Saved Video": {"main": [[{"node": "Fix Video MIME Type", "type": "main", "index": 0}]]},
