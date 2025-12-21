@@ -326,7 +326,7 @@
         "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
         "text": "=✅ Video kaydedildi!\n\n📌 Başlık: {{$json.title}}\n\n🎬 Video hazır! Ne yapalım?\n\n👇 Butona tıkla:",
         "additionalFields": {
-          "reply_markup": "={{ JSON.stringify({inline_keyboard: [[{text: '✅ YAYINLA', url: 'https://argusbot.duckdns.org/webhook/youtube-approve'}]]}) }}"
+          "reply_markup": "{\"inline_keyboard\":[[{\"text\":\"✅ YAYINLA\",\"url\":\"https://argusbot.duckdns.org/webhook/youtube-approve\"}]]}"
         }
       },
       "type": "n8n-nodes-base.telegram",
