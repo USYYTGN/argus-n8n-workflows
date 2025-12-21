@@ -26,7 +26,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Parse JSON from binary data\nconst input = $input.first();\nconst binaryData = input.binary.data?.data || input.binary.data;\nconst jsonText = Buffer.isBuffer(binaryData) ? binaryData.toString('utf-8') : JSON.stringify(binaryData);\nconst metadata = JSON.parse(jsonText);\n\nreturn [{\n  json: metadata\n}];"
+        "jsCode": "// Parse JSON from binary data with error handling\nconst input = $input.first();\nconst binaryData = input.binary.data?.data || input.binary.data;\n\nlet jsonText;\nif (Buffer.isBuffer(binaryData)) {\n  jsonText = binaryData.toString('utf-8');\n} else if (typeof binaryData === 'object') {\n  jsonText = JSON.stringify(binaryData);\n} else {\n  jsonText = String(binaryData);\n}\n\nconsole.log('DEBUG jsonText:', jsonText);\n\nlet metadata;\ntry {\n  metadata = JSON.parse(jsonText);\n} catch (e) {\n  throw new Error('JSON parse failed: ' + e.message + '. Content: ' + jsonText.substring(0, 200));\n}\n\nif (typeof metadata !== 'object' || metadata === null) {\n  throw new Error('Metadata is not an object! Type: ' + typeof metadata + ', Value: ' + JSON.stringify(metadata));\n}\n\nreturn [{\n  json: metadata\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
