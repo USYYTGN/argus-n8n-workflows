@@ -1,0 +1,407 @@
+{
+  "name": "VAPI AI Customer Service - FIXED",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "vapi-customer-service",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [260, 360],
+      "id": "webhook-vapi",
+      "name": "VAPI Webhook",
+      "webhookId": "vapi-cs-main"
+    },
+    {
+      "parameters": {
+        "jsCode": "const req = $input.first().json;\nconst body = req.body || req;\n\nconst eventType = body.message?.type || body.type || 'unknown';\nconst callId = body.call?.id || '';\nconst assistantId = body.assistant?.id || '';\nconst phoneNumber = body.call?.customer?.number || body.phoneNumber || '';\nconst timestamp = body.message?.timestamp || new Date().toISOString();\n\nlet eventData = {\n  eventType,\n  callId,\n  assistantId,\n  phoneNumber,\n  timestamp,\n  rawData: body\n};\n\nswitch(eventType) {\n  case 'assistant-request':\n    eventData.needsConfig = true;\n    eventData.conversationHistory = body.message?.conversation || [];\n    break;\n    \n  case 'function-call':\n    eventData.functionName = body.message?.functionCall?.name || body.functionCall?.name || '';\n    eventData.parameters = body.message?.functionCall?.parameters || body.functionCall?.parameters || {};\n    eventData.toolCallId = body.message?.toolCallId || body.toolCallId || '';\n    break;\n    \n  case 'end-of-call-report':\n    eventData.duration = body.message?.duration || 0;\n    eventData.endedReason = body.message?.endedReason || '';\n    eventData.transcript = body.message?.transcript || '';\n    eventData.summary = body.message?.summary || '';\n    eventData.cost = body.message?.cost || 0;\n    break;\n    \n  case 'transcript':\n    eventData.transcriptText = body.message?.transcript || body.transcript || '';\n    eventData.role = body.message?.role || 'user';\n    break;\n}\n\nreturn [{ json: eventData }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, 360],
+      "id": "parse-event",
+      "name": "Parse Vapi Event"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.eventType }}",
+                    "rightValue": "assistant-request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "assistant-request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.eventType }}",
+                    "rightValue": "function-call",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "function-call"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.eventType }}",
+                    "rightValue": "end-of-call-report",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "end-call"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.eventType }}",
+                    "rightValue": "transcript",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "transcript"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [700, 360],
+      "id": "switch-event",
+      "name": "Switch: Event Type"
+    },
+    {
+      "parameters": {
+        "jsCode": "const assistantConfig = {\n  model: {\n    provider: \"openai\",\n    model: \"gpt-4-turbo\",\n    temperature: 0.7,\n    systemPrompt: `Sen ARGUS Müşteri Hizmetleri AI asistanısın.\n\nGörevin:\n- Müşterilere yardımcı olmak\n- Siparişleri sorgulamak\n- Destek talepleri oluşturmak\n- Sık sorulan soruları yanıtlamak\n\nKonuşma Tarzın:\n- Profesyonel ama samimi\n- Türkçe, anlaşılır ve doğal\n- Kısa ve öz cevaplar\n- Empati göster\n\nKurallar:\n1. Müşteri bilgilerini asla paylaşma\n2. Emin olmadığın şeyleri uydurmak yerine kontrol et\n3. Çözemediğin sorunları insana yönlendir\n4. Her zaman profesyonel kal\n\nErişebildiğin Fonksiyonlar:\n- checkOrder: Sipariş durumu sorgula\n- createTicket: Destek talebi oluştur\n- getCustomerInfo: Müşteri bilgilerini getir\n- getFAQ: Sık sorulan soruları getir\n\nMüşteri: ${$json.phoneNumber || 'Bilinmiyor'}\nArama ID: ${$json.callId}\nZaman: ${$json.timestamp}`\n  },\n  voice: {\n    provider: \"11labs\",\n    voiceId: \"pNInz6obpgDQGcFmaJgB\",\n    stability: 0.5,\n    similarityBoost: 0.75,\n    speed: 1.0\n  },\n  transcriber: {\n    provider: \"deepgram\",\n    model: \"nova-2\",\n    language: \"tr\"\n  },\n  firstMessage: \"Merhaba, ARGUS müşteri hizmetlerine hoş geldiniz. Size nasıl yardımcı olabilirim?\",\n  endCallMessage: \"ARGUS'u aradığınız için teşekkürler, iyi günler!\",\n  endCallPhrases: [\"görüşürüz\", \"hoşçakal\", \"kapat\", \"tamam yeter\"],\n  maxDurationSeconds: 600,\n  backgroundSound: \"off\",\n  backchannelingEnabled: true,\n  tools: [\n    {\n      type: \"function\",\n      function: {\n        name: \"checkOrder\",\n        description: \"Sipariş durumu sorgular\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            orderNumber: { type: \"string\", description: \"Sipariş numarası\" },\n            phoneNumber: { type: \"string\", description: \"Telefon numarası\" }\n          }\n        },\n        async: true,\n        url: $env.WEBHOOK_URL + \"webhook/vapi-tool-checkorder\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"createTicket\",\n        description: \"Destek talebi oluşturur\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            description: { type: \"string\" },\n            priority: { type: \"string\", enum: [\"low\", \"medium\", \"high\", \"urgent\"] },\n            category: { type: \"string\", enum: [\"technical\", \"billing\", \"shipping\", \"product\", \"other\"] }\n          },\n          required: [\"description\", \"priority\", \"category\"]\n        },\n        async: true,\n        url: $env.WEBHOOK_URL + \"webhook/vapi-tool-createticket\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"getCustomerInfo\",\n        description: \"Müşteri bilgilerini getirir\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            phoneNumber: { type: \"string\" }\n          },\n          required: [\"phoneNumber\"]\n        },\n        async: true,\n        url: $env.WEBHOOK_URL + \"webhook/vapi-tool-customerinfo\"\n      }\n    },\n    {\n      type: \"function\",\n      function: {\n        name: \"getFAQ\",\n        description: \"FAQ bilgisi getirir\",\n        parameters: {\n          type: \"object\",\n          properties: {\n            query: { type: \"string\" }\n          },\n          required: [\"query\"]\n        },\n        async: true,\n        url: $env.WEBHOOK_URL + \"webhook/vapi-tool-faq\"\n      }\n    }\n  ]\n};\n\nreturn [{ json: { assistant: assistantConfig } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 160],
+      "id": "build-config",
+      "name": "Build Assistant Config"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1140, 160],
+      "id": "respond-config",
+      "name": "Respond: Assistant Config"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.functionName }}",
+                    "rightValue": "checkOrder",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "checkOrder"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.functionName }}",
+                    "rightValue": "createTicket",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "createTicket"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.functionName }}",
+                    "rightValue": "getCustomerInfo",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getCustomerInfo"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.functionName }}",
+                    "rightValue": "getFAQ",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "getFAQ"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [920, 360],
+      "id": "switch-function",
+      "name": "Switch: Function"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $json.parameters || {};\nconst orderNumber = params.orderNumber || '';\nconst phoneNumber = params.phoneNumber || $json.phoneNumber || '';\n\nconst mockOrders = [\n  {\n    orderNumber: 'ARG-12345',\n    phoneNumber: '+905454423820',\n    status: 'shipped',\n    statusText: 'Kargoya verildi',\n    trackingNumber: 'TRK123456789',\n    estimatedDelivery: '2025-12-20'\n  }\n];\n\nlet result = {};\n\nif (orderNumber) {\n  const order = mockOrders.find(o => o.orderNumber === orderNumber);\n  result = order ? {\n    success: true,\n    order,\n    message: `${orderNumber} numaralı siparişiniz ${order.statusText} durumunda. Kargo: ${order.trackingNumber}`\n  } : {\n    success: false,\n    message: 'Sipariş bulunamadı'\n  };\n} else if (phoneNumber) {\n  const orders = mockOrders.filter(o => o.phoneNumber === phoneNumber);\n  result = orders.length > 0 ? {\n    success: true,\n    orders,\n    message: `${orders.length} adet sipariş bulundu`\n  } : {\n    success: false,\n    message: 'Sipariş bulunamadı'\n  };\n} else {\n  result = { success: false, message: 'Sipariş numarası veya telefon gerekli' };\n}\n\nreturn [{ json: { toolCallId: $json.toolCallId, result } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 260],
+      "id": "tool-checkorder",
+      "name": "Tool: checkOrder"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $json.parameters || {};\nconst ticketId = 'TKT-' + Date.now().toString().slice(-8);\n\nconst ticket = {\n  id: ticketId,\n  description: params.description || '',\n  priority: params.priority || 'medium',\n  category: params.category || 'other',\n  phoneNumber: $json.phoneNumber || '',\n  status: 'open',\n  createdAt: new Date().toISOString()\n};\n\nconst result = {\n  success: true,\n  ticket,\n  message: `Destek talebiniz oluşturuldu. Talep numaranız: ${ticketId}`\n};\n\nreturn [{ json: { toolCallId: $json.toolCallId, result, ticketData: ticket } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 360],
+      "id": "tool-createticket",
+      "name": "Tool: createTicket"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $json.parameters || {};\nconst phoneNumber = params.phoneNumber || $json.phoneNumber || '';\n\nconst mockCustomers = {\n  '+905454423820': {\n    id: 'CUST-001',\n    name: 'Ulaşım',\n    email: 'ulasim@example.com',\n    accountType: 'premium',\n    totalOrders: 12\n  }\n};\n\nconst customer = mockCustomers[phoneNumber];\nconst result = customer ? {\n  success: true,\n  customer,\n  message: `Merhaba ${customer.name}, sizi tanıyorum! Premium müşterimizsiniz.`\n} : {\n  success: false,\n  message: 'Müşteri bulunamadı'\n};\n\nreturn [{ json: { toolCallId: $json.toolCallId, result } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 460],
+      "id": "tool-customerinfo",
+      "name": "Tool: getCustomerInfo"
+    },
+    {
+      "parameters": {
+        "jsCode": "const params = $json.parameters || {};\nconst query = (params.query || '').toLowerCase();\n\nconst faqs = [\n  {\n    question: 'Kargo ne zaman gelir?',\n    keywords: ['kargo', 'teslimat'],\n    answer: 'Standart kargolar 2-3 iş günü içinde teslim edilir.'\n  },\n  {\n    question: 'İade nasıl yapılır?',\n    keywords: ['iade', 'geri gönderme'],\n    answer: '14 gün içinde iade edebilirsiniz.'\n  }\n];\n\nconst matches = faqs.filter(faq => \n  faq.keywords.some(k => query.includes(k))\n);\n\nconst result = matches.length > 0 ? {\n  success: true,\n  faq: matches[0],\n  message: matches[0].answer\n} : {\n  success: false,\n  message: 'Bu konuda bilgi bulunamadı'\n};\n\nreturn [{ json: { toolCallId: $json.toolCallId, result } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1140, 560],
+      "id": "tool-faq",
+      "name": "Tool: getFAQ"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"result\": $json.result } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1360, 360],
+      "id": "respond-function",
+      "name": "Respond: Function Result"
+    },
+    {
+      "parameters": {
+        "jsCode": "const callLog = {\n  callId: $json.callId,\n  phoneNumber: $json.phoneNumber,\n  duration: $json.duration,\n  transcript: $json.transcript,\n  summary: $json.summary,\n  cost: $json.cost,\n  timestamp: $json.timestamp\n};\n\nconsole.log('Call ended:', callLog);\nreturn [{ json: callLog }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 560],
+      "id": "log-callend",
+      "name": "Log: Call End"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1140, 560],
+      "id": "respond-ok",
+      "name": "Respond: OK"
+    },
+    {
+      "parameters": {
+        "jsCode": "const log = {\n  callId: $json.callId,\n  text: $json.transcriptText,\n  role: $json.role,\n  timestamp: $json.timestamp\n};\n\nconsole.log('Transcript:', log);\nreturn [{ json: log }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [920, 660],
+      "id": "log-transcript",
+      "name": "Log: Transcript"
+    },
+    {
+      "parameters": {
+        "respondWith": "text",
+        "responseBody": "OK",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [1140, 660],
+      "id": "respond-ok2",
+      "name": "Respond: OK2"
+    }
+  ],
+  "connections": {
+    "VAPI Webhook": {
+      "main": [[{ "node": "Parse Vapi Event", "type": "main", "index": 0 }]]
+    },
+    "Parse Vapi Event": {
+      "main": [[{ "node": "Switch: Event Type", "type": "main", "index": 0 }]]
+    },
+    "Switch: Event Type": {
+      "main": [
+        [{ "node": "Build Assistant Config", "type": "main", "index": 0 }],
+        [{ "node": "Switch: Function", "type": "main", "index": 0 }],
+        [{ "node": "Log: Call End", "type": "main", "index": 0 }],
+        [{ "node": "Log: Transcript", "type": "main", "index": 0 }]
+      ]
+    },
+    "Build Assistant Config": {
+      "main": [[{ "node": "Respond: Assistant Config", "type": "main", "index": 0 }]]
+    },
+    "Switch: Function": {
+      "main": [
+        [{ "node": "Tool: checkOrder", "type": "main", "index": 0 }],
+        [{ "node": "Tool: createTicket", "type": "main", "index": 0 }],
+        [{ "node": "Tool: getCustomerInfo", "type": "main", "index": 0 }],
+        [{ "node": "Tool: getFAQ", "type": "main", "index": 0 }]
+      ]
+    },
+    "Tool: checkOrder": {
+      "main": [[{ "node": "Respond: Function Result", "type": "main", "index": 0 }]]
+    },
+    "Tool: createTicket": {
+      "main": [[{ "node": "Respond: Function Result", "type": "main", "index": 0 }]]
+    },
+    "Tool: getCustomerInfo": {
+      "main": [[{ "node": "Respond: Function Result", "type": "main", "index": 0 }]]
+    },
+    "Tool: getFAQ": {
+      "main": [[{ "node": "Respond: Function Result", "type": "main", "index": 0 }]]
+    },
+    "Log: Call End": {
+      "main": [[{ "node": "Respond: OK", "type": "main", "index": 0 }]]
+    },
+    "Log: Transcript": {
+      "main": [[{ "node": "Respond: OK2", "type": "main", "index": 0 }]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false,
+  "id": "VapiCSFixed",
+  "tags": []
+}

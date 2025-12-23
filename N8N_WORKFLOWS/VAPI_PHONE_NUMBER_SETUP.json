@@ -1,0 +1,129 @@
+{
+  "name": "VAPI Phone Number Setup",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -480,
+        240
+      ],
+      "id": "manual-trigger-setup",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Vapi Phone Number Configuration\n// ENV'den değerleri çeker - .env dosyanızda olmalı!\n\nconst config = {\n  // Twilio Credentials - ENV'den\n  twilioAccountSid: $env.TWILIO_ACCOUNT_SID,\n  twilioAuthToken: $env.TWILIO_AUTH_TOKEN,\n  twilioPhoneNumber: $env.TWILIO_PHONE_NUMBER,\n  \n  // Vapi Configuration - ENV'den\n  vapiApiKey: $env.VAPI_API_KEY,\n  \n  // Assistant Configuration\n  assistantId: null, // İsteğe bağlı - önceden oluşturduysanız buraya yazın\n  \n  // Webhook URLs - ENV'den\n  webhookBaseUrl: $env.WEBHOOK_URL + 'webhook',\n  \n  // Provider seçimi\n  provider: 'twilio',\n  \n  // Language ve Voice\n  language: 'tr',\n  voiceProvider: '11labs',\n  voiceId: 'pNInz6obpgDQGcFmaJgB' // 11labs Turkish voice\n};\n\nreturn [{\n  json: config\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -280,
+        240
+      ],
+      "id": "config-settings",
+      "name": "Config Settings"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vapi.ai/phone-number",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{ $json.vapiApiKey }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  provider: $json.provider,\n  number: $json.twilioPhoneNumber,\n  twilioAccountSid: $json.twilioAccountSid,\n  twilioAuthToken: $json.twilioAuthToken,\n  assistantId: $json.assistantId,\n  name: 'ARGUS Customer Service Line',\n  serverUrl: $json.webhookBaseUrl + '/vapi-customer-service',\n  serverUrlSecret: 'n8n_vapi_webhook_secret'\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -80,
+        240
+      ],
+      "id": "create-vapi-phone",
+      "name": "Create Vapi Phone Number"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nconsole.log('Vapi Phone Number Created:', response);\n\nconst result = {\n  success: true,\n  phoneNumberId: response.id,\n  phoneNumber: response.number,\n  provider: response.provider,\n  message: `Telefon numarası başarıyla Vapi'ye bağlandı! \\nNumara: ${response.number}\\nID: ${response.id}`\n};\n\nreturn [{\n  json: result\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        120,
+        240
+      ],
+      "id": "parse-response",
+      "name": "Parse Response"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Config Settings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Config Settings": {
+      "main": [
+        [
+          {
+            "node": "Create Vapi Phone Number",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Vapi Phone Number": {
+      "main": [
+        [
+          {
+            "node": "Parse Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "vapi-phone-setup-v1",
+  "meta": {
+    "instanceId": "vapi-phone-setup"
+  },
+  "id": "VapiPhoneSetup001",
+  "tags": [
+    {
+      "name": "vapi",
+      "id": "vapi-tag"
+    },
+    {
+      "name": "setup",
+      "id": "setup-tag"
+    }
+  ]
+}
