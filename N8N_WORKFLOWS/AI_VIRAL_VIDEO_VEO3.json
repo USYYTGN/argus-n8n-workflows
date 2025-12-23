@@ -1,0 +1,384 @@
+{
+  "name": "AI Viral Video - VEO 3 (Optimized)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 3
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [240, 300],
+      "id": "schedule-trigger",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/videos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "chart",
+              "value": "mostPopular"
+            },
+            {
+              "name": "regionCode",
+              "value": "TR"
+            },
+            {
+              "name": "maxResults",
+              "value": "5"
+            },
+            {
+              "name": "part",
+              "value": "snippet,statistics"
+            },
+            {
+              "name": "key",
+              "value": "={{$env.YOUTUBE_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [464, 300],
+      "id": "youtube-fetch",
+      "name": "YouTube Trending"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "items",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [688, 300],
+      "id": "split-videos",
+      "name": "Split Videos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Filter and score YouTube trending videos\nconst publishedAt = new Date($json.snippet.publishedAt);\nconst now = new Date();\nconst hoursDiff = (now - publishedAt) / (1000 * 60 * 60);\n\n// Accept videos up to 7 days old (168 hours)\nif (hoursDiff > 168) {\n  return [];\n}\n\nconst views = Number($json.statistics.viewCount) || 0;\nconst likes = Number($json.statistics.likeCount) || 0;\nconst comments = Number($json.statistics.commentCount) || 0;\n\nconst engagementRate = views > 0 ? ((likes + comments) / views) * 100 : 0;\n\n// Boost videos that are very fresh\nconst ageBonus = hoursDiff < 12 ? 2 : (hoursDiff < 24 ? 1.5 : 1);\n\n// Viral score calculation\nconst viralScore = (views * 0.5 * ageBonus) + ((likes * 30) + (comments * 50) + (engagementRate * 1000));\n\nreturn [{\n  json: {\n    videoId: $json.id,\n    title: $json.snippet.title,\n    description: $json.snippet.description,\n    channelTitle: $json.snippet.channelTitle,\n    thumbnail: $json.snippet.thumbnails?.maxres?.url || $json.snippet.thumbnails?.high?.url || '',\n    viewCount: views,\n    likeCount: likes,\n    commentCount: comments,\n    engagementRate: engagementRate.toFixed(2),\n    viralScore: Math.round(viralScore),\n    ageHours: Math.round(hoursDiff),\n    publishedAt: $json.snippet.publishedAt\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [912, 300],
+      "id": "filter-score",
+      "name": "Filter & Score"
+    },
+    {
+      "parameters": {
+        "sortFieldsUi": {
+          "sortField": [
+            {
+              "fieldName": "viralScore",
+              "order": "descending"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.sort",
+      "typeVersion": 1,
+      "position": [1136, 300],
+      "id": "sort-videos",
+      "name": "Sort by Score"
+    },
+    {
+      "parameters": {
+        "maxItems": 1
+      },
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [1360, 300],
+      "id": "get-top-video",
+      "name": "Get Top Video"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GOOGLE_AI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Sen professional cinematographer ve Google VEO 3 video generation uzmanısın. YouTube'da viral olan bu videodan ilham alarak, VEO 3 için ULTRA DETAYLI bir 8 saniyelik video prompt'u oluştur.\n\n📹 VIRAL VIDEO BİLGİLERİ:\nBaşlık: ${$json.title}\nKanal: ${$json.channelTitle}\nİzlenme: ${$json.viewCount.toLocaleString()}\nBeğeni: ${$json.likeCount.toLocaleString()}\nYorum: ${$json.commentCount.toLocaleString()}\nAçıklama: ${($json.description || '').substring(0, 200)}\n\n🎬 VEO 3 PROMPT KURALLARI:\n\n1. CAMERA WORK (Mutlaka belirt):\n   - Shot type: wide shot / medium shot / close-up / extreme close-up / aerial / POV\n   - Camera movement: slow motion / time-lapse / smooth tracking / dolly zoom / handheld / static\n   - Angle: low angle / high angle / eye level / bird's eye / worm's eye\n\n2. SUBJECT & ACTION (Çok net olmalı):\n   - Ana obje/kişi ne yapıyor?\n   - Hareket nasıl? (dynamic / graceful / explosive / gentle)\n   - Pozisyon ve kompozisyon\n\n3. LIGHTING & ATMOSPHERE (Kritik!):\n   - Light quality: golden hour / blue hour / harsh midday / soft studio / dramatic shadows / backlit / rim light\n   - Color temperature: warm / cool / neutral\n   - Mood: cinematic / dreamy / energetic / peaceful / dramatic / mysterious\n\n4. TECHNICAL SPECS:\n   - Quality: 4K / cinematic / professional\n   - Depth of field: shallow / deep\n   - Color grading: film look / vivid / muted / high contrast\n\n5. ENVIRONMENT:\n   - Lokasyon detayları\n   - Background elements\n   - Atmosfer (fog / rain / dust / clear)\n\n6. KURAL:\n   - KESINLIKLE metin, yazı, UI, logo eklememe\n   - İnsan yüzü varsa generic olmalı (ünlü benzemez)\n   - Max 480 karakter\n   - Sadece İngilizce\n\n📝 ÖRNEK MÜKEMMEL PROMPT:\n\"A cinematic wide-angle shot of a golden retriever running through a sunlit meadow at golden hour, captured in slow motion with smooth tracking camera movement. Shot at eye level with shallow depth of field, professional 4K quality. The dog's fur glows in the warm backlit sunlight, creating rim lighting effect. Background features soft bokeh of wildflowers and tall grass. Film-like color grading with warm tones, dreamy atmosphere, gentle motion blur on the grass, peaceful and uplifting mood.\"\n\nŞİMDI SADECE VEO 3 PROMPT'UNU YAZ (açıklama yapma, direkt prompt ver):`\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.7,\n    maxOutputTokens: 512,\n    topP: 0.95,\n    topK: 40\n  }\n}) }}"
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [1584, 300],
+      "id": "gemini-prompt",
+      "name": "Gemini - Generate VEO3 Prompt"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse Gemini response and extract VEO3 prompt\nconst response = $input.first().json;\nlet veo3Prompt = '';\n\ntry {\n  if (response.candidates && response.candidates[0]) {\n    veo3Prompt = response.candidates[0].content.parts[0].text.trim();\n    \n    // Remove any markdown formatting\n    veo3Prompt = veo3Prompt.replace(/```[a-z]*\\n?/g, '').trim();\n    \n    // Remove \"VEO 3 Prompt:\" or similar prefixes\n    veo3Prompt = veo3Prompt.replace(/^(VEO\\s*3\\s*Prompt:|Prompt:)\\s*/i, '').trim();\n    \n    // Ensure max 480 characters\n    if (veo3Prompt.length > 480) {\n      veo3Prompt = veo3Prompt.substring(0, 477) + '...';\n    }\n  } else {\n    throw new Error('No candidates in Gemini response');\n  }\n} catch (error) {\n  // Fallback to a known-good prompt\n  veo3Prompt = \"A cinematic slow-motion wide shot of ocean waves crashing on coastal rocks at golden hour, professional 4K quality with shallow depth of field, warm color grading, dramatic backlit sunlight creating spray highlights, peaceful atmosphere.\";\n  console.log('Gemini parse error, using fallback:', error.message);\n}\n\nreturn [{\n  json: {\n    veo3Prompt: veo3Prompt,\n    sourceVideo: {\n      title: $('Get Top Video').item.json.title,\n      channel: $('Get Top Video').item.json.channelTitle,\n      views: $('Get Top Video').item.json.viewCount\n    }\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1808, 300],
+      "id": "parse-veo3-prompt",
+      "name": "Parse VEO3 Prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.0-fast-generate-001:predictLongRunning",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GOOGLE_AI_API_KEY}}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  instances: [{\n    prompt: $json.veo3Prompt\n  }],\n  parameters: {\n    aspectRatio: \"16:9\",\n    sampleCount: 1,\n    durationSeconds: 8\n  }\n}) }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2032, 300],
+      "id": "veo3-request",
+      "name": "VEO3 - Start Generation"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse operation ID from VEO3 response\nconst input = $input.first().json;\nconst operationName = input.name;\nconst operationId = operationName.split('/').pop();\n\nconst chatId = '1496380263'; // Telegram chat ID\n\nreturn [{\n  json: {\n    operationName: operationName,\n    operationId: operationId,\n    checkUrl: `https://generativelanguage.googleapis.com/v1beta/${operationName}`,\n    status: 'PROCESSING',\n    retryCount: 0,\n    maxRetries: 15,\n    chatId: chatId,\n    message: '🎬 Video üretimi başladı! Bekleniyor...'\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2256, 300],
+      "id": "parse-operation-id",
+      "name": "Parse Operation ID"
+    },
+    {
+      "parameters": {
+        "amount": 60,
+        "unit": "seconds"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [2480, 300],
+      "id": "wait-60s",
+      "name": "Wait 60 Seconds",
+      "webhookId": "veo3-wait"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.checkUrl}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GOOGLE_AI_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [2704, 300],
+      "id": "check-status",
+      "name": "Check VEO3 Status"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Parse VEO3 status and extract video URI if ready\nconst statusResponse = $input.first().json;\nconst previousData = $('Parse Operation ID').item.json;\nconst chatId = previousData.chatId;\n\nif (statusResponse.done === true) {\n  // Video is ready! Extract URI using regex\n  const responseStr = JSON.stringify(statusResponse.response);\n  const uriMatch = responseStr.match(/\"uri\":\"([^\"]+)\"/);  \n  const videoUri = uriMatch ? uriMatch[1] : null;\n  \n  if (!videoUri) {\n    return [{\n      json: {\n        status: 'ERROR',\n        error: 'Video URI not found in response',\n        shouldRetry: false,\n        chatId: chatId\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      status: 'DONE',\n      videoUri: videoUri,\n      shouldRetry: false,\n      chatId: chatId,\n      operationName: statusResponse.name,\n      message: '✅ Video hazır! İndiriliyor...'\n    }\n  }];\n} else {\n  // Still processing, check retry count\n  const retryCount = (previousData.retryCount || 0) + 1;\n  const maxRetries = previousData.maxRetries || 15;\n  \n  if (retryCount >= maxRetries) {\n    return [{\n      json: {\n        status: 'TIMEOUT',\n        error: `Video ${maxRetries} deneme sonrası hazır değil`,\n        shouldRetry: false,\n        chatId: chatId,\n        message: '⏱️ Video üretimi çok uzun sürdü, zaman aşımı.'\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      operationName: previousData.operationName,\n      operationId: previousData.operationId,\n      checkUrl: previousData.checkUrl,\n      status: 'PROCESSING',\n      retryCount: retryCount,\n      maxRetries: maxRetries,\n      chatId: chatId,\n      shouldRetry: true,\n      message: `⏳ Hala işleniyor... (${retryCount}/${maxRetries})`\n    }\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2928, 300],
+      "id": "parse-status",
+      "name": "Parse Video Status"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "retry-condition",
+              "leftValue": "={{$json.shouldRetry}}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3152, 300],
+      "id": "check-retry",
+      "name": "Should Retry?"
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "={{$json.videoUri}}",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-goog-api-key",
+              "value": "={{$env.GOOGLE_AI_API_KEY}}"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file",
+              "outputPropertyName": "data"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [3376, 188],
+      "id": "download-video",
+      "name": "Download Video"
+    },
+    {
+      "parameters": {
+        "operation": "sendVideo",
+        "chatId": "={{$json.chatId}}",
+        "binaryData": true,
+        "binaryProperty": "data",
+        "additionalFields": {
+          "caption": "={{\"🎬 AI VİRAL VİDEO HAZIR!\\n\\n📹 Kaynak: \" + $('Parse VEO3 Prompt').item.json.sourceVideo.title + \"\\n👤 Kanal: \" + $('Parse VEO3 Prompt').item.json.sourceVideo.channel + \"\\n👁️ İzlenme: \" + $('Parse VEO3 Prompt').item.json.sourceVideo.views.toLocaleString() + \"\\n\\n🤖 VEO 3 ile üretildi\\n⏱️ 8 saniye\\n📐 16:9\\n\\n💡 Prompt:\\n\" + $('Parse VEO3 Prompt').item.json.veo3Prompt.substring(0, 200) + \"...\"}}"
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [3600, 188],
+      "id": "send-telegram",
+      "name": "Send to Telegram",
+      "credentials": {
+        "telegramApi": {
+          "id": "telegram-bot",
+          "name": "Telegram Bot"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Schedule Trigger": {
+      "main": [[{"node": "YouTube Trending", "type": "main", "index": 0}]]
+    },
+    "YouTube Trending": {
+      "main": [[{"node": "Split Videos", "type": "main", "index": 0}]]
+    },
+    "Split Videos": {
+      "main": [[{"node": "Filter & Score", "type": "main", "index": 0}]]
+    },
+    "Filter & Score": {
+      "main": [[{"node": "Sort by Score", "type": "main", "index": 0}]]
+    },
+    "Sort by Score": {
+      "main": [[{"node": "Get Top Video", "type": "main", "index": 0}]]
+    },
+    "Get Top Video": {
+      "main": [[{"node": "Gemini - Generate VEO3 Prompt", "type": "main", "index": 0}]]
+    },
+    "Gemini - Generate VEO3 Prompt": {
+      "main": [[{"node": "Parse VEO3 Prompt", "type": "main", "index": 0}]]
+    },
+    "Parse VEO3 Prompt": {
+      "main": [[{"node": "VEO3 - Start Generation", "type": "main", "index": 0}]]
+    },
+    "VEO3 - Start Generation": {
+      "main": [[{"node": "Parse Operation ID", "type": "main", "index": 0}]]
+    },
+    "Parse Operation ID": {
+      "main": [[{"node": "Wait 60 Seconds", "type": "main", "index": 0}]]
+    },
+    "Wait 60 Seconds": {
+      "main": [[{"node": "Check VEO3 Status", "type": "main", "index": 0}]]
+    },
+    "Check VEO3 Status": {
+      "main": [[{"node": "Parse Video Status", "type": "main", "index": 0}]]
+    },
+    "Parse Video Status": {
+      "main": [[{"node": "Should Retry?", "type": "main", "index": 0}]]
+    },
+    "Should Retry?": {
+      "main": [
+        [{"node": "Wait 60 Seconds", "type": "main", "index": 0}],
+        [{"node": "Download Video", "type": "main", "index": 0}]
+      ]
+    },
+    "Download Video": {
+      "main": [[{"node": "Send to Telegram", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "initial-version",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "tags": []
+}
