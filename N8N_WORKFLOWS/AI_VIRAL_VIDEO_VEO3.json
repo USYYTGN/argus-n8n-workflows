@@ -394,35 +394,10 @@
     },
     {
       "parameters": {
-        "command": "=ffmpeg -i /tmp/video_input.mp4 -i /tmp/voiceover_input.mp3 -i /tmp/music_input.mp3 -filter_complex \"[2:a]volume=0.2[music];[1:a][music]amix=inputs=2:duration=shortest[aout]\" -map 0:v -map \"[aout]\" -c:v copy -c:a aac -b:a 192k -shortest /tmp/final_output.mp4",
-        "requirements": {
-          "fileInputs": {
-            "files": [
-              {
-                "fileName": "video_input.mp4",
-                "binaryProperty": "data",
-                "inputIndex": 0
-              },
-              {
-                "fileName": "voiceover_input.mp3",
-                "binaryProperty": "audio",
-                "inputIndex": 0
-              },
-              {
-                "fileName": "music_input.mp3",
-                "binaryProperty": "music",
-                "inputIndex": 1
-              }
-            ]
-          },
-          "fileOutput": {
-            "fileName": "final_output.mp4",
-            "outputPropertyName": "finalVideo"
-          }
-        }
+        "jsCode": "const { spawn } = require('child_process');\nconst fs = require('fs').promises;\nconst path = require('path');\n\n// Get inputs from multiple sources\nconst items = $input.all();\n\n// Find video, audio, and music data\nlet videoData, audioData, musicData;\n\nfor (const item of items) {\n  if (item.binary?.data) {\n    videoData = item.binary.data;\n  }\n  if (item.binary?.audio) {\n    audioData = item.binary.audio;\n  }\n  if (item.binary?.music) {\n    musicData = item.binary.music;\n  }\n}\n\nif (!videoData || !audioData || !musicData) {\n  throw new Error('Missing video, audio, or music data');\n}\n\n// Create temp file paths\nconst tempDir = '/tmp';\nconst videoPath = path.join(tempDir, `video_${Date.now()}.mp4`);\nconst audioPath = path.join(tempDir, `audio_${Date.now()}.mp3`);\nconst musicPath = path.join(tempDir, `music_${Date.now()}.mp3`);\nconst outputPath = path.join(tempDir, `final_${Date.now()}.mp4`);\n\n// Write binary data to temp files\nawait fs.writeFile(videoPath, Buffer.from(videoData.data, 'base64'));\nawait fs.writeFile(audioPath, Buffer.from(audioData.data, 'base64'));\nawait fs.writeFile(musicPath, Buffer.from(musicData.data, 'base64'));\n\n// Run ffmpeg to merge video + voiceover + background music\nconst ffmpegArgs = [\n  '-i', videoPath,\n  '-i', audioPath,\n  '-i', musicPath,\n  '-filter_complex', '[2:a]volume=0.2[music];[1:a][music]amix=inputs=2:duration=shortest[aout]',\n  '-map', '0:v',\n  '-map', '[aout]',\n  '-c:v', 'copy',\n  '-c:a', 'aac',\n  '-b:a', '192k',\n  '-shortest',\n  outputPath\n];\n\nreturn new Promise((resolve, reject) => {\n  const ffmpeg = spawn('ffmpeg', ffmpegArgs);\n  \n  let stderr = '';\n  ffmpeg.stderr.on('data', (data) => {\n    stderr += data.toString();\n  });\n  \n  ffmpeg.on('close', async (code) => {\n    if (code !== 0) {\n      // Cleanup temp files\n      await fs.unlink(videoPath).catch(() => {});\n      await fs.unlink(audioPath).catch(() => {});\n      await fs.unlink(musicPath).catch(() => {});\n      return reject(new Error(`ffmpeg failed: ${stderr}`));\n    }\n    \n    try {\n      // Read final video\n      const finalVideo = await fs.readFile(outputPath);\n      \n      // Cleanup temp files\n      await fs.unlink(videoPath).catch(() => {});\n      await fs.unlink(audioPath).catch(() => {});\n      await fs.unlink(musicPath).catch(() => {});\n      await fs.unlink(outputPath).catch(() => {});\n      \n      resolve([{\n        json: {\n          success: true,\n          message: 'Video merged successfully',\n          chatId: $('Parse Narration Script').first().json.chatId\n        },\n        binary: {\n          finalVideo: {\n            data: finalVideo.toString('base64'),\n            mimeType: 'video/mp4',\n            fileName: 'viral_video_final.mp4'\n          }\n        }\n      }]);\n    } catch (error) {\n      reject(error);\n    }\n  });\n});"
       },
-      "type": "n8n-nodes-base.executeCommand",
-      "typeVersion": 1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [4272, 282],
       "id": "merge-audio-video",
       "name": "Merge Video + Audio + Music",
