@@ -111,7 +111,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Fetch YouTube thumbnail and convert to base64\nconst thumbnailUrl = $json.thumbnail;\n\nif (!thumbnailUrl) {\n  throw new Error('No thumbnail URL found');\n}\n\ntry {\n  const response = await fetch(thumbnailUrl);\n  const arrayBuffer = await response.arrayBuffer();\n  const base64Image = Buffer.from(arrayBuffer).toString('base64');\n  \n  return [{\n    json: {\n      ...($json),\n      thumbnailBase64: base64Image\n    }\n  }];\n} catch (error) {\n  throw new Error(`Failed to fetch thumbnail: ${error.message}`);\n}"
+        "jsCode": "// Fetch YouTube thumbnail using axios (fetch not available in n8n)\nconst thumbnailUrl = $json.thumbnail;\n\nif (!thumbnailUrl) {\n  throw new Error('No thumbnail URL found');\n}\n\ntry {\n  // Use axios to fetch the thumbnail\n  const response = await this.helpers.httpRequest({\n    method: 'GET',\n    url: thumbnailUrl,\n    encoding: null,\n    returnFullResponse: false\n  });\n  \n  // Convert to base64\n  const base64Image = Buffer.from(response).toString('base64');\n  \n  return [{\n    json: {\n      ...($json),\n      thumbnailBase64: base64Image\n    }\n  }];\n} catch (error) {\n  throw new Error(`Failed to fetch thumbnail: ${error.message}`);\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -123,8 +123,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [\n      {\n        text: `Sen professional cinematographer ve Google VEO 3 video generation uzmanısın. YouTube'da viral olan bu videonun GÖRSELINI ve BİLGİLERİNİ analiz ederek, VEO 3 için ULTRA DETAYLI bir 8 saniyelik video prompt'u oluştur.\n\n📹 VIRAL VIDEO BİLGİLERİ:\nBaşlık: ${$json.title}\nKanal: ${$json.channelTitle}\nİzlenme: ${$json.viewCount.toLocaleString()}\nBeğeni: ${$json.likeCount.toLocaleString()}\nAçıklama: ${($json.description || '').substring(0, 200)}\n\n👁️ ÖNEMLİ: Aşağıdaki thumbnail görselini detaylıca analiz et! Renk paleti, kompozisyon, atmosfer, kişilerin pozları, ışık kullanımı, genel mood - hepsini incele ve benzer bir VEO 3 prompt'u oluştur.\n\n🎬 VEO 3 PROMPT KURALLARI:\n\n1. CAMERA WORK (Mutlaka belirt):\n   - Shot type: wide shot / medium shot / close-up / extreme close-up / aerial / POV\n   - Camera movement: slow motion / time-lapse / smooth tracking / dolly zoom / handheld / static\n   - Angle: low angle / high angle / eye level / bird's eye / worm's eye\n\n2. SUBJECT & ACTION (Görselden esinlen!):\n   - Ana obje/kişi ne yapıyor?\n   - Hareket nasıl? (dynamic / graceful / explosive / gentle)\n   - Pozisyon ve kompozisyon (görseldeki gibi!)\n\n3. LIGHTING & ATMOSPHERE (Görseldeki ışığı kopyala!):\n   - Light quality: golden hour / blue hour / harsh midday / soft studio / dramatic shadows / backlit / rim light / neon\n   - Color temperature: warm / cool / neutral / neon / saturated\n   - Mood: cinematic / dreamy / energetic / peaceful / dramatic / mysterious / urban / vintage\n\n4. TECHNICAL SPECS:\n   - Quality: 4K / cinematic / professional\n   - Depth of field: shallow / deep\n   - Color grading: film look / vivid / muted / high contrast / retro / modern\n\n5. ENVIRONMENT (Görseldeki ortamı tanımla!):\n   - Lokasyon detayları (indoor/outdoor, urban/nature, etc.)\n   - Background elements\n   - Atmosfer (fog / rain / dust / clear / smoke / lights)\n\n6. COLOR PALETTE (Görseldeki renkler!):\n   - Ana renkler (dominant colors)\n   - Kontrast durumu\n   - Saturation level\n\n7. KURAL:\n   - KESINLIKLE metin, yazı, UI, logo eklememe\n   - İnsan yüzü varsa generic olmalı (ünlü benzemez)\n   - Max 480 karakter\n   - Sadece İngilizce\n   - Görseldeki MOOD ve STİLİ yakala!\n\n📝 ÖRNEK:\n\"A cinematic wide-angle shot of a golden retriever running through a sunlit meadow at golden hour, captured in slow motion with smooth tracking camera movement. Shot at eye level with shallow depth of field, professional 4K quality. The dog's fur glows in the warm backlit sunlight, creating rim lighting effect. Background features soft bokeh of wildflowers and tall grass. Film-like color grading with warm tones, dreamy atmosphere.\"\n\nŞİMDI GÖRSELI ANALIZ ET VE SADECE VEO 3 PROMPT'UNU YAZ (açıklama yapma!):`\n      },\n      {\n        inlineData: {\n          mimeType: 'image/jpeg',\n          data: $json.thumbnailBase64\n        }\n      }\n    ]\n  }],\n  generationConfig: {\n    temperature: 0.7,\n    maxOutputTokens: 512,\n    topP: 0.95,\n    topK: 40\n  }\n}) }}"
@@ -150,8 +150,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://generativelanguage.googleapis.com/v1beta/models/veo-3.0-fast-generate-001:predictLongRunning",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  instances: [{\n    prompt: $json.veo3Prompt\n  }],\n  parameters: {\n    aspectRatio: \"16:9\",\n    sampleCount: 1,\n    durationSeconds: 8\n  }\n}) }}",
@@ -195,8 +195,8 @@
       "parameters": {
         "method": "GET",
         "url": "={{$json.checkUrl}}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "options": {
           "response": {
             "response": {
@@ -254,8 +254,8 @@
       "parameters": {
         "method": "GET",
         "url": "={{$json.videoUri}}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "options": {
           "response": {
             "response": {
@@ -276,8 +276,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Sen professional voiceover artist ve viral content yazarısın. YouTube'da viral olan bu video için 8 SANİYELİK kısa, çarpıcı, enerjik bir voiceover scripti yaz.\n\n📹 ORİJİNAL VIDEO:\nBaşlık: ${$('Get Top Video').item.json.title}\nKanal: ${$('Get Top Video').item.json.channelTitle}\nAçıklama: ${($('Get Top Video').item.json.description || '').substring(0, 150)}\n\n🎤 VOICEOVER KURALLARI:\n- SADECE 8 SANİYE! (max 20-25 kelime)\n- Enerjik, dikkat çekici başlangıç\n- Hook: İlk 2 saniyede insanı yakala\n- Kısa, vurucu cümleler\n- Call to action ile bitir\n- Türkçe olmalı\n- Seslendirmeye uygun (konuşma dili)\n\n✅ İYİ ÖRNEKLER:\n\"Bunu görmek zorundasın! İnanılmaz bir anın tam ortasındasın. Kaçırma!\"\n\"Dur bir dakika! Az önce olan şeye inanamayacaksın. Dikkat et!\"\n\"İşte bu! Tam da aradığın şey. Hemen izle!\"\n\n🎯 SADECE SCRİPTİ YAZ (açıklama yapma):`\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.9,\n    maxOutputTokens: 128,\n    topP: 0.95\n  }\n}) }}"
@@ -302,8 +302,8 @@
       "parameters": {
         "method": "POST",
         "url": "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "headerAuth",
+        "authentication": "genericCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
         "jsonBody": "={{ JSON.stringify({\n  text: $json.narrationScript,\n  model_id: 'eleven_turbo_v2_5',\n  voice_settings: {\n    stability: 0.5,\n    similarity_boost: 0.75,\n    style: 0.5,\n    use_speaker_boost: true\n  }\n}) }}",
