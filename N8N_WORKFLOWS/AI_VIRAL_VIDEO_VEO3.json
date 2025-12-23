@@ -14,7 +14,10 @@
       },
       "type": "n8n-nodes-base.scheduleTrigger",
       "typeVersion": 1.2,
-      "position": [240, 300],
+      "position": [
+        240,
+        300
+      ],
       "id": "schedule-trigger",
       "name": "Schedule Trigger"
     },
@@ -56,7 +59,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [464, 300],
+      "position": [
+        464,
+        300
+      ],
       "id": "youtube-fetch",
       "name": "YouTube Trending"
     },
@@ -67,7 +73,10 @@
       },
       "type": "n8n-nodes-base.splitOut",
       "typeVersion": 1,
-      "position": [688, 300],
+      "position": [
+        688,
+        300
+      ],
       "id": "split-videos",
       "name": "Split Videos"
     },
@@ -77,7 +86,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [912, 300],
+      "position": [
+        912,
+        300
+      ],
       "id": "filter-score",
       "name": "Filter & Score"
     },
@@ -95,7 +107,10 @@
       },
       "type": "n8n-nodes-base.sort",
       "typeVersion": 1,
-      "position": [1136, 300],
+      "position": [
+        1136,
+        300
+      ],
       "id": "sort-videos",
       "name": "Sort by Score"
     },
@@ -105,7 +120,10 @@
       },
       "type": "n8n-nodes-base.limit",
       "typeVersion": 1,
-      "position": [1360, 300],
+      "position": [
+        1360,
+        300
+      ],
       "id": "get-top-video",
       "name": "Get Top Video"
     },
@@ -115,7 +133,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1472, 300],
+      "position": [
+        1472,
+        300
+      ],
       "id": "fetch-thumbnail",
       "name": "Fetch Thumbnail Base64"
     },
@@ -127,11 +148,14 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [\n      {\n        text: `Sen professional cinematographer ve Google VEO 3 video generation uzmanısın. YouTube'da viral olan bu videonun GÖRSELINI ve BİLGİLERİNİ analiz ederek, VEO 3 için ULTRA DETAYLI bir 8 saniyelik video prompt'u oluştur.\n\n📹 VIRAL VIDEO BİLGİLERİ:\nBaşlık: ${$json.title}\nKanal: ${$json.channelTitle}\nİzlenme: ${$json.viewCount.toLocaleString()}\nBeğeni: ${$json.likeCount.toLocaleString()}\nAçıklama: ${($json.description || '').substring(0, 200)}\n\n👁️ ÖNEMLİ: Aşağıdaki thumbnail görselini detaylıca analiz et! Renk paleti, kompozisyon, atmosfer, kişilerin pozları, ışık kullanımı, genel mood - hepsini incele ve benzer bir VEO 3 prompt'u oluştur.\n\n🎬 VEO 3 PROMPT KURALLARI:\n\n1. CAMERA WORK (Mutlaka belirt):\n   - Shot type: wide shot / medium shot / close-up / extreme close-up / aerial / POV\n   - Camera movement: slow motion / time-lapse / smooth tracking / dolly zoom / handheld / static\n   - Angle: low angle / high angle / eye level / bird's eye / worm's eye\n\n2. SUBJECT & ACTION (Görselden esinlen!):\n   - Ana obje/kişi ne yapıyor?\n   - Hareket nasıl? (dynamic / graceful / explosive / gentle)\n   - Pozisyon ve kompozisyon (görseldeki gibi!)\n\n3. LIGHTING & ATMOSPHERE (Görseldeki ışığı kopyala!):\n   - Light quality: golden hour / blue hour / harsh midday / soft studio / dramatic shadows / backlit / rim light / neon\n   - Color temperature: warm / cool / neutral / neon / saturated\n   - Mood: cinematic / dreamy / energetic / peaceful / dramatic / mysterious / urban / vintage\n\n4. TECHNICAL SPECS:\n   - Quality: 4K / cinematic / professional\n   - Depth of field: shallow / deep\n   - Color grading: film look / vivid / muted / high contrast / retro / modern\n\n5. ENVIRONMENT (Görseldeki ortamı tanımla!):\n   - Lokasyon detayları (indoor/outdoor, urban/nature, etc.)\n   - Background elements\n   - Atmosfer (fog / rain / dust / clear / smoke / lights)\n\n6. COLOR PALETTE (Görseldeki renkler!):\n   - Ana renkler (dominant colors)\n   - Kontrast durumu\n   - Saturation level\n\n7. KURAL:\n   - KESINLIKLE metin, yazı, UI, logo eklememe\n   - İnsan yüzü varsa generic olmalı (ünlü benzemez)\n   - Max 480 karakter\n   - Sadece İngilizce\n   - Görseldeki MOOD ve STİLİ yakala!\n\n📝 ÖRNEK:\n\"A cinematic wide-angle shot of a golden retriever running through a sunlit meadow at golden hour, captured in slow motion with smooth tracking camera movement. Shot at eye level with shallow depth of field, professional 4K quality. The dog's fur glows in the warm backlit sunlight, creating rim lighting effect. Background features soft bokeh of wildflowers and tall grass. Film-like color grading with warm tones, dreamy atmosphere.\"\n\nŞİMDI GÖRSELI ANALIZ ET VE SADECE VEO 3 PROMPT'UNU YAZ (açıklama yapma!):`\n      },\n      {\n        inlineData: {\n          mimeType: 'image/jpeg',\n          data: $json.thumbnailBase64\n        }\n      }\n    ]\n  }],\n  generationConfig: {\n    temperature: 0.7,\n    maxOutputTokens: 512,\n    topP: 0.95,\n    topK: 40\n  }\n}) }}"
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [\n      {\n        text: `Sen professional cinematographer ve Google VEO 3 video generation uzman\u0131s\u0131n. YouTube'da viral olan bu videonun G\u00d6RSELINI ve B\u0130LG\u0130LER\u0130N\u0130 analiz ederek, VEO 3 i\u00e7in ULTRA DETAYLI bir 8 saniyelik video prompt'u olu\u015ftur.\n\n\ud83d\udcf9 VIRAL VIDEO B\u0130LG\u0130LER\u0130:\nBa\u015fl\u0131k: ${$json.title}\nKanal: ${$json.channelTitle}\n\u0130zlenme: ${$json.viewCount.toLocaleString()}\nBe\u011feni: ${$json.likeCount.toLocaleString()}\nA\u00e7\u0131klama: ${($json.description || '').substring(0, 200)}\n\n\ud83d\udc41\ufe0f \u00d6NEML\u0130: A\u015fa\u011f\u0131daki thumbnail g\u00f6rselini detayl\u0131ca analiz et! Renk paleti, kompozisyon, atmosfer, ki\u015filerin pozlar\u0131, \u0131\u015f\u0131k kullan\u0131m\u0131, genel mood - hepsini incele ve benzer bir VEO 3 prompt'u olu\u015ftur.\n\n\ud83c\udfac VEO 3 PROMPT KURALLARI:\n\n1. CAMERA WORK (Mutlaka belirt):\n   - Shot type: wide shot / medium shot / close-up / extreme close-up / aerial / POV\n   - Camera movement: slow motion / time-lapse / smooth tracking / dolly zoom / handheld / static\n   - Angle: low angle / high angle / eye level / bird's eye / worm's eye\n\n2. SUBJECT & ACTION (G\u00f6rselden esinlen!):\n   - Ana obje/ki\u015fi ne yap\u0131yor?\n   - Hareket nas\u0131l? (dynamic / graceful / explosive / gentle)\n   - Pozisyon ve kompozisyon (g\u00f6rseldeki gibi!)\n\n3. LIGHTING & ATMOSPHERE (G\u00f6rseldeki \u0131\u015f\u0131\u011f\u0131 kopyala!):\n   - Light quality: golden hour / blue hour / harsh midday / soft studio / dramatic shadows / backlit / rim light / neon\n   - Color temperature: warm / cool / neutral / neon / saturated\n   - Mood: cinematic / dreamy / energetic / peaceful / dramatic / mysterious / urban / vintage\n\n4. TECHNICAL SPECS:\n   - Quality: 4K / cinematic / professional\n   - Depth of field: shallow / deep\n   - Color grading: film look / vivid / muted / high contrast / retro / modern\n\n5. ENVIRONMENT (G\u00f6rseldeki ortam\u0131 tan\u0131mla!):\n   - Lokasyon detaylar\u0131 (indoor/outdoor, urban/nature, etc.)\n   - Background elements\n   - Atmosfer (fog / rain / dust / clear / smoke / lights)\n\n6. COLOR PALETTE (G\u00f6rseldeki renkler!):\n   - Ana renkler (dominant colors)\n   - Kontrast durumu\n   - Saturation level\n\n7. KURAL:\n   - KESINLIKLE metin, yaz\u0131, UI, logo eklememe\n   - \u0130nsan y\u00fcz\u00fc varsa generic olmal\u0131 (\u00fcnl\u00fc benzemez)\n   - Max 480 karakter\n   - Sadece \u0130ngilizce\n   - G\u00f6rseldeki MOOD ve ST\u0130L\u0130 yakala!\n\n\ud83d\udcdd \u00d6RNEK:\n\"A cinematic wide-angle shot of a golden retriever running through a sunlit meadow at golden hour, captured in slow motion with smooth tracking camera movement. Shot at eye level with shallow depth of field, professional 4K quality. The dog's fur glows in the warm backlit sunlight, creating rim lighting effect. Background features soft bokeh of wildflowers and tall grass. Film-like color grading with warm tones, dreamy atmosphere.\"\n\n\u015e\u0130MDI G\u00d6RSELI ANALIZ ET VE SADECE VEO 3 PROMPT'UNU YAZ (a\u00e7\u0131klama yapma!):`\n      },\n      {\n        inlineData: {\n          mimeType: 'image/jpeg',\n          data: $json.thumbnailBase64\n        }\n      }\n    ]\n  }],\n  generationConfig: {\n    temperature: 0.7,\n    maxOutputTokens: 512,\n    topP: 0.95,\n    topK: 40\n  }\n}) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [1584, 300],
+      "position": [
+        1584,
+        300
+      ],
       "id": "gemini-prompt",
       "name": "Gemini Vision - Generate VEO3 Prompt",
       "notes": "Uses Gemini Vision to analyze YouTube thumbnail and create accurate VEO 3 prompts"
@@ -142,7 +166,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1808, 300],
+      "position": [
+        1808,
+        300
+      ],
       "id": "parse-veo3-prompt",
       "name": "Parse VEO3 Prompt"
     },
@@ -165,17 +192,23 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2032, 300],
+      "position": [
+        2032,
+        300
+      ],
       "id": "veo3-request",
       "name": "VEO3 - Start Generation"
     },
     {
       "parameters": {
-        "jsCode": "// Parse operation ID from VEO3 response\nconst input = $input.first().json;\nconst operationName = input.name;\nconst operationId = operationName.split('/').pop();\n\n// Get Telegram Chat ID from environment variable\nconst chatId = $env.TELEGRAM_CHAT_ID;\n\nreturn [{\n  json: {\n    operationName: operationName,\n    operationId: operationId,\n    checkUrl: `https://generativelanguage.googleapis.com/v1beta/${operationName}`,\n    status: 'PROCESSING',\n    retryCount: 0,\n    maxRetries: 15,\n    chatId: chatId,\n    message: '🎬 Video üretimi başladı! Bekleniyor...'\n  }\n}];"
+        "jsCode": "// Parse operation ID from VEO3 response\nconst input = $input.first().json;\nconst operationName = input.name;\nconst operationId = operationName.split('/').pop();\n\n// Get Telegram Chat ID from environment variable\nconst chatId = $env.TELEGRAM_CHAT_ID;\n\nreturn [{\n  json: {\n    operationName: operationName,\n    operationId: operationId,\n    checkUrl: `https://generativelanguage.googleapis.com/v1beta/${operationName}`,\n    status: 'PROCESSING',\n    retryCount: 0,\n    maxRetries: 15,\n    chatId: chatId,\n    message: '\ud83c\udfac Video \u00fcretimi ba\u015flad\u0131! Bekleniyor...'\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2256, 300],
+      "position": [
+        2256,
+        300
+      ],
       "id": "parse-operation-id",
       "name": "Parse Operation ID"
     },
@@ -186,7 +219,10 @@
       },
       "type": "n8n-nodes-base.wait",
       "typeVersion": 1.1,
-      "position": [2480, 300],
+      "position": [
+        2480,
+        300
+      ],
       "id": "wait-60s",
       "name": "Wait 60 Seconds",
       "webhookId": "veo3-wait"
@@ -207,17 +243,23 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [2704, 300],
+      "position": [
+        2704,
+        300
+      ],
       "id": "check-status",
       "name": "Check VEO3 Status"
     },
     {
       "parameters": {
-        "jsCode": "// Parse VEO3 status and extract video URI if ready\nconst statusResponse = $input.first().json;\nconst previousData = $('Parse Operation ID').item.json;\nconst chatId = previousData.chatId;\n\nif (statusResponse.done === true) {\n  // Video is ready! Extract URI using regex\n  const responseStr = JSON.stringify(statusResponse.response);\n  const uriMatch = responseStr.match(/\"uri\":\"([^\"]+)\"/);  \n  const videoUri = uriMatch ? uriMatch[1] : null;\n  \n  if (!videoUri) {\n    return [{\n      json: {\n        status: 'ERROR',\n        error: 'Video URI not found in response',\n        shouldRetry: false,\n        chatId: chatId\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      status: 'DONE',\n      videoUri: videoUri,\n      shouldRetry: false,\n      chatId: chatId,\n      operationName: statusResponse.name,\n      message: '✅ Video hazır! İndiriliyor...'\n    }\n  }];\n} else {\n  // Still processing, check retry count\n  const retryCount = (previousData.retryCount || 0) + 1;\n  const maxRetries = previousData.maxRetries || 15;\n  \n  if (retryCount >= maxRetries) {\n    return [{\n      json: {\n        status: 'TIMEOUT',\n        error: `Video ${maxRetries} deneme sonrası hazır değil`,\n        shouldRetry: false,\n        chatId: chatId,\n        message: '⏱️ Video üretimi çok uzun sürdü, zaman aşımı.'\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      operationName: previousData.operationName,\n      operationId: previousData.operationId,\n      checkUrl: previousData.checkUrl,\n      status: 'PROCESSING',\n      retryCount: retryCount,\n      maxRetries: maxRetries,\n      chatId: chatId,\n      shouldRetry: true,\n      message: `⏳ Hala işleniyor... (${retryCount}/${maxRetries})`\n    }\n  }];\n}"
+        "jsCode": "// Parse VEO3 status and extract video URI if ready\nconst statusResponse = $input.first().json;\nconst previousData = $('Parse Operation ID').item.json;\nconst chatId = previousData.chatId;\n\nif (statusResponse.done === true) {\n  // Video is ready! Extract URI using regex\n  const responseStr = JSON.stringify(statusResponse.response);\n  const uriMatch = responseStr.match(/\"uri\":\"([^\"]+)\"/);  \n  const videoUri = uriMatch ? uriMatch[1] : null;\n  \n  if (!videoUri) {\n    return [{\n      json: {\n        status: 'ERROR',\n        error: 'Video URI not found in response',\n        shouldRetry: false,\n        chatId: chatId\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      status: 'DONE',\n      videoUri: videoUri,\n      shouldRetry: false,\n      chatId: chatId,\n      operationName: statusResponse.name,\n      message: '\u2705 Video haz\u0131r! \u0130ndiriliyor...'\n    }\n  }];\n} else {\n  // Still processing, check retry count\n  const retryCount = (previousData.retryCount || 0) + 1;\n  const maxRetries = previousData.maxRetries || 15;\n  \n  if (retryCount >= maxRetries) {\n    return [{\n      json: {\n        status: 'TIMEOUT',\n        error: `Video ${maxRetries} deneme sonras\u0131 haz\u0131r de\u011fil`,\n        shouldRetry: false,\n        chatId: chatId,\n        message: '\u23f1\ufe0f Video \u00fcretimi \u00e7ok uzun s\u00fcrd\u00fc, zaman a\u015f\u0131m\u0131.'\n      }\n    }];\n  }\n  \n  return [{\n    json: {\n      operationName: previousData.operationName,\n      operationId: previousData.operationId,\n      checkUrl: previousData.checkUrl,\n      status: 'PROCESSING',\n      retryCount: retryCount,\n      maxRetries: maxRetries,\n      chatId: chatId,\n      shouldRetry: true,\n      message: `\u23f3 Hala i\u015fleniyor... (${retryCount}/${maxRetries})`\n    }\n  }];\n}"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [2928, 300],
+      "position": [
+        2928,
+        300
+      ],
       "id": "parse-status",
       "name": "Parse Video Status"
     },
@@ -246,7 +288,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2,
-      "position": [3152, 300],
+      "position": [
+        3152,
+        300
+      ],
       "id": "check-retry",
       "name": "Should Retry?"
     },
@@ -267,7 +312,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [3376, 188],
+      "position": [
+        3376,
+        188
+      ],
       "id": "download-video",
       "name": "Download Video",
       "notes": "Download VEO3 generated video using Google AI Studio API key"
@@ -280,21 +328,27 @@
         "nodeCredentialType": "httpHeaderAuth",
         "sendBody": true,
         "specifyBody": "json",
-        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Sen professional voiceover artist ve viral content yazarısın. YouTube'da viral olan bu video için 8 SANİYELİK kısa, çarpıcı, enerjik bir voiceover scripti yaz.\n\n📹 ORİJİNAL VIDEO:\nBaşlık: ${$('Get Top Video').item.json.title}\nKanal: ${$('Get Top Video').item.json.channelTitle}\nAçıklama: ${($('Get Top Video').item.json.description || '').substring(0, 150)}\n\n🎤 VOICEOVER KURALLARI:\n- SADECE 8 SANİYE! (max 20-25 kelime)\n- Enerjik, dikkat çekici başlangıç\n- Hook: İlk 2 saniyede insanı yakala\n- Kısa, vurucu cümleler\n- Call to action ile bitir\n- Türkçe olmalı\n- Seslendirmeye uygun (konuşma dili)\n\n✅ İYİ ÖRNEKLER:\n\"Bunu görmek zorundasın! İnanılmaz bir anın tam ortasındasın. Kaçırma!\"\n\"Dur bir dakika! Az önce olan şeye inanamayacaksın. Dikkat et!\"\n\"İşte bu! Tam da aradığın şey. Hemen izle!\"\n\n🎯 SADECE SCRİPTİ YAZ (açıklama yapma):`\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.9,\n    maxOutputTokens: 128,\n    topP: 0.95\n  }\n}) }}"
+        "jsonBody": "={{ JSON.stringify({\n  contents: [{\n    parts: [{\n      text: `Sen professional voiceover artist ve viral content yazar\u0131s\u0131n. YouTube'da viral olan bu video i\u00e7in 8 SAN\u0130YEL\u0130K k\u0131sa, \u00e7arp\u0131c\u0131, enerjik bir voiceover scripti yaz.\n\n\ud83d\udcf9 OR\u0130J\u0130NAL VIDEO:\nBa\u015fl\u0131k: ${$('Get Top Video').item.json.title}\nKanal: ${$('Get Top Video').item.json.channelTitle}\nA\u00e7\u0131klama: ${($('Get Top Video').item.json.description || '').substring(0, 150)}\n\n\ud83c\udfa4 VOICEOVER KURALLARI:\n- SADECE 8 SAN\u0130YE! (max 20-25 kelime)\n- Enerjik, dikkat \u00e7ekici ba\u015flang\u0131\u00e7\n- Hook: \u0130lk 2 saniyede insan\u0131 yakala\n- K\u0131sa, vurucu c\u00fcmleler\n- Call to action ile bitir\n- T\u00fcrk\u00e7e olmal\u0131\n- Seslendirmeye uygun (konu\u015fma dili)\n\n\u2705 \u0130Y\u0130 \u00d6RNEKLER:\n\"Bunu g\u00f6rmek zorundas\u0131n! \u0130nan\u0131lmaz bir an\u0131n tam ortas\u0131ndas\u0131n. Ka\u00e7\u0131rma!\"\n\"Dur bir dakika! Az \u00f6nce olan \u015feye inanamayacaks\u0131n. Dikkat et!\"\n\"\u0130\u015fte bu! Tam da arad\u0131\u011f\u0131n \u015fey. Hemen izle!\"\n\n\ud83c\udfaf SADECE SCR\u0130PT\u0130 YAZ (a\u00e7\u0131klama yapma):`\n    }]\n  }],\n  generationConfig: {\n    temperature: 0.9,\n    maxOutputTokens: 128,\n    topP: 0.95\n  }\n}) }}"
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [3600, 188],
+      "position": [
+        3600,
+        188
+      ],
       "id": "gemini-narration",
       "name": "Gemini - Generate Narration"
     },
     {
       "parameters": {
-        "jsCode": "// Parse narration script\nconst response = $input.first().json;\nlet narrationScript = '';\n\ntry {\n  if (response.candidates && response.candidates[0]) {\n    narrationScript = response.candidates[0].content.parts[0].text.trim();\n    \n    // Clean up\n    narrationScript = narrationScript.replace(/```[a-z]*\\n?/g, '').trim();\n    narrationScript = narrationScript.replace(/^(Script:|Voiceover:)\\s*/i, '').trim();\n    \n    // Remove quotes if wrapped\n    narrationScript = narrationScript.replace(/^[\"'](.+)[\"']$/, '$1');\n    \n    // Limit to reasonable length for 8 seconds\n    if (narrationScript.length > 200) {\n      narrationScript = narrationScript.substring(0, 197) + '...';\n    }\n  } else {\n    throw new Error('No narration candidates');\n  }\n} catch (error) {\n  narrationScript = 'İşte bu! Tam da aradığın viral an. Kaçırma!';\n  console.log('Gemini narration error, using fallback:', error.message);\n}\n\nreturn [{\n  json: {\n    narrationScript: narrationScript,\n    videoData: $('Download Video').item.json,\n    chatId: $('Parse Video Status').item.json.chatId\n  }\n}];"
+        "jsCode": "// Parse narration script\nconst response = $input.first().json;\nlet narrationScript = '';\n\ntry {\n  if (response.candidates && response.candidates[0]) {\n    narrationScript = response.candidates[0].content.parts[0].text.trim();\n    \n    // Clean up\n    narrationScript = narrationScript.replace(/```[a-z]*\\n?/g, '').trim();\n    narrationScript = narrationScript.replace(/^(Script:|Voiceover:)\\s*/i, '').trim();\n    \n    // Remove quotes if wrapped\n    narrationScript = narrationScript.replace(/^[\"'](.+)[\"']$/, '$1');\n    \n    // Limit to reasonable length for 8 seconds\n    if (narrationScript.length > 200) {\n      narrationScript = narrationScript.substring(0, 197) + '...';\n    }\n  } else {\n    throw new Error('No narration candidates');\n  }\n} catch (error) {\n  narrationScript = '\u0130\u015fte bu! Tam da arad\u0131\u011f\u0131n viral an. Ka\u00e7\u0131rma!';\n  console.log('Gemini narration error, using fallback:', error.message);\n}\n\nreturn [{\n  json: {\n    narrationScript: narrationScript,\n    videoData: $('Download Video').item.json,\n    chatId: $('Parse Video Status').item.json.chatId\n  }\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [3824, 188],
+      "position": [
+        3824,
+        188
+      ],
       "id": "parse-narration",
       "name": "Parse Narration Script"
     },
@@ -318,55 +372,89 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [4048, 188],
+      "position": [
+        4048,
+        188
+      ],
       "id": "elevenlabs-tts",
       "name": "ElevenLabs - Text to Speech",
       "notes": "Voice ID: Rachel (21m00Tcm4TlvDq8ikWAM) - Professional, energetic female voice"
     },
     {
       "parameters": {
-        "method": "GET",
-        "url": "https://www.soundjay.com/buttons/sounds/button-09.mp3",
-        "options": {
-          "response": {
-            "response": {
-              "responseFormat": "file",
-              "outputPropertyName": "music"
-            }
-          }
-        }
+        "operation": "write",
+        "fileName": "/tmp/n8n/veo3_video.mp4",
+        "dataPropertyName": "data"
       },
-      "type": "n8n-nodes-base.httpRequest",
-      "typeVersion": 4.3,
-      "position": [4048, 376],
-      "id": "download-music",
-      "name": "Download Background Music",
-      "notes": "Free royalty-free background music - replace URL with your preferred music API or file"
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        3600,
+        300
+      ],
+      "id": "save-video-file",
+      "name": "Save VEO3 Video to File"
     },
     {
       "parameters": {
-        "jsCode": "const { spawn } = require('child_process');\nconst fs = require('fs').promises;\nconst path = require('path');\n\n// Get inputs from multiple sources\nconst items = $input.all();\n\n// Find video, audio, and music data\nlet videoData, audioData, musicData;\n\nfor (const item of items) {\n  if (item.binary?.data) {\n    videoData = item.binary.data;\n  }\n  if (item.binary?.audio) {\n    audioData = item.binary.audio;\n  }\n  if (item.binary?.music) {\n    musicData = item.binary.music;\n  }\n}\n\nif (!videoData || !audioData || !musicData) {\n  throw new Error('Missing video, audio, or music data');\n}\n\n// Create temp file paths\nconst tempDir = '/tmp';\nconst videoPath = path.join(tempDir, `video_${Date.now()}.mp4`);\nconst audioPath = path.join(tempDir, `audio_${Date.now()}.mp3`);\nconst musicPath = path.join(tempDir, `music_${Date.now()}.mp3`);\nconst outputPath = path.join(tempDir, `final_${Date.now()}.mp4`);\n\n// Write binary data to temp files\nawait fs.writeFile(videoPath, Buffer.from(videoData.data, 'base64'));\nawait fs.writeFile(audioPath, Buffer.from(audioData.data, 'base64'));\nawait fs.writeFile(musicPath, Buffer.from(musicData.data, 'base64'));\n\n// Run ffmpeg to merge video + voiceover + background music\nconst ffmpegArgs = [\n  '-i', videoPath,\n  '-i', audioPath,\n  '-i', musicPath,\n  '-filter_complex', '[2:a]volume=0.2[music];[1:a][music]amix=inputs=2:duration=shortest[aout]',\n  '-map', '0:v',\n  '-map', '[aout]',\n  '-c:v', 'copy',\n  '-c:a', 'aac',\n  '-b:a', '192k',\n  '-shortest',\n  outputPath\n];\n\nreturn new Promise((resolve, reject) => {\n  const ffmpeg = spawn('ffmpeg', ffmpegArgs);\n  \n  let stderr = '';\n  ffmpeg.stderr.on('data', (data) => {\n    stderr += data.toString();\n  });\n  \n  ffmpeg.on('close', async (code) => {\n    if (code !== 0) {\n      // Cleanup temp files\n      await fs.unlink(videoPath).catch(() => {});\n      await fs.unlink(audioPath).catch(() => {});\n      await fs.unlink(musicPath).catch(() => {});\n      return reject(new Error(`ffmpeg failed: ${stderr}`));\n    }\n    \n    try {\n      // Read final video\n      const finalVideo = await fs.readFile(outputPath);\n      \n      // Cleanup temp files\n      await fs.unlink(videoPath).catch(() => {});\n      await fs.unlink(audioPath).catch(() => {});\n      await fs.unlink(musicPath).catch(() => {});\n      await fs.unlink(outputPath).catch(() => {});\n      \n      resolve([{\n        json: {\n          success: true,\n          message: 'Video merged successfully',\n          chatId: $('Parse Narration Script').first().json.chatId\n        },\n        binary: {\n          finalVideo: {\n            data: finalVideo.toString('base64'),\n            mimeType: 'video/mp4',\n            fileName: 'viral_video_final.mp4'\n          }\n        }\n      }]);\n    } catch (error) {\n      reject(error);\n    }\n  });\n});"
+        "operation": "write",
+        "fileName": "/tmp/n8n/voiceover.mp3",
+        "dataPropertyName": "audio"
       },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [4272, 282],
-      "id": "merge-audio-video",
-      "name": "Merge Video + Audio + Music",
-      "notes": "ffmpeg: Combines VEO3 video + ElevenLabs voiceover + background music (20% volume)"
+      "type": "n8n-nodes-base.writeBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        4272,
+        188
+      ],
+      "id": "save-audio-file",
+      "name": "Save Voiceover to File"
+    },
+    {
+      "parameters": {
+        "command": "ffmpeg -y -i /tmp/n8n/veo3_video.mp4 -i /tmp/n8n/voiceover.mp3 -map 0:v -map 1:a -c:v copy -c:a aac -b:a 192k -shortest /tmp/n8n/final_video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        4496,
+        188
+      ],
+      "id": "ffmpeg-merge",
+      "name": "FFmpeg: Merge Video + Voiceover",
+      "notes": "Merges VEO3 video + ElevenLabs voiceover using system ffmpeg"
+    },
+    {
+      "parameters": {
+        "filePath": "/tmp/n8n/final_video.mp4",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readBinaryFile",
+      "typeVersion": 1,
+      "position": [
+        4720,
+        188
+      ],
+      "id": "read-final-video",
+      "name": "Read Final Video"
     },
     {
       "parameters": {
         "operation": "sendVideo",
-        "chatId": "={{$('Parse Narration Script').item.json.chatId}}",
+        "chatId": "={{$env.TELEGRAM_CHAT_ID}}",
         "binaryData": true,
-        "binaryProperty": "finalVideo",
+        "binaryProperty": "data",
         "additionalFields": {
-          "caption": "={{\"🔥 AI VİRAL VİDEO - TAM PAKET! 🔥\\n\\n📹 Kaynak: \" + $('Get Top Video').item.json.title + \"\\n👤 Kanal: \" + $('Get Top Video').item.json.channelTitle + \"\\n👁️ İzlenme: \" + $('Get Top Video').item.json.viewCount.toLocaleString() + \"\\n\\n🤖 VEO 3 Video\\n🎤 ElevenLabs Voiceover\\n🎵 Background Müzik\\n⏱️ 8 saniye\\n📐 16:9\\n\\n💬 Narration:\\n\\\"\" + $('Parse Narration Script').item.json.narrationScript + \"\\\"\"}}"
+          "caption": "={{\"\ud83d\udd25 AI V\u0130RAL V\u0130DEO! \ud83d\udd25\\n\\n\ud83d\udcf9 Kaynak: \" + $('Get Top Video').item.json.title + \"\\n\ud83d\udc64 Kanal: \" + $('Get Top Video').item.json.channelTitle + \"\\n\ud83d\udc41\ufe0f \u0130zlenme: \" + $('Get Top Video').item.json.viewCount.toLocaleString() + \"\\n\\n\ud83e\udd16 VEO 3 Video\\n\ud83c\udfa4 ElevenLabs Voiceover\\n\u23f1\ufe0f 8 saniye\\n\ud83d\udcd0 16:9\\n\\n\ud83d\udcac Narration:\\n\\\"\" + $('Parse Narration Script').item.json.narrationScript + \"\\\"\"}}"
         }
       },
       "type": "n8n-nodes-base.telegram",
       "typeVersion": 1.2,
-      "position": [4496, 282],
+      "position": [
+        4496,
+        282
+      ],
       "id": "send-final-telegram",
       "name": "Send Final Video to Telegram",
       "credentials": {
@@ -380,73 +468,264 @@
   "pinData": {},
   "connections": {
     "Schedule Trigger": {
-      "main": [[{"node": "YouTube Trending", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "YouTube Trending",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "YouTube Trending": {
-      "main": [[{"node": "Split Videos", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Split Videos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Split Videos": {
-      "main": [[{"node": "Filter & Score", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Filter & Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Filter & Score": {
-      "main": [[{"node": "Sort by Score", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Sort by Score",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Sort by Score": {
-      "main": [[{"node": "Get Top Video", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Get Top Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Get Top Video": {
-      "main": [[{"node": "Fetch Thumbnail Base64", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Fetch Thumbnail Base64",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Fetch Thumbnail Base64": {
-      "main": [[{"node": "Gemini Vision - Generate VEO3 Prompt", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Gemini Vision - Generate VEO3 Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Gemini Vision - Generate VEO3 Prompt": {
-      "main": [[{"node": "Parse VEO3 Prompt", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse VEO3 Prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse VEO3 Prompt": {
-      "main": [[{"node": "VEO3 - Start Generation", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "VEO3 - Start Generation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "VEO3 - Start Generation": {
-      "main": [[{"node": "Parse Operation ID", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse Operation ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Operation ID": {
-      "main": [[{"node": "Wait 60 Seconds", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Wait 60 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Wait 60 Seconds": {
-      "main": [[{"node": "Check VEO3 Status", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Check VEO3 Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Check VEO3 Status": {
-      "main": [[{"node": "Parse Video Status", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse Video Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Video Status": {
-      "main": [[{"node": "Should Retry?", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Should Retry?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Should Retry?": {
       "main": [
-        [{"node": "Wait 60 Seconds", "type": "main", "index": 0}],
-        [{"node": "Download Video", "type": "main", "index": 0}]
+        [
+          {
+            "node": "Wait 60 Seconds",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Download Video": {
-      "main": [[{"node": "Gemini - Generate Narration", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Save VEO3 Video to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Gemini - Generate Narration": {
-      "main": [[{"node": "Parse Narration Script", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Parse Narration Script",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Narration Script": {
-      "main": [[
-        {"node": "ElevenLabs - Text to Speech", "type": "main", "index": 0},
-        {"node": "Download Background Music", "type": "main", "index": 0}
-      ]]
+      "main": [
+        [
+          {
+            "node": "ElevenLabs - Text to Speech",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "ElevenLabs - Text to Speech": {
-      "main": [[{"node": "Merge Video + Audio + Music", "type": "main", "index": 0}]]
+      "main": [
+        [
+          {
+            "node": "Save Voiceover to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Download Background Music": {
-      "main": [[{"node": "Merge Video + Audio + Music", "type": "main", "index": 1}]]
+    "Save VEO3 Video to File": {
+      "main": [
+        [
+          {
+            "node": "Gemini - Generate Narration",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Merge Video + Audio + Music": {
-      "main": [[{"node": "Send Final Video to Telegram", "type": "main", "index": 0}]]
+    "Save Voiceover to File": {
+      "main": [
+        [
+          {
+            "node": "FFmpeg: Merge Video + Voiceover",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "FFmpeg: Merge Video + Voiceover": {
+      "main": [
+        [
+          {
+            "node": "Read Final Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Final Video": {
+      "main": [
+        [
+          {
+            "node": "Send Final Video to Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
