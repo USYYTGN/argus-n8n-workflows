@@ -273,8 +273,6 @@
       "parameters": {
         "method": "GET",
         "url": "={{$json.videoUri}}",
-        "authentication": "predefinedCredentialType",
-        "nodeCredentialType": "googleApi",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -297,7 +295,8 @@
       "typeVersion": 4.3,
       "position": [3376, 188],
       "id": "download-video",
-      "name": "Download Video"
+      "name": "Download Video",
+      "notes": "Download VEO3 generated video using Google AI Studio API key"
     },
     {
       "parameters": {
