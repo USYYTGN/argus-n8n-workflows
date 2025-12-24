@@ -1,0 +1,47 @@
+{
+  "name": "VAPI Phone Setup (BASH)",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [240, 300],
+      "id": "manual-trigger",
+      "name": "Manual Trigger"
+    },
+    {
+      "parameters": {
+        "command": "curl -X POST https://api.vapi.ai/phone-number \\\n  -H \"Authorization: Bearer ${VAPI_API_KEY}\" \\\n  -H \"Content-Type: application/json\" \\\n  -d '{\n    \"provider\": \"twilio\",\n    \"number\": \"'${TWILIO_PHONE_NUMBER}'\",\n    \"twilioAccountSid\": \"'${TWILIO_ACCOUNT_SID}'\",\n    \"twilioAuthToken\": \"'${TWILIO_AUTH_TOKEN}'\",\n    \"name\": \"ARGUS Customer Service\",\n    \"serverUrl\": \"'${WEBHOOK_URL}'webhook/vapi-customer-service\",\n    \"serverUrlSecret\": \"n8n_vapi_secret\"\n  }'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [460, 300],
+      "id": "bash-vapi-setup",
+      "name": "Setup Vapi Phone (BASH)"
+    },
+    {
+      "parameters": {
+        "jsCode": "const output = $input.first().json.stdout;\nconst parsed = JSON.parse(output);\n\nreturn [{\n  json: {\n    success: true,\n    phoneNumberId: parsed.id,\n    phoneNumber: parsed.number,\n    provider: parsed.provider,\n    message: `✅ Telefon başarıyla Vapi'ye bağlandı!\\n\\nNumara: ${parsed.number}\\nID: ${parsed.id}\\nProvider: ${parsed.provider}`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300],
+      "id": "parse-response",
+      "name": "Parse Response"
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [[{"node": "Setup Vapi Phone (BASH)", "type": "main", "index": 0}]]
+    },
+    "Setup Vapi Phone (BASH)": {
+      "main": [[{"node": "Parse Response", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "id": "VapiPhoneSetupBash"
+}
