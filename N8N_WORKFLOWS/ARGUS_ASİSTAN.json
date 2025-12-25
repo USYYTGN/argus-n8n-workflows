@@ -272,7 +272,7 @@
             },
             {
               "name": "message",
-              "value": "=={{ (\"Soru: \" + ($json.query_text ?? \"\")).replace(/^=+/, \"\") + \"\\n\\nKayıtlar:\\n\" + JSON.stringify($json.hits ?? {}, null, 2) }}\n"
+              "value": "=={{ \n  const q = (\"Soru: \" + ($json.query_text ?? \"\")).replace(/^=+/, \"\");\n  const hits = $json.hits ?? {};\n  \n  // Özet format: JSON.stringify yerine okunabilir metin\n  let kayitlar = \"\";\n  \n  if (hits.meeting?.length > 0) {\n    kayitlar += \"\\n[TOPLANTILAR]\\n\";\n    hits.meeting.forEach((m, i) => {\n      kayitlar += `${i+1}. ${m.TOPLANTI_ADI || '-'} (${m.TARİH || '-'})\\n`;\n      kayitlar += `   Katılımcılar: ${m.KATILIMCILAR || '-'}\\n`;\n      kayitlar += `   Özet: ${(m.ÖZET || '-').slice(0, 150)}\\n\\n`;\n    });\n  }\n  \n  if (hits.note?.length > 0) {\n    kayitlar += \"\\n[NOTLAR]\\n\";\n    hits.note.forEach((n, i) => {\n      kayitlar += `${i+1}. [${n.ETİKET || '-'}] ${n.TARİH || '-'}\\n`;\n      kayitlar += `   ${(n.ÖZET || '-').slice(0, 150)}\\n\\n`;\n    });\n  }\n  \n  if (hits.lead?.length > 0) {\n    kayitlar += \"\\n[LEADLER]\\n\";\n    hits.lead.forEach((l, i) => {\n      kayitlar += `${i+1}. ${l.İsim || '-'} - ${l.Durum || '-'} (${l.TARİH || '-'})\\n`;\n      kayitlar += `   Kanal: ${l.Kanal || '-'}\\n`;\n      kayitlar += `   Not: ${(l.Not || '-').slice(0, 100)}\\n\\n`;\n    });\n  }\n  \n  return q + \"\\n\" + (kayitlar || \"Kayıt bulunamadı.\");\n}}\n"
             }
           ]
         },
