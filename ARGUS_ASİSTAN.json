@@ -1,0 +1,1824 @@
+{
+  "name": "ARGUS_ASİSTAN",
+  "nodes": [
+    {
+      "parameters": {
+        "from": "whatsapp:+14155238886",
+        "to": "whatsapp:+905424423820",
+        "message": "={{$json.reply_text}}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1872,
+        -1024
+      ],
+      "id": "d75a6ff8-f40c-4f4d-b933-9bbbe7161d89",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "credentials": {
+        "twilioApi": {
+          "id": "FEjQpddak7sgxg1o",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp/sandbox/send",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1408,
+        -1008
+      ],
+      "id": "68d0f59f-da57-4da2-a2c2-6c8ffb24cfe6",
+      "name": "Webhook",
+      "webhookId": "2fe97bd3-d951-492c-b189-4d5b6d91ad4b"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2fa85f2-b9f1-43aa-99c2-4ab18493a2d0",
+              "name": "from",
+              "value": "={{$json.body?.From || $json.From || ''}}\n\n",
+              "type": "string"
+            },
+            {
+              "id": "fd6bbe94-065e-445e-bfcf-6e7b786eabe6",
+              "name": "systemPrompt",
+              "value": "Argus. Sadece istenen JSON'u üret. Gereksiz metin yok.\n",
+              "type": "string"
+            },
+            {
+              "id": "d132bdbb-0629-4b24-ac42-7ce7532522d8",
+              "name": "mode",
+              "value": "lead",
+              "type": "string"
+            },
+            {
+              "id": "774da53c-4415-4f33-aa8d-fcfebaa2929d",
+              "name": "message",
+              "value": "={{\nString($json.body?.Body ?? $json.Body ?? \"\")\n  .replace(/\\s+/g, \" \")\n  .trim()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "27ebbd7c-33cf-4392-a1dc-1877adb65acf",
+              "name": "userText",
+              "value": "={{\nString($json.body?.Body ?? $json.Body ?? \"\")\n  .replace(/\\s+/g, \" \")\n  .trim()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "fbdbd059-4afa-4608-9c42-91763c3f166d",
+              "name": "user_id",
+              "value": "=={{ \n  'wa-' + String($json.body?.From ?? $json.From ?? $json.from ?? '')\n    .replace(/^whatsapp:/,'')\n    .replace(/\\D/g,'') \n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -944,
+        -992
+      ],
+      "id": "eb2d3e37-ccad-4d2a-9507-fbf00f6970b2",
+      "name": "Edit Fields3"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "0772fb70-04c1-42a0-95bc-bd13ad8b96f1",
+              "leftValue": "={{ Number($json.body?.NumMedia || 0) > 0 }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -1232,
+        -1008
+      ],
+      "id": "b370d049-f429-4498-804c-9cc1e38b6453",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "=Bearer {{$env.OPENAI_API_KEY}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o-mini-transcribe"
+            },
+            {
+              "parameterType": "formBinaryData",
+              "name": "file",
+              "inputDataFieldName": "data"
+            },
+            {
+              "name": "language",
+              "value": "tr"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -944,
+        -1152
+      ],
+      "id": "77d7a316-b42b-4904-bdbe-b1e0ec96245a",
+      "name": "SESİ ÇEVİRME"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1590c3e-4b62-4a9d-9004-e0f0e55482c9",
+              "name": "message",
+              "value": "={{ \n  \"Şu ses kaydının metni:\\n\\n\" + ($json.text || \"\") + \n  \"\\n\\nBunu toplantı özeti gibi değerlendir. Kullanıcı deadline söylediyse onu aynen kullan. Toplantı tarihi belirtilmediyse bugünün tarihini kullan.\"\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "8a78d55c-67c7-47c8-a2be-f9f54ed7f230",
+              "name": "userText",
+              "value": "={{ String($json.text || $json.transcript || $json.data || \"\").trim() }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -768,
+        -1280
+      ],
+      "id": "ce2ccb21-7ef1-4168-a6fd-8d008eec7324",
+      "name": "Edit Fields4"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M",
+          "mode": "list",
+          "cachedResultName": "ARGUS_MEETING",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        -672
+      ],
+      "id": "7c8b31a3-3e43-45fd-babe-8cb41876582f",
+      "name": "GS_TOPLANTI_SEARCH",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/brain",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "content_type",
+              "value": "aplication/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "=={{ $json.user_id }}"
+            },
+            {
+              "name": "mode",
+              "value": "memory_recall"
+            },
+            {
+              "name": "systemPrompt",
+              "value": "Sen ARGUS WhatsApp asistanısın.  KESİNLİKLE şunları üretme: - [AKSİYON ÖNERİLERİ] - flow:, data:, JSON şeması, otomasyon önerisi, tool çağrısı - kod, yapılandırma, node ismi  SADECE kullanıcıya gönderilecek metni üret.  Çıktı formatı TAM OLARAK şu olacak (başka anahtar yok): {\"reply_text\":\"...\"}"
+            },
+            {
+              "name": "message",
+              "value": "=={{ (\"Soru: \" + ($json.query_text ?? \"\")).replace(/^=+/, \"\") + \"\\n\\nKayıtlar:\\n\" + JSON.stringify($json.hits ?? {}, null, 2) }}\n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        1568,
+        -496
+      ],
+      "id": "0e203266-efa7-4fa0-af7b-c2416e2a939f",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k",
+          "mode": "list",
+          "cachedResultName": "LEAD",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        -352
+      ],
+      "id": "3c31669a-5232-4eb8-b75b-d6fd06a85b65",
+      "name": "GS_LEAD_SEARCH",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg",
+          "mode": "list",
+          "cachedResultName": "NOTLAR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg/edit#gid=0"
+        },
+        "options": {
+          "dataLocationOnSheet": {
+            "values": {
+              "rangeDefinition": "detectAutomatically"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        384,
+        -512
+      ],
+      "id": "e7328d40-613c-43e1-b40f-edd2b16066a3",
+      "name": "GS_NOT_SEARCH",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0dfc3d18-9573-48f1-8fc7-6a3b3e2ab97a",
+              "name": "source",
+              "value": "lead",
+              "type": "string"
+            },
+            {
+              "id": "fe8933d0-9cd3-4334-8554-5d54cd2c5b57",
+              "name": "query_text",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.query_text }}",
+              "type": "string"
+            },
+            {
+              "id": "405f32c7-9385-4507-8331-c3d4add4c70b",
+              "name": "entity_guess",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.entity_guess }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        -352
+      ],
+      "id": "983aac09-73b8-4f74-b57c-dfff88afaecb",
+      "name": "LEAD_TAG"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        832,
+        -608
+      ],
+      "id": "8f362458-00dc-4db4-8e49-6af5700391d9",
+      "name": "Merge"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1024,
+        -480
+      ],
+      "id": "b1df9325-05dc-46c0-ac60-b870a55e650b",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// HAFIZA_PACK_ALL (Run Once for All Items)\n\n// ---------------- helpers ----------------\nconst asString = (v) => {\n  if (v === null || v === undefined) return \"\";\n  if (typeof v === \"string\") return v;\n  try { return JSON.stringify(v); } catch { return String(v); }\n};\n\nconst cleanWeirdTemplate = (s) => {\n  // \"{{json[...]}}\" gibi literal template çöplerini biraz temizleyelim\n  return String(s ?? \"\")\n    .replace(/\\{\\{[^}]+\\}\\}/g, \" \")   // {{ ... }}\n    .replace(/\\s+/g, \" \")\n    .trim();\n};\n\nconst foldTR = (s) => String(s ?? \"\")\n  .normalize(\"NFKD\")\n  .replace(/[\\u0300-\\u036f]/g, \"\")   // combining marks\n  .replace(/ı/g, \"i\")                // dotless i\n  .replace(/[çÇ]/g, \"c\")\n  .replace(/[ğĞ]/g, \"g\")\n  .replace(/[öÖ]/g, \"o\")\n  .replace(/[şŞ]/g, \"s\")\n  .replace(/[üÜ]/g, \"u\")\n  .toLowerCase()\n  .trim();\n\nconst stripTRSuffix = (w) => {\n  let s = foldTR(w).replace(/'/g, \"\");\n  // Ali'yi, Aliyi, Esra'yla vb. basit ek kırpma\n  s = s.replace(/(yla|yle|yi|yı|yu|yü|ya|ye|ni|nı|nu|nü|in|ın|un|ün|im|ım|um|üm|i|ı|u|ü|e|a)$/g, \"\");\n  return s.length >= 3 ? s : foldTR(w).replace(/'/g, \"\");\n};\n\nconst canonEntity = (raw) => {\n  const t = foldTR(cleanWeirdTemplate(raw))\n    .replace(/[^a-z0-9\\s']/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n  if (!t) return \"\";\n  return t.split(\" \").map(stripTRSuffix).join(\" \").trim();\n};\n\nconst STOP = new Set([\n  \"argus\",\"bro\",\"kanka\",\"abi\",\"canim\",\"bebeğim\",\"bebegim\",\n  \"ne\",\"nedir\",\"niye\",\"nasil\",\"nasıl\",\"kim\",\"kime\",\"kimi\",\"kimin\",\n  \"ile\",\"la\",\"le\",\"mi\",\"mı\",\"mu\",\"mü\",\"ya\",\"yahu\",\n  \"ben\",\"sen\",\"biz\",\"siz\",\"o\",\"bu\",\"su\",\"şu\",\n  \"dun\",\"dün\",\"bugun\",\"bugün\",\"yarin\",\"yarın\",\n  \"saat\",\"kac\",\"kaç\",\"hangi\",\"olarak\",\"gibi\",\"icin\",\"için\",\n  \"kaydet\",\"kaydettim\",\"kaydettin\",\"hatirla\",\"hatırla\",\"not\",\"toplanti\",\"toplantı\",\"lead\"\n]);\n\nconst tokenize = (s) => {\n  const t = foldTR(cleanWeirdTemplate(s))\n    .replace(/[^a-z0-9\\s]/g, \" \")\n    .replace(/\\s+/g, \" \")\n    .trim();\n  if (!t) return [];\n  const parts = t.split(\" \");\n  const out = [];\n  for (const p of parts) {\n    if (p.length < 3) continue;\n    if (STOP.has(p)) continue;\n    out.push(stripTRSuffix(p));\n  }\n  // uniq\n  return [...new Set(out)].filter(Boolean);\n};\n\nconst pickFirstNonEmpty = (key) => {\n  const it = items.find(i => i?.json?.[key] != null && cleanWeirdTemplate(i.json[key]) !== \"\");\n  return it ? cleanWeirdTemplate(it.json[key]) : \"\";\n};\n\nconst normSource = (src) => {\n  const s = foldTR(src);\n  if ([\"meeting\",\"toplanti\",\"toplantı\"].includes(s)) return \"meeting\";\n  if ([\"note\",\"not\"].includes(s)) return \"note\";\n  if ([\"lead\",\"musteri\",\"müşteri\"].includes(s)) return \"lead\";\n  return \"\";\n};\n\n// ---------------- pick query/entity ----------------\nconst query_text = pickFirstNonEmpty(\"query_text\") || pickFirstNonEmpty(\"userText\") || \"\";\nconst entity_guess_raw = pickFirstNonEmpty(\"entity_guess\");\nconst entity = canonEntity(entity_guess_raw);\n\n// soru tokenları\nconst qTokens = tokenize(query_text);\n\n// ---------------- scoring ----------------\nconst scoreRow = (rowStr) => {\n  let s = 0;\n\n  // entity eşleşmesi büyük bonus\n  if (entity && rowStr.includes(entity)) s += 50;\n\n  // token eşleşmeleri\n  for (const t of qTokens) {\n    if (rowStr.includes(t)) s += 3;\n  }\n\n  // entity var ama entity yok + token çok zayıfsa alma\n  if (entity && !rowStr.includes(entity) && s < 6) return 0;\n\n  // entity yoksa en azından bir şey tutmalı\n  if (!entity && s < 6) return 0;\n\n  return s;\n};\n\n// ---------------- group + select ----------------\nconst groupedTmp = { meeting: [], note: [], lead: [] };\n\nfor (const it of items) {\n  const j = it?.json ?? {};\n\n  // source\n  const src = normSource(j.source || \"\");\n  if (!src || !groupedTmp[src]) continue;\n\n  // satır temizle: paket şişmesin, eşleşme daha stabil olsun\n  const row = { ...j };\n  delete row.query_text;\n  delete row.entity_guess;\n  delete row.systemPrompt;\n  delete row.user_id;\n\n  const rowStr = foldTR(asString(row));\n  const s = scoreRow(rowStr);\n  if (s <= 0) continue;\n\n  groupedTmp[src].push({ s, row });\n}\n\n// her gruptan top N (azaltıldı: context limit aşmasın)\nconst topN = 3;\n\n// Her satırdan sadece önemli alanları seç (tüm alanları gönderme)\nconst pickImportantFields = (row, source) => {\n  const base = {\n    TARİH: row.TARİH || row.TARIH || row.tarih || '',\n  };\n\n  if (source === 'meeting') {\n    return {\n      ...base,\n      TOPLANTI_ADI: row.TOPLANTI_ADI || row.toplanti_adi || '',\n      KATILIMCILAR: row.KATILIMCILAR || row.katilimcilar || '',\n      ÖZET: (row.ÖZET || row.ozet || '').slice(0, 200) // max 200 char\n    };\n  } else if (source === 'note') {\n    return {\n      ...base,\n      ETİKET: row.ETİKET || row.etiket || '',\n      ÖZET: (row.ÖZET || row.ozet || '').slice(0, 200)\n    };\n  } else if (source === 'lead') {\n    return {\n      ...base,\n      İsim: row.İsim || row.isim || '',\n      Kanal: row.Kanal || row.kanal || '',\n      Durum: row.Durum || row.durum || '',\n      Not: (row.Not || row.not || '').slice(0, 150)\n    };\n  }\n  return base;\n};\n\nconst hits = {};\nfor (const k of Object.keys(groupedTmp)) {\n  hits[k] = groupedTmp[k]\n    .sort((a,b) => b.s - a.s)\n    .slice(0, topN)\n    .map(x => pickImportantFields(x.row, k));\n}\n\nconst has_hits = (hits.meeting.length + hits.note.length + hits.lead.length) > 0;\n\n// ---------------- output ----------------\nreturn [{\n  json: {\n    mode: \"memory_recall\",\n    query_text,\n    entity_guess: entity,  // normalize edilmiş hali\n    hits,\n    has_hits\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -480
+      ],
+      "id": "109ec993-ee60-4ac9-8fe0-ab1a5bdc02b0",
+      "name": "HAZIFA_PACK_ALL"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "bb3cd978-c771-4e99-aa1b-a3b314ea857e",
+              "name": "query_text",
+              "value": "=={{ $json.userText }}\n",
+              "type": "string"
+            },
+            {
+              "id": "fb37c661-ac23-48ae-baf2-bc4f20a5a823",
+              "name": "entity_guess",
+              "value": "={{\n(() => {\n  const raw = String($json.userText ?? $json.message ?? \"\").trim();\n  const t = raw.replace(/^argus\\s+/i, \"\").trim();       // \"Argus \" baştaysa at\n  const lower = t.toLowerCase();\n\n  // 1) \"X ile\" / \"X için\" / \"X hakkında\"\n  let m = lower.match(/\\b([a-zçğıöşü]{2,})\\s+(?:ile|için|hakkında)\\b/i);\n  if (m) return m[1];\n\n  // 2) \"ile X\" / \"için X\" / \"hakkında X\"\n  m = lower.match(/\\b(?:ile|için|hakkında)\\s+([a-zçğıöşü]{2,})\\b/i);\n  if (m) return m[1];\n\n  // 3) Direkt isim yakala: cümlede geçen ilk “mantıklı” kelime\n  const stop = new Set([\"argus\",\"bizden\",\"ne\",\"neydi\",\"kim\",\"kaç\",\"hangi\",\"nedir\",\"mi\",\"mı\",\"mu\",\"mü\",\"ile\",\"için\",\"hakkında\",\"konuştuk\",\"konuşmuştuk\",\"istemişti\",\"istedi\"]);\n  const toks = lower.split(/\\s+/).map(x => x.replace(/[^a-zçğıöşü]/g,\"\")).filter(Boolean);\n  for (const tok of toks) if (!stop.has(tok) && tok.length >= 3) return tok;\n\n  return \"\";\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -336,
+        -656
+      ],
+      "id": "b8226359-7a7e-470c-9a80-e15cb644cd3e",
+      "name": "HAFIZA_REQUERY"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "b7deeec6-f860-4e29-9307-23891e8f808b",
+              "leftValue": "=={{ ($json.userText ?? \"\").toString().toLowerCase() }}\n",
+              "rightValue": "(^|\\b)(not al|kaydet|kayıt et|lead kaydet|potansiyel müşteri kaydet|toplant[ıi]\\s*(kaydet|kaydı)|sesli toplant[ıi]\\s*(kaydet|kaydı))\\b",
+              "operator": {
+                "type": "string",
+                "operation": "regex"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        -528,
+        -992
+      ],
+      "id": "e3e6acbd-5087-4de3-9ceb-9c5bfb4869c7",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d6b6b2b0-f35c-454b-a818-ef085f44536e",
+              "name": "userText",
+              "value": "={{\n(() => {\n  const w = $items(\"Webhook\")?.[0]?.json ?? {};\n  const fromWebhook = w.Body ?? w.body ?? \"\";\n  const fromTranscript =\n    $json.transcript ?? $json.text ?? $json.data?.text ?? $json.reply_text_clean ?? \"\";\n\n  const t = String(fromTranscript || $json.userText || fromWebhook || \"\").trim();\n  return t;\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -672,
+        -992
+      ],
+      "id": "2e97ee62-0c1a-41d1-9a6a-da6df1852396",
+      "name": "TEXT_NORMALIZE"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0dfc3d18-9573-48f1-8fc7-6a3b3e2ab97a",
+              "name": "source",
+              "value": "meeting",
+              "type": "string"
+            },
+            {
+              "id": "fe8933d0-9cd3-4334-8554-5d54cd2c5b57",
+              "name": "query_text",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.query_text }}\n",
+              "type": "string"
+            },
+            {
+              "id": "405f32c7-9385-4507-8331-c3d4add4c70b",
+              "name": "entity_guess",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.entity_guess }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        -672
+      ],
+      "id": "3600eb67-63f3-4cf0-a80a-6761013be879",
+      "name": "TOPLANTI_TAG"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://127.0.0.1:8000/brain",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "user_id",
+              "value": "=={{ \n  'wa-' + (\n    (\n      ($json.body?.From ?? $json.From ?? $json.from ?? '')\n        .toString()\n        .replace(/^whatsapp:/,'')\n        .replace(/\\D/g,'')\n    ) || 'unknown'\n  )\n}}\n"
+            },
+            {
+              "name": "message",
+              "value": "=={{ \n  (\n    $json.userText ??\n    $json.message ??\n    $json.body?.Body ??\n    $json.Body ??\n    ''\n  ).toString().trim()\n}}\n"
+            },
+            {
+              "name": "mode",
+              "value": "router"
+            },
+            {
+              "name": "systemPrompt",
+              "value": "Sadece GEÇERLİ JSON üret. Başka hiçbir metin yok. ŞEMA: {\"reply_text\":\"...\", \"flow\":\"lead_kaydet|not_kaydet|toplanti_kaydet|lead_getir|not_getir|toplanti_getir|none\", \"data\":{...}} Markdown yok. Kod bloğu yok."
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -320,
+        -1008
+      ],
+      "id": "a567d464-3872-4461-8725-30a2c4a9bca7",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Argus PARSEACTION v3\n// Çok satırlı `- flow: \"x\", data: { ... }` bloklarını yakalar.\n// Çıkış: flow, data, actions (hepsi), reply_text_clean (aksiyon bloğu çıkarılmış)\n\nconst input = $json;\nconst text = String(input.reply_text ?? \"\");\n\nfunction extractBalancedJson(s, startIdx) {\n  // startIdx'ten itibaren ilk { veya [ bul, sonra stack ile dengeli JSON al\n  let i = startIdx;\n  while (i < s.length && s[i] !== \"{\" && s[i] !== \"[\") i++;\n  if (i >= s.length) return null;\n\n  const start = i;\n  const stack = [];\n  let inStr = false;\n  let esc = false;\n\n  for (; i < s.length; i++) {\n    const ch = s[i];\n\n    if (inStr) {\n      if (esc) { esc = false; continue; }\n      if (ch === \"\\\\\") { esc = true; continue; }\n      if (ch === '\"') inStr = false;\n      continue;\n    } else {\n      if (ch === '\"') { inStr = true; continue; }\n      if (ch === \"{\" || ch === \"[\") stack.push(ch);\n      else if (ch === \"}\" || ch === \"]\") {\n        const top = stack[stack.length - 1];\n        if ((ch === \"}\" && top === \"{\") || (ch === \"]\" && top === \"[\")) {\n          stack.pop();\n          if (stack.length === 0) {\n            return { jsonStr: s.slice(start, i + 1), endIdx: i + 1, startIdx: start };\n          }\n        } else {\n          // uyumsuz kapanış, yine de devam et\n        }\n      }\n    }\n  }\n  return null;\n}\n\nconst actionRe = /(^|\\n)\\s*-\\s*flow\\s*:\\s*\"?([a-zA-Z0-9_]+)\"?\\s*,\\s*data\\s*:\\s*/g;\n\nconst actions = [];\nconst cutRanges = [];\n\nlet m;\nwhile ((m = actionRe.exec(text)) !== null) {\n  const flow = m[2];\n  const afterHeaderIdx = m.index + m[0].length;\n\n  const extracted = extractBalancedJson(text, afterHeaderIdx);\n  if (!extracted) continue;\n\n  let data = {};\n  try {\n    data = JSON.parse(extracted.jsonStr);\n  } catch (e) {\n    // parse edemediysek pas geç\n    continue;\n  }\n\n  actions.push({ flow, data });\n  // reply_text_clean için bu bloğu kes\n  cutRanges.push({ from: m.index + (m[1] ? m[1].length : 0), to: extracted.endIdx });\n}\n\n// Aksiyon bloklarını temizle (sondan başa kes ki index kaymasın)\nlet reply_text_clean = text;\ncutRanges.sort((a, b) => b.from - a.from).forEach(r => {\n  reply_text_clean = reply_text_clean.slice(0, r.from) + reply_text_clean.slice(r.to);\n});\nreply_text_clean = reply_text_clean.trim();\nreply_text_clean = reply_text_clean.replace(/\\n*\\[?\\s*AKSİYON\\s+ÖNERİLERİ\\s*\\]?\\s*[\\s\\S]*$/i, \"\").trim();\nreply_text_clean = reply_text_clean.replace(/\\n*\\[?\\s*AKSIYON\\s+ONERILER[Iİ]\\s*\\]?\\s*[\\s\\S]*$/i, \"\").trim();\n\nconst primary = actions[0] ?? { flow: \"none\", data: {} };\n\nreturn [\n  {\n    json: {\n      ...input,\n      flow: primary.flow,\n      data: primary.data,\n      actions,\n      reply_text_clean,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -160,
+        -992
+      ],
+      "id": "9f84508d-24e6-4d92-8475-461dbf5f660e",
+      "name": "PARSEACTION1"
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 7,
+        "output": "={{\n  $json.flow === 'claude_flow_olustur'\n    ? 0                           // Sadece konuşma / test\n    : $json.flow === 'lead_olustur'\n      ? 1                         // Lead sheet\n      : $json.flow === 'toplanti_ozeti'\n        ? 2                       // Meeting sheet\n        : (\n            $json.flow === 'not_kaydet' ||\n            $json.flow === 'sesli_not_kaydet'\n          )\n          ? 3                     // Notlar (yazılı + sesli)\n          : 0                     // Tanımsızsa sohbet kolu\n}}\n"
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        48,
+        -1088
+      ],
+      "id": "a9db2b0b-21d6-47d0-9de7-0b0d321d253b",
+      "name": "ROUTEFLOWS1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "9db3251c-adf0-4485-8295-174181ee890d",
+              "leftValue": "=={{ $json.has_hits }}\n",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1392,
+        -480
+      ],
+      "id": "4cc9b99e-c860-429e-8a64-efe8fc72857e",
+      "name": "If2"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b664253e-f720-498d-bb69-1537a5ef39f1",
+              "name": "reply_text",
+              "value": "Kayıtlarda bulamadım.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1392,
+        -608
+      ],
+      "id": "d8e440ca-bde2-46bb-a3f5-a053defcc8a6",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "jsCode": "let txt = ($json.reply_text ?? \"\").toString();\n\n// 1) Kaçışları normale çevir: \"\\n\" -> gerçek satır sonu\ntxt = txt\n  .replace(/\\\\r\\\\n/g, \"\\n\")\n  .replace(/\\\\n/g, \"\\n\")\n  .replace(/\\\\t/g, \"\\t\");\n\n// 2) Sondaki “AKSİYON ÖNERİLERİ” ekini komple buda (başlıktan itibaren sona kadar)\ntxt = txt.replace(/\\n?\\s*\\[?AKSİYON ÖNERİLERİ\\]?\\s*:?\\s*[\\s\\S]*$/i, \"\").trim();\n\n// 3) Markdown artıklarını temizle (başlık/bold/bullet)\ntxt = txt\n  .replace(/^\\s{0,3}#{1,6}\\s+/gm, \"\")      // ### Başlık -> Başlık\n  .replace(/\\*\\*(.*?)\\*\\*/g, \"$1\")        // **kalın** -> kalın\n  .replace(/^\\s*[-*]\\s+/gm, \"• \")         // - madde / * madde -> • madde\n  .replace(/\\n{3,}/g, \"\\n\\n\")             // aşırı boş satırlar\n  .trim();\n\nreturn [{ json: { ...$json, reply_text: txt } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1744,
+        -496
+      ],
+      "id": "3fd7c70b-137e-4202-8a09-52cec7eb3d04",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b17e6fec-40ab-422b-9581-6fb8e25aea7d",
+              "name": "reply_text",
+              "value": "={{\n(() => {\n  const deTurk = (s) => String(s)\n    .replace(/İ/g,'I').replace(/ı/g,'i')\n    .replace(/Ğ/g,'G').replace(/ğ/g,'g')\n    .replace(/Ü/g,'U').replace(/ü/g,'u')\n    .replace(/Ş/g,'S').replace(/ş/g,'s')\n    .replace(/Ö/g,'O').replace(/ö/g,'o')\n    .replace(/Ç/g,'C').replace(/ç/g,'c');\n\n  const norm = (k) => deTurk(k).toLowerCase().replace(/[^a-z0-9]/g,'');\n\n  // hem üst seviye hem 1 kat içeri (nested) tarar\n  const scanEntries = () => {\n    const out = [];\n    for (const [k,v] of Object.entries($json || {})) {\n      out.push([k,v]);\n      if (v && typeof v === 'object' && !Array.isArray(v)) {\n        for (const [k2,v2] of Object.entries(v)) out.push([`${k}.${k2}`, v2]);\n      }\n    }\n    return out;\n  };\n\n  const pick = (patterns) => {\n    const entries = scanEntries();\n    for (const [k,v] of entries) {\n      const nk = norm(k);\n      if (patterns.some(p => nk.includes(p))) {\n        const val = (v === undefined || v === null) ? '' : String(v).trim();\n        if (val) return val;\n      }\n    }\n    return '';\n  };\n\n  const tarih   = pick(['tarih','date','created','timestamp']);\n  const musteri = pick(['musteri','kisi','isim','ad','name','client','customer','leadname']);\n  const kanal   = pick(['kanal','platform','source','channel']);\n  const butce   = pick(['butce','budget','tutar','amount','price']);\n  const durum   = pick(['durum','status','stage']);\n\n  return [\n    '✅ Potansiyel müşteri (Lead) kaydedildi.',\n    '',\n    `Tarih: ${tarih || '-'}`,\n    `Müşteri: ${musteri || '-'}`,\n    `Kanal: ${kanal || '-'}`,\n    `Bütçe: ${butce || '-'}`,\n    `Durum: ${durum || '-'}`\n  ].join('\\n');\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        -1152
+      ],
+      "id": "155f4252-55bf-4ebc-b232-fedd46b0eec1",
+      "name": "LEAD_SET"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed9e460b-80c8-4d49-8c18-939825b61344",
+              "name": "tarih",
+              "value": "={{\n  (() => {\n    const raw = $json.data?.tarih;\n    const now = $now.setZone('Europe/Istanbul');\n    if (!raw) return now.toFormat('dd.LL.yyyy HH:mm');\n\n    const dt = DateTime.fromISO(raw, { zone: 'Europe/Istanbul' });\n    if (!dt.isValid) return now.toFormat('dd.LL.yyyy HH:mm');\n\n    // 2025’ten küçükse (senin senaryonda) çöpe at\n    if (dt.year < 2025) return now.toFormat('dd.LL.yyyy HH:mm');\n\n    return dt.toFormat('dd.LL.yyyy HH:mm');\n  })()\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "09f79a95-fc75-4167-bef0-155447f7ec91",
+              "name": "toplanti_adi",
+              "value": "={{$json.data?.toplanti_adi || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "8761c919-2175-43a1-9be8-eb8651b629c9",
+              "name": "katilimcilar",
+              "value": "={{$json.data?.katilimcilar || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "2302aba7-0415-4b87-8b82-e4b94a9512a7",
+              "name": "ozet",
+              "value": "={{$json.data?.ozet || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "351c4004-ca9b-4bfb-8e7b-d82fbbf5e4f8",
+              "name": "kararlar",
+              "value": "={{($json.data?.kararlar || []).join('\\n')}}\n",
+              "type": "string"
+            },
+            {
+              "id": "c1332dc1-da49-45ab-baa7-8734f32fe8f2",
+              "name": "aksiyonlar",
+              "value": "={{\n($json.data?.aksiyonlar || []).map(a => {\n  const gorev = a.gorev || '-';\n  const sorumlu = a.sorumlu || '-';\n  const dl = (a.deadline ?? '').toString().trim();\n\n  return `Görev: ${gorev}\\nSorumlu: ${sorumlu}` + (dl ? `\\nDeadline: ${dl}` : '');\n}).join('\\n\\n').trim()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        -1008
+      ],
+      "id": "d1027346-2b9e-4297-8db0-1ed71330a882",
+      "name": "MEETING"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M",
+          "mode": "list",
+          "cachedResultName": "ARGUS_MEETING",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1Vdjd6CouA7b5MIKu-TPonlpST4sYaeDT4nS7d8mfe_M/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TARİH": "={{$json.tarih}}",
+            "KATILIMCILAR": "={{$json.katilimcilar}}",
+            "ÖZET": "={{$json.ozet}}",
+            "KARARLAR": "={{$json.kararlar}}",
+            "TOPLANTI_ADI": "={{$json.toplanti_adi}}",
+            "AKSIYONLAR": "={{$json.aksiyonlar}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TARİH",
+              "displayName": "TARİH",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "TOPLANTI_ADI",
+              "displayName": "TOPLANTI_ADI",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "KATILIMCILAR",
+              "displayName": "KATILIMCILAR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ÖZET",
+              "displayName": "ÖZET",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "KARARLAR",
+              "displayName": "KARARLAR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AKSIYONLAR",
+              "displayName": "AKSIYONLAR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        -1008
+      ],
+      "id": "93b2d311-dc25-41cc-852f-53a332248303",
+      "name": "MEETING_SHEET",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg",
+          "mode": "list",
+          "cachedResultName": "NOTLAR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/11eLaOoAGS_0oXQJdKcK1huf3TSAlRxX3-NNTnb8Abbg/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "TARİH": "={{$json.tarih}}",
+            "ETİKET": "={{$json[\"etiket\"]}}",
+            "ÖZET": "={{$json[\"özet\"]}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "TARİH",
+              "displayName": "TARİH",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ETİKET",
+              "displayName": "ETİKET",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ÖZET",
+              "displayName": "ÖZET",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        -832
+      ],
+      "id": "5969e5b0-4fbd-4a5c-8288-75e770546ca3",
+      "name": "NOTE_SHEET",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed9e460b-80c8-4d49-8c18-939825b61344",
+              "name": "tarih",
+              "value": "={{ DateTime.now().setZone('Europe/Istanbul').toFormat('dd.LL.yyyy HH:mm') }}\n",
+              "type": "string"
+            },
+            {
+              "id": "09f79a95-fc75-4167-bef0-155447f7ec91",
+              "name": "etiket",
+              "value": "={{$json.data?.etiket || ''}}",
+              "type": "string"
+            },
+            {
+              "id": "8761c919-2175-43a1-9be8-eb8651b629c9",
+              "name": "özet",
+              "value": "={{\n(() => {\n  const d = $json.data ?? $json;\n  const v =\n    d.ozet ?? d[\"ÖZET\"] ??\n    d.icerik ?? $json.icerik ??\n    $json.ozet ?? $json[\"ÖZET\"] ??\n    $json.message ?? '';\n  return String(v).replace(/^\\s*=+\\s*/,'').trim();\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        -832
+      ],
+      "id": "b6bd4946-2429-49aa-bfae-901fcd7b0d59",
+      "name": "NOTE"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ed9e460b-80c8-4d49-8c18-939825b61344",
+              "name": "tarih",
+              "value": "={{\n  $json.data?.tarih\n    ? DateTime.fromISO($json.data.tarih).setZone('Europe/Istanbul').toFormat('dd.LL.yyyy HH:mm')\n    : $now.setZone('Europe/Istanbul').toFormat('dd.LL.yyyy HH:mm')\n}}\n",
+              "type": "string"
+            },
+            {
+              "id": "09f79a95-fc75-4167-bef0-155447f7ec91",
+              "name": "isim",
+              "value": "={{ $json.data.isim }}",
+              "type": "string"
+            },
+            {
+              "id": "8761c919-2175-43a1-9be8-eb8651b629c9",
+              "name": "kanal",
+              "value": "={{ $json.data.kanal }}",
+              "type": "string"
+            },
+            {
+              "id": "2302aba7-0415-4b87-8b82-e4b94a9512a7",
+              "name": "butce",
+              "value": "={{ $json.data.butce }}",
+              "type": "string"
+            },
+            {
+              "id": "351c4004-ca9b-4bfb-8e7b-d82fbbf5e4f8",
+              "name": "not",
+              "value": "={{ $json.data.not }}",
+              "type": "string"
+            },
+            {
+              "id": "8d7c0a75-1ae6-433c-ae0f-0f2db3d5832a",
+              "name": "durum",
+              "value": "={{ (() => {\n  const txt = [\n    // $json.data?.durum satırı silindi\n    $json.data?.not,\n    $json.not,\n    $json.reply_text_clean,\n    $json.reply_text,\n    $json.userText,\n    $json.message\n  ].filter(Boolean).join(' ');\n\n  // TR karakter kaosu temizliği:\n  // 1) lowercase\n  // 2) diakritikleri sök (İ -> i̇ gibi birleşik nokta dahil)\n  // 3) ı -> i dönüştür (takıp vs takip)\n  const raw = txt\n    .toString()\n    .toLowerCase()\n    .normalize('NFKD')\n    .replace(/[\\u0300-\\u036f]/g, '')\n    .replace(/ı/g, 'i')\n    .trim();\n\n  if (raw.includes('pazarl')) return 'Pazarlık';\n  if (raw.includes('takip'))  return 'Takipte';\n  if (raw.includes('teklif')) return 'Teklif gönderildi';\n  if (raw.includes('kazan'))  return 'Kazanıldı';\n  if (raw.includes('kayb') || raw.includes('lost')) return 'Kaybedildi';\n  return 'Yeni';\n})() }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        384,
+        -1152
+      ],
+      "id": "dc8b0670-debb-4b53-9703-73f6801ea2fe",
+      "name": "LEAD1"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k",
+          "mode": "list",
+          "cachedResultName": "LEAD",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1SmZNBqylfL2iwj063Y8OCufHjCD3kmpd1YGsUOdbc9k/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "İsim": "={{$json[\"isim\"]}}\n",
+            "Kanal": "={{$json[\"kanal\"]}}",
+            "Bütçe": "={{$json[\"butce\"]}}",
+            "Not": "={{$json[\"not\"]}}",
+            "Tarih": "={{$json.tarih}}",
+            "Durum": "={{$json.durum}}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "İsim",
+              "displayName": "İsim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kanal",
+              "displayName": "Kanal",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Bütçe",
+              "displayName": "Bütçe",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Not",
+              "displayName": "Not",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Durum",
+              "displayName": "Durum",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        624,
+        -1152
+      ],
+      "id": "8aba26b8-4b98-48d8-bcae-960e21415e03",
+      "name": "LEAD_SHEET",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b17e6fec-40ab-422b-9581-6fb8e25aea7d",
+              "name": "reply_text",
+              "value": "={{\n(() => {\n  const baslik = String($json.TOPLANTI_ADI ?? $json.toplanti_adi ?? $json.BAŞLIK ?? $json.baslik ?? '').trim();\n  const tarih  = String($json.TARİH ?? $json.TARIH ?? $json.tarih ?? '').trim();\n  return `✅ Toplantı kaydedildi: ${baslik || '-'} (${tarih || '-'})`;\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        -1008
+      ],
+      "id": "06bcefcf-20f7-4b00-9471-75727e58bb53",
+      "name": "MEETİNG_SET"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0dfc3d18-9573-48f1-8fc7-6a3b3e2ab97a",
+              "name": "source",
+              "value": "note",
+              "type": "string"
+            },
+            {
+              "id": "fe8933d0-9cd3-4334-8554-5d54cd2c5b57",
+              "name": "query_text",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.query_text }}",
+              "type": "string"
+            },
+            {
+              "id": "405f32c7-9385-4507-8331-c3d4add4c70b",
+              "name": "entity_guess",
+              "value": "={{ $items(\"HAFIZA_REQUERY\")[0].json.entity_guess }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        624,
+        -512
+      ],
+      "id": "7d4670b2-ea36-4233-97d9-b0c2a6a388b7",
+      "name": "NOTE_TAG"
+    },
+    {
+      "parameters": {
+        "url": "={{$json.body.MediaUrl0}}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -1104,
+        -1264
+      ],
+      "id": "9d980a41-6d76-4fca-a838-3562afd26c47",
+      "name": "SESİ İNDİR",
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "Tn2UknHXfLcUtpyN",
+          "name": "twılıo account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputData = $json;\nconst rawText = inputData.reply_text || \"\"; \n\n// 1. Sadece \"Özet/İçerik:\" kısmına odaklan\nlet cleanText = rawText;\nif (rawText.includes(\"Özet/İçerik:\")) {\n  cleanText = rawText.split(\"Özet/İçerik:\")[1];\n}\n\nconst norm = cleanText.toLowerCase()\n  .replace(/ç/g,\"c\").replace(/ğ/g,\"g\").replace(/ı/g,\"i\")\n  .replace(/ö/g,\"o\").replace(/ş/g,\"s\").replace(/ü/g,\"u\");\n\n// 2. KRİTİK FİLTRE: Sadece \"hatirlat\" veya \"alarm\" varsa çalış\nconst hasReminderKeyword = /(hatirlat|hatirla|alarm|uyar)/i.test(norm);\n\n// 3. Saat Yakalama\nconst timeRe = /(?:saat\\s*)?(\\d{1,2})(?:[:\\.](\\d{2}))?/gi;\nlet m, times = [];\nwhile ((m = timeRe.exec(norm)) !== null) {\n  const hh = parseInt(m[1], 10);\n  const mm = m[2] ? parseInt(m[2], 10) : 0;\n  if (hh >= 0 && hh <= 23 && mm >= 0 && mm <= 59) {\n    times.push({ hh, mm });\n  }\n}\n\n// 4. İstanbul ISO Formatlayıcı (Yarın desteği eklendi)\nfunction getIstanbulISO(hh, mm, isTomorrow = false) {\n  const now = new Date();\n  const trOffset = 3 * 60; \n  const localTime = new Date(now.getTime() + (trOffset + now.getTimezoneOffset()) * 60000);\n  let target = new Date(localTime);\n  \n  target.setHours(hh, mm, 0, 0);\n\n  // \"Yarın\" kelimesi geçiyorsa veya saat bugün için geçmişse 1 gün ekle\n  if (isTomorrow || target <= localTime) {\n    target.setDate(target.getDate() + 1);\n  }\n\n  const pad = (n) => n.toString().padStart(2, '0');\n  return `${target.getFullYear()}-${pad(target.getMonth()+1)}-${pad(target.getDate())}T${pad(target.getHours())}:${pad(target.getMinutes())}:00+03:00`;\n}\n\n// 5. Sonuç Hazırlama\nlet reminder = { trigger: false, at_iso: null };\n\n// EĞER \"hatırlat\" kelimesi yoksa asla trigger olmaz!\nif (hasReminderKeyword && times.length > 0) {\n  const isTomorrow = /yarin/i.test(norm);\n  reminder = {\n    trigger: true,\n    at_iso: getIstanbulISO(times[0].hh, times[0].mm, isTomorrow),\n    debug_text: cleanText.trim()\n  };\n}\n\nreturn [{ json: { ...inputData, reminder } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1072,
+        -816
+      ],
+      "id": "b788668b-bc34-4e93-bc08-0b3d9fdde6e9",
+      "name": "REMINDER_PARSE"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "=Wrong type: '=false ' is a string but was expecting a boolean [condition 0, item 0]\nTry either:\n\nEnabling 'Convert types where required'\nConverting the first field to a boolean by adding .toBoolean()",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "133d4a39-193b-401b-8005-0d68e42140c9"
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1392,
+        -784
+      ],
+      "id": "239b6085-bb65-4c32-8005-877527ae357d",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b17e6fec-40ab-422b-9581-6fb8e25aea7d",
+              "name": "reply_text",
+              "value": "={{\n(() => {\n  const get = (...keys) => {\n    for (const k of keys) {\n      const v = $json?.[k];\n      if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();\n    }\n    return '';\n  };\n\n  const clean = (s) => String(s ?? '')\n    .replace(/\\\\n/g, '\\n')\n    .replace(/[ \\t]+/g,' ')\n    .replace(/\\n{3,}/g,'\\n\\n')\n    .trim();\n\n  const tarih  = get('TARİH','TARIH','tarih');\n  const etiket = get('ETİKET','ETIKET','etiket');\n  const icerik = clean(get('ÖZET','OZET','İÇERİK','ICERIK','icerik','özet'));\n\n  return [\n    '✅ Not kaydedildi.',\n    '',\n    `Tarih: ${tarih || '-'}`,\n    `Etiket: ${etiket || '-'}`,\n    '',\n    'Özet/İçerik:',\n    icerik || '-'\n  ].join('\\n');\n})()\n}}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        832,
+        -832
+      ],
+      "id": "d6290346-f677-4343-b5be-338b85e10eb9",
+      "name": "NOTE_SET"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "xd3jio5nP0gGHANt",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/xd3jio5nP0gGHANt",
+          "cachedResultName": "ARGUS_REMINDER"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {
+          "waitForSubWorkflow": false
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1888,
+        -784
+      ],
+      "id": "811e1878-fbd2-4fcd-80e7-cdf238ccec1d",
+      "name": "Call 'ARGUS_REMINDER'"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields3": {
+      "main": [
+        [
+          {
+            "node": "TEXT_NORMALIZE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "SESİ İNDİR",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SESİ ÇEVİRME": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields4": {
+      "main": [
+        [
+          {
+            "node": "TEXT_NORMALIZE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GS_TOPLANTI_SEARCH": {
+      "main": [
+        [
+          {
+            "node": "TOPLANTI_TAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GS_LEAD_SEARCH": {
+      "main": [
+        [
+          {
+            "node": "LEAD_TAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GS_NOT_SEARCH": {
+      "main": [
+        [
+          {
+            "node": "NOTE_TAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LEAD_TAG": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "HAZIFA_PACK_ALL",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HAZIFA_PACK_ALL": {
+      "main": [
+        [
+          {
+            "node": "If2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HAFIZA_REQUERY": {
+      "main": [
+        [
+          {
+            "node": "GS_TOPLANTI_SEARCH",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GS_NOT_SEARCH",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "GS_LEAD_SEARCH",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HAFIZA_REQUERY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TEXT_NORMALIZE": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "TOPLANTI_TAG": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "PARSEACTION1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PARSEACTION1": {
+      "main": [
+        [
+          {
+            "node": "ROUTEFLOWS1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ROUTEFLOWS1": {
+      "main": [
+        [],
+        [
+          {
+            "node": "LEAD1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "MEETING",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "NOTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If2": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LEAD_SET": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MEETING": {
+      "main": [
+        [
+          {
+            "node": "MEETING_SHEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MEETING_SHEET": {
+      "main": [
+        [
+          {
+            "node": "MEETİNG_SET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NOTE_SHEET": {
+      "main": [
+        [
+          {
+            "node": "NOTE_SET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NOTE": {
+      "main": [
+        [
+          {
+            "node": "NOTE_SHEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LEAD1": {
+      "main": [
+        [
+          {
+            "node": "LEAD_SHEET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "LEAD_SHEET": {
+      "main": [
+        [
+          {
+            "node": "LEAD_SET",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MEETİNG_SET": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NOTE_TAG": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "SESİ İNDİR": {
+      "main": [
+        [
+          {
+            "node": "SESİ ÇEVİRME",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "REMINDER_PARSE": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Call 'ARGUS_REMINDER'",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "NOTE_SET": {
+      "main": [
+        [
+          {
+            "node": "REMINDER_PARSE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "5ead98fc-226b-434f-8046-9b429305d227",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "I2chrNjrZaTRhL69",
+  "tags": []
+}
