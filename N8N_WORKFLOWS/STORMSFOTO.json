@@ -1,0 +1,166 @@
+{
+  "name": "stormsfoto",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "save-data",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -80,
+        -32
+      ],
+      "id": "7c4c5ddd-6b81-40da-a260-22d3a454c369",
+      "name": "Webhook",
+      "webhookId": "e69616ac-48bb-490a-a37e-43df406b0eca"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "28496760-f47c-464b-a56c-52cd411121d5",
+              "name": "icerik",
+              "value": "={{ $json.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        128,
+        -32
+      ],
+      "id": "8182c483-0173-45f0-8903-b0123b54c4af",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "operation": "write",
+        "fileName": "=/var/www/html/db.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        464,
+        -32
+      ],
+      "id": "048401cd-8043-44c1-a655-e7f63dc0fadf",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"status\": \"success\", \"saved\": true }",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, GET, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        624,
+        -16
+      ],
+      "id": "ec66e852-1c0d-46f1-b106-b6e915c204c5",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "operation": "toText",
+        "sourceProperty": "icerik",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        288,
+        -16
+      ],
+      "id": "6ed9f753-dd8d-4c6f-84f5-d54021aff13c",
+      "name": "Convert to File"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Convert to File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert to File": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "3d010df3-1013-40c0-b5ba-5a9f01adfcb5",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "L37oS91v4QNN8Urb",
+  "tags": []
+}
