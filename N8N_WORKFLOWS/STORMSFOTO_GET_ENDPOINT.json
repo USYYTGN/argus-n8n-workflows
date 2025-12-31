@@ -1,0 +1,127 @@
+{
+  "name": "stormsfoto-get-db",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "db.json",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        240,
+        300
+      ],
+      "id": "webhook-get-db",
+      "name": "Webhook GET",
+      "webhookId": "get-db-json-123"
+    },
+    {
+      "parameters": {
+        "operation": "read",
+        "fileName": "=/var/www/html/db.json",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "id": "read-db-file",
+      "name": "Read DB File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Okunan dosyayı JSON olarak parse et\nconst fileData = $input.first().binary.data.data;\nconst jsonString = Buffer.from(fileData, 'base64').toString('utf8');\n\nlet jsonData;\ntry {\n  jsonData = JSON.parse(jsonString);\n} catch (e) {\n  // Parse hatası varsa boş array dön\n  jsonData = [];\n}\n\nreturn [{ json: { data: jsonData } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ],
+      "id": "parse-json",
+      "name": "Parse JSON"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.data) }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Cache-Control",
+                "value": "no-cache, no-store, must-revalidate"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.4,
+      "position": [
+        860,
+        300
+      ],
+      "id": "respond-json",
+      "name": "Respond JSON"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook GET": {
+      "main": [
+        [
+          {
+            "node": "Read DB File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read DB File": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Respond JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "get-db-endpoint-v1",
+  "meta": {
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "tags": []
+}

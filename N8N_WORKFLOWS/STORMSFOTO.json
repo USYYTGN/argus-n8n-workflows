@@ -20,26 +20,16 @@
     },
     {
       "parameters": {
-        "assignments": {
-          "assignments": [
-            {
-              "id": "28496760-f47c-464b-a56c-52cd411121d5",
-              "name": "icerik",
-              "value": "={{ $json.body }}",
-              "type": "string"
-            }
-          ]
-        },
-        "options": {}
+        "jsCode": "// Gelen veriyi al ve JSON string'e çevir\nconst data = $input.first().json.body;\n\n// JSON'u güzel formatla (pretty print)\nconst jsonString = JSON.stringify(data, null, 2);\n\n// Binary data olarak döndür (n8n'in dosyaya yazması için)\nreturn [\n  {\n    json: {\n      fileName: 'db.json',\n      dataSize: jsonString.length\n    },\n    binary: {\n      data: {\n        data: Buffer.from(jsonString, 'utf8').toString('base64'),\n        mimeType: 'application/json',\n        fileName: 'db.json'\n      }\n    }\n  }\n];"
       },
-      "type": "n8n-nodes-base.set",
-      "typeVersion": 3.4,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
         128,
         -32
       ],
       "id": "8182c483-0173-45f0-8903-b0123b54c4af",
-      "name": "Edit Fields"
+      "name": "Prepare JSON"
     },
     {
       "parameters": {
@@ -50,16 +40,16 @@
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1,
       "position": [
-        464,
+        288,
         -32
       ],
       "id": "048401cd-8043-44c1-a655-e7f63dc0fadf",
-      "name": "Read/Write Files from Disk"
+      "name": "Write to Disk"
     },
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"status\": \"success\", \"saved\": true }",
+        "responseBody": "={ \"status\": \"success\", \"saved\": true, \"size\": $json.dataSize }",
         "options": {
           "responseHeaders": {
             "entries": [
@@ -82,26 +72,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.4,
       "position": [
-        624,
-        -16
+        448,
+        -32
       ],
       "id": "ec66e852-1c0d-46f1-b106-b6e915c204c5",
       "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "operation": "toText",
-        "sourceProperty": "icerik",
-        "options": {}
-      },
-      "type": "n8n-nodes-base.convertToFile",
-      "typeVersion": 1.1,
-      "position": [
-        288,
-        -16
-      ],
-      "id": "6ed9f753-dd8d-4c6f-84f5-d54021aff13c",
-      "name": "Convert to File"
     }
   ],
   "pinData": {},
@@ -110,40 +85,29 @@
       "main": [
         [
           {
-            "node": "Edit Fields",
+            "node": "Prepare JSON",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Edit Fields": {
+    "Prepare JSON": {
       "main": [
         [
           {
-            "node": "Convert to File",
+            "node": "Write to Disk",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Read/Write Files from Disk": {
+    "Write to Disk": {
       "main": [
         [
           {
             "node": "Respond to Webhook",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Convert to File": {
-      "main": [
-        [
-          {
-            "node": "Read/Write Files from Disk",
             "type": "main",
             "index": 0
           }

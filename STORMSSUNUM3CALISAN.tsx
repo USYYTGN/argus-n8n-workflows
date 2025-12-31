@@ -8,7 +8,8 @@ import { toast } from "sonner";
 
 // --- SABİTLER ---
 const N8N_WEBHOOK_URL = "https://argusbot.duckdns.org/webhook/save-data";
-const DB_FILE_URL = "https://argusai.duckdns.org/db.json";
+// n8n GET endpoint üzerinden db.json oku
+const DB_FILE_URL = "https://argusbot.duckdns.org/webhook/db.json";
 const MASTER_ADMIN_PASS = "stormsadmin";
 
 interface Post { id: string; mediaUrl: string; mediaType: 'image'|'video'; caption: string; date: string; time: string; likes: number; type: 'post'|'reels'|'shared'|'tag'; }
@@ -73,10 +74,13 @@ const AdminDashboard = () => {
     loadData();
   }, []);
 
-  // --- 2. BULUTA KAYDET (DÜZELTİLDİ) ---
+  // --- 2. BULUTA KAYDET (İYİLEŞTİRİLDİ) ---
   const saveToCloud = async (updatedClients: Client[]) => {
     setClients(updatedClients);
-    const toastId = toast.loading("Veriler Hetzner Bulutuna İşleniyor...");
+    const toastId = toast.loading("Veriler Kaydediliyor...");
+
+    console.log("💾 Kayıt başlıyor:", updatedClients.length, "müşteri");
+
     try {
       const response = await fetch(N8N_WEBHOOK_URL, {
         method: "POST",
@@ -87,17 +91,28 @@ const AdminDashboard = () => {
         body: JSON.stringify(updatedClients)
       });
 
+      const responseData = await response.json().catch(() => ({}));
+
       if (!response.ok) {
-          throw new Error("n8n webhook hatası: " + response.status);
+          console.error("❌ HTTP Hatası:", response.status, response.statusText);
+          throw new Error(`n8n hatası: ${response.status}`);
       }
 
+      console.log("✅ n8n cevabı:", responseData);
+
       toast.dismiss(toastId);
-      toast.success("✅ Bulut Senkronize Edildi!");
-      console.log("✅ Kaydedildi:", updatedClients.length, "müşteri");
-    } catch (err) {
+      toast.success("✅ Kaydedildi!");
+      console.log("✅ Başarıyla kaydedildi:", updatedClients.length, "müşteri");
+
+    } catch (err: any) {
       toast.dismiss(toastId);
-      toast.error("❌ Kayıt Hatası! n8n ACTIVE mi?");
-      console.error("Kayıt hatası:", err);
+      console.error("❌ Kayıt hatası detayı:", err);
+
+      if (err.message?.includes('Failed to fetch')) {
+          toast.error("❌ Bağlantı Hatası! n8n çalışıyor mu?");
+      } else {
+          toast.error("❌ Kayıt Hatası: " + (err.message || 'Bilinmeyen hata'));
+      }
     }
   };
 
