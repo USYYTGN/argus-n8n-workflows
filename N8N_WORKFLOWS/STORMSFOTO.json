@@ -49,7 +49,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={ \"status\": \"success\", \"saved\": true, \"size\": $json.dataSize }",
+        "responseBody": "={{ { \"status\": \"success\", \"saved\": true, \"size\": $json.dataSize || 0 } }}",
         "options": {
           "responseHeaders": {
             "entries": [

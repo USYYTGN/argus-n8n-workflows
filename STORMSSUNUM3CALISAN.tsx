@@ -46,6 +46,8 @@ const AdminDashboard = () => {
   // --- 1. VERİLERİ BULUTTAN ÇEK (DÜZELTİLDİ) ---
   useEffect(() => {
     const loadData = async () => {
+        console.log("📥 Veri yükleme başlıyor...");
+        console.log("📥 URL:", DB_FILE_URL);
         try {
             const res = await fetch(DB_FILE_URL + "?t=" + new Date().getTime(), {
                 method: 'GET',
@@ -53,22 +55,34 @@ const AdminDashboard = () => {
                     'Accept': 'application/json',
                 }
             });
+            console.log("📥 GET Response status:", res.status, res.ok);
+
             if (!res.ok) {
-                console.log("DB dosyası henüz oluşturulmadı veya erişilemiyor.");
+                console.error("❌ DB GET hatası:", res.status, res.statusText);
                 return;
             }
             const text = await res.text();
+            console.log("📥 GET Response text:", text.substring(0, 200));
+
             if (!text || text.trim() === '') {
-                console.log("DB boş, yeni kayıt bekliyor.");
+                console.log("⚠️ DB boş, yeni kayıt bekliyor.");
                 return;
             }
             const data = JSON.parse(text);
-            if (Array.isArray(data) && data.length > 0) {
+            console.log("📥 Parse edilen data:", data);
+
+            if (Array.isArray(data)) {
                 setClients(data);
                 console.log("✅ Veriler yüklendi:", data.length, "müşteri");
+                if (data.length > 0) {
+                    console.log("✅ İlk müşteri:", data[0].brand_name, "- Şifre:", data[0].password);
+                }
+            } else {
+                console.error("❌ Data array değil:", typeof data);
             }
-        } catch (e) {
-            console.log("DB yükleme hatası:", e);
+        } catch (e: any) {
+            console.error("❌ DB yükleme hatası:", e.message);
+            console.error("❌ Error stack:", e.stack);
         }
     };
     loadData();
@@ -80,6 +94,7 @@ const AdminDashboard = () => {
     const toastId = toast.loading("Veriler Kaydediliyor...");
 
     console.log("💾 Kayıt başlıyor:", updatedClients.length, "müşteri");
+    console.log("📤 Gönderilen veri boyutu:", JSON.stringify(updatedClients).length, "karakter");
 
     try {
       const response = await fetch(N8N_WEBHOOK_URL, {
@@ -91,13 +106,27 @@ const AdminDashboard = () => {
         body: JSON.stringify(updatedClients)
       });
 
-      const responseData = await response.json().catch(() => ({}));
+      console.log("📥 Response status:", response.status, response.statusText);
+      console.log("📥 Response ok:", response.ok);
+
+      // Response text'i al (JSON parse hatası olmasın diye)
+      const responseText = await response.text();
+      console.log("📥 Response text:", responseText);
+
+      let responseData: any = {};
+      try {
+          responseData = JSON.parse(responseText);
+          console.log("✅ JSON parse başarılı:", responseData);
+      } catch (parseErr) {
+          console.warn("⚠️ JSON parse hatası, devam ediliyor...");
+      }
 
       if (!response.ok) {
           console.error("❌ HTTP Hatası:", response.status, response.statusText);
           throw new Error(`n8n hatası: ${response.status}`);
       }
 
+      // Başarılı - ama responseData.status kontrolü yapmıyoruz artık
       console.log("✅ n8n cevabı:", responseData);
 
       toast.dismiss(toastId);
@@ -107,9 +136,12 @@ const AdminDashboard = () => {
     } catch (err: any) {
       toast.dismiss(toastId);
       console.error("❌ Kayıt hatası detayı:", err);
+      console.error("❌ Error stack:", err.stack);
 
       if (err.message?.includes('Failed to fetch')) {
           toast.error("❌ Bağlantı Hatası! n8n çalışıyor mu?");
+      } else if (err.message?.includes('NetworkError')) {
+          toast.error("❌ Ağ Hatası! CORS sorunu olabilir.");
       } else {
           toast.error("❌ Kayıt Hatası: " + (err.message || 'Bilinmeyen hata'));
       }
