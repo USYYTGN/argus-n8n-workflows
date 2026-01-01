@@ -172,7 +172,12 @@
       "name": "BK"
     },
     {
-     
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        560,
+        96
       ],
       "id": "bb81c254-3517-45fe-9915-34fcbf9cfbe0",
       "name": "Merge"
@@ -449,7 +454,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "DUMMY_OPENAI_API_KEY
+              "value": "DUMMY_OPENAI_API_KEY"
             },
             {
               "name": "Content-Type",
