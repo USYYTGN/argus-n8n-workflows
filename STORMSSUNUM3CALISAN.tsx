@@ -178,19 +178,71 @@ const AdminDashboard = () => {
     }
   };
 
-  // --- 4. DOSYA SEÇİMİ (EKLENDİ - EKSIK OLAN FONKSİYON) ---
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // --- 4. DOSYA SEÇİMİ (RESIZE İLE!) ---
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const reader = new FileReader();
-    reader.onloadend = () => {
-        const result = reader.result as string;
-        const mediaType = file.type.startsWith('video/') ? 'video' : 'image';
-        setNewMedia({ url: result, type: mediaType });
-        toast.success(`${mediaType === 'video' ? 'Video' : 'Görsel'} yüklendi!`);
-    };
-    reader.readAsDataURL(file);
+    // Video ise direkt oku (resize yok)
+    if (file.type.startsWith('video/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setNewMedia({ url: reader.result as string, type: 'video' });
+            toast.success("Video yüklendi!");
+        };
+        reader.readAsDataURL(file);
+        return;
+    }
+
+    // Görsel ise RESIZE yap (800x800 max, JPEG 0.7 quality)
+    try {
+        toast.loading("Görsel optimize ediliyor...");
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max 800x800px (orantılı)
+                const maxSize = 800;
+                if (width > maxSize || height > maxSize) {
+                    if (width > height) {
+                        height *= maxSize / width;
+                        width = maxSize;
+                    } else {
+                        width *= maxSize / height;
+                        height = maxSize;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx?.drawImage(img, 0, 0, width, height);
+
+                // JPEG quality 0.7 ile compress
+                const resized = canvas.toDataURL('image/jpeg', 0.7);
+                const sizeBefore = (img.src.length / 1024).toFixed(0);
+                const sizeAfter = (resized.length / 1024).toFixed(0);
+
+                console.log(`🖼️ Resize: ${img.width}x${img.height} → ${width}x${height}, ${sizeBefore}KB → ${sizeAfter}KB`);
+
+                setNewMedia({ url: resized, type: 'image' });
+                toast.dismiss();
+                toast.success(`Görsel yüklendi! (${sizeAfter}KB)`);
+            };
+            img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+
+    } catch (err) {
+        toast.dismiss();
+        toast.error("Görsel yüklenemedi!");
+        console.error("Resize hatası:", err);
+    }
   };
 
   // --- 5. İÇERİK YÖNETİMİ ---
