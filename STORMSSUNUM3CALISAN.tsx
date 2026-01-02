@@ -29,6 +29,7 @@ const AdminDashboard = () => {
   const [customerViewMode, setCustomerViewMode] = useState<'profile' | 'feed'>('profile');
   const [activeTab, setActiveTab] = useState<'grid'|'reels'|'shared'|'tags'>('grid');
   const [loginPass, setLoginPass] = useState("");
+  const [isLoading, setIsLoading] = useState(true); // YENİ: Veri yükleme durumu
 
   // Modal/Revize States
   const [isAddClientOpen, setIsAddClientOpen] = useState(false);
@@ -47,7 +48,7 @@ const AdminDashboard = () => {
   useEffect(() => {
     const loadData = async () => {
         console.log("📥 Veri yükleme başlıyor...");
-        console.log("📥 URL:", DB_FILE_URL);
+        setIsLoading(true); // YENİ: Loading başlat
         try {
             const res = await fetch(DB_FILE_URL + "?t=" + new Date().getTime(), {
                 method: 'GET',
@@ -59,6 +60,7 @@ const AdminDashboard = () => {
 
             if (!res.ok) {
                 console.error("❌ DB GET hatası:", res.status, res.statusText);
+                setIsLoading(false); // YENİ: Loading bitir
                 return;
             }
             const text = await res.text();
@@ -66,6 +68,7 @@ const AdminDashboard = () => {
 
             if (!text || text.trim() === '') {
                 console.log("⚠️ DB boş, yeni kayıt bekliyor.");
+                setIsLoading(false); // YENİ: Loading bitir
                 return;
             }
             const data = JSON.parse(text);
@@ -74,15 +77,11 @@ const AdminDashboard = () => {
             if (Array.isArray(data)) {
                 setClients(data);
                 console.log("✅ Veriler yüklendi:", data.length, "müşteri");
-                if (data.length > 0) {
-                    console.log("✅ İlk müşteri:", data[0].brand_name, "- Şifre:", data[0].password);
-                }
-            } else {
-                console.error("❌ Data array değil:", typeof data);
             }
         } catch (e: any) {
             console.error("❌ DB yükleme hatası:", e.message);
-            console.error("❌ Error stack:", e.stack);
+        } finally {
+            setIsLoading(false); // YENİ: Her durumda loading bitir
         }
     };
     loadData();
@@ -152,6 +151,12 @@ const AdminDashboard = () => {
 
   // --- 3. GİRİŞ MANTIĞI (DÜZELTİLDİ) ---
   const handleLogin = () => {
+    // YENİ: Veriler yüklenirken giriş yapılmasını engelle
+    if (isLoading) {
+      toast.loading("Veriler yükleniyor, lütfen bekleyin...");
+      return;
+    }
+
     console.log("Login denemesi, mevcut müşteri sayısı:", clients.length);
 
     if (loginPass === MASTER_ADMIN_PASS) {
@@ -297,12 +302,7 @@ const AdminDashboard = () => {
                 </div>
                 <Button onClick={handleLogin} className="w-full bg-blue-600 hover:bg-blue-700 font-bold h-12 rounded-xl">Sisteme Gir</Button>
             </div>
-            <p className="text-[10px] text-zinc-600 text-center mt-6 uppercase tracking-widest">Powered by Storms Studio</p>
-            {clients.length > 0 && (
-                <p className="text-[9px] text-zinc-700 text-center mt-2">
-                    {clients.length} müşteri kayıtlı
-                </p>
-            )}
+            <p className="text-[9px] text-zinc-700 text-center mt-6 tracking-wider">by STORM with ARGUS</p>
         </div>
       </div>
     );
