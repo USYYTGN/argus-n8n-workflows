@@ -19,6 +19,7 @@ const AdminDashboard = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const logoInputRef = useRef<HTMLInputElement>(null);
   const feedRefs = useRef<{ [key: string]: HTMLDivElement | null }>({});
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // --- ANA STATES ---
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -44,107 +45,122 @@ const AdminDashboard = () => {
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [reviseNote, setReviseNote] = useState("");
 
-  // --- 1. VERİLERİ BULUTTAN ÇEK (DÜZELTİLDİ) ---
+  // --- 1. VERİLERİ BULUTTAN ÇEK (CACHE İLE HIZLANDIRILDI!) ---
   useEffect(() => {
     const loadData = async () => {
         console.log("📥 Veri yükleme başlıyor...");
-        setIsLoading(true); // YENİ: Loading başlat
+        setIsLoading(true);
+
+        // ÖNCE CACHE'DEN OKU (HIZLI!)
+        const cachedData = localStorage.getItem('stormsCacheV1');
+        const cacheTime = localStorage.getItem('stormsCacheTime');
+        const now = new Date().getTime();
+
+        // Cache varsa ve 5 dakikadan yeniyse kullan
+        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
+            try {
+                const parsed = JSON.parse(cachedData);
+                setClients(parsed);
+                setIsLoading(false);
+                console.log("⚡ Cache'den yüklendi! (Süper hızlı)", parsed.length, "müşteri");
+                // Arka planda yenile
+                setTimeout(() => loadFromServer(), 1000);
+                return;
+            } catch (e) {
+                console.warn("⚠️ Cache okunamadı, sunucudan çekiliyor...");
+            }
+        }
+
+        // Cache yoksa veya eskiyse sunucudan çek
+        await loadFromServer();
+    };
+
+    const loadFromServer = async () => {
         try {
             const res = await fetch(DB_FILE_URL + "?t=" + new Date().getTime(), {
                 method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                }
+                headers: { 'Accept': 'application/json' }
             });
             console.log("📥 GET Response status:", res.status, res.ok);
 
             if (!res.ok) {
                 console.error("❌ DB GET hatası:", res.status, res.statusText);
-                setIsLoading(false); // YENİ: Loading bitir
+                setIsLoading(false);
                 return;
             }
             const text = await res.text();
-            console.log("📥 GET Response text:", text.substring(0, 200));
 
             if (!text || text.trim() === '') {
                 console.log("⚠️ DB boş, yeni kayıt bekliyor.");
-                setIsLoading(false); // YENİ: Loading bitir
+                setIsLoading(false);
                 return;
             }
             const data = JSON.parse(text);
-            console.log("📥 Parse edilen data:", data);
 
             if (Array.isArray(data)) {
                 setClients(data);
-                console.log("✅ Veriler yüklendi:", data.length, "müşteri");
+                // CACHE'E KAYDET (Bir dahaki sefer hızlı!)
+                localStorage.setItem('stormsCacheV1', JSON.stringify(data));
+                localStorage.setItem('stormsCacheTime', new Date().getTime().toString());
+                console.log("✅ Veriler yüklendi ve cache'lendi:", data.length, "müşteri");
             }
         } catch (e: any) {
             console.error("❌ DB yükleme hatası:", e.message);
         } finally {
-            setIsLoading(false); // YENİ: Her durumda loading bitir
+            setIsLoading(false);
         }
     };
+
     loadData();
   }, []);
 
-  // --- 2. BULUTA KAYDET (İYİLEŞTİRİLDİ) ---
+  // --- 2. BULUTA KAYDET (DEBOUNCED + CACHE İLE HIZLANDIRILDI!) ---
   const saveToCloud = async (updatedClients: Client[]) => {
+    // ÖNCE UI'I GÜNCELLE (Optimistic Update - Anında görünsün!)
     setClients(updatedClients);
-    const toastId = toast.loading("Veriler Kaydediliyor...");
 
-    console.log("💾 Kayıt başlıyor:", updatedClients.length, "müşteri");
-    console.log("📤 Gönderilen veri boyutu:", JSON.stringify(updatedClients).length, "karakter");
+    // CACHE'İ HEMEN GÜNCELLE (Sayfa yenilendiğinde kaybolmasın!)
+    localStorage.setItem('stormsCacheV1', JSON.stringify(updatedClients));
+    localStorage.setItem('stormsCacheTime', new Date().getTime().toString());
+    console.log("⚡ Cache güncellendi (hızlı!)");
 
-    try {
-      const response = await fetch(N8N_WEBHOOK_URL, {
-        method: "POST",
-        headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json"
-        },
-        body: JSON.stringify(updatedClients)
-      });
-
-      console.log("📥 Response status:", response.status, response.statusText);
-      console.log("📥 Response ok:", response.ok);
-
-      // Response text'i al (JSON parse hatası olmasın diye)
-      const responseText = await response.text();
-      console.log("📥 Response text:", responseText);
-
-      let responseData: any = {};
-      try {
-          responseData = JSON.parse(responseText);
-          console.log("✅ JSON parse başarılı:", responseData);
-      } catch (parseErr) {
-          console.warn("⚠️ JSON parse hatası, devam ediliyor...");
-      }
-
-      if (!response.ok) {
-          console.error("❌ HTTP Hatası:", response.status, response.statusText);
-          throw new Error(`n8n hatası: ${response.status}`);
-      }
-
-      // Başarılı - ama responseData.status kontrolü yapmıyoruz artık
-      console.log("✅ n8n cevabı:", responseData);
-
-      toast.dismiss(toastId);
-      toast.success("✅ Kaydedildi!");
-      console.log("✅ Başarıyla kaydedildi:", updatedClients.length, "müşteri");
-
-    } catch (err: any) {
-      toast.dismiss(toastId);
-      console.error("❌ Kayıt hatası detayı:", err);
-      console.error("❌ Error stack:", err.stack);
-
-      if (err.message?.includes('Failed to fetch')) {
-          toast.error("❌ Bağlantı Hatası! n8n çalışıyor mu?");
-      } else if (err.message?.includes('NetworkError')) {
-          toast.error("❌ Ağ Hatası! CORS sorunu olabilir.");
-      } else {
-          toast.error("❌ Kayıt Hatası: " + (err.message || 'Bilinmeyen hata'));
-      }
+    // DEBOUNCING: Önceki kayıt varsa iptal et, 1.5 saniye bekle
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      console.log("⏸️ Önceki kayıt iptal edildi, yeni kayıt bekliyor...");
     }
+
+    saveTimeoutRef.current = setTimeout(async () => {
+      const toastId = toast.loading("Buluta kaydediliyor...");
+      console.log("💾 Kayıt başlıyor:", updatedClients.length, "müşteri");
+
+      try {
+        const response = await fetch(N8N_WEBHOOK_URL, {
+          method: "POST",
+          headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json"
+          },
+          body: JSON.stringify(updatedClients)
+        });
+
+        const responseText = await response.text();
+
+        if (!response.ok) {
+            console.error("❌ HTTP Hatası:", response.status, response.statusText);
+            throw new Error(`n8n hatası: ${response.status}`);
+        }
+
+        toast.dismiss(toastId);
+        toast.success("✅ Kaydedildi!");
+        console.log("✅ Başarıyla kaydedildi:", updatedClients.length, "müşteri");
+
+      } catch (err: any) {
+        toast.dismiss(toastId);
+        console.error("❌ Kayıt hatası:", err);
+        toast.error("❌ Kayıt Hatası: " + (err.message || 'Bilinmeyen hata'));
+      }
+    }, 1500); // 1.5 saniye bekle (hızlı yazarken gereksiz kayıt yapmasın!)
   };
 
   const activeClient = clients.find(c => c.id === activeClientId);
