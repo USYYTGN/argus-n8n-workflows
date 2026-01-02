@@ -188,12 +188,23 @@ const AdminDashboard = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Video ise direkt oku (resize yok)
+    // Video ise boyut kontrolü yap (max 10MB)
     if (file.type.startsWith('video/')) {
+        const maxVideoSize = 10 * 1024 * 1024; // 10MB
+        if (file.size > maxVideoSize) {
+            const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+            toast.error(`Video çok büyük! (${sizeMB}MB) Max 10MB olmalı.`);
+            return;
+        }
+
+        toast.loading("Video yükleniyor...");
         const reader = new FileReader();
         reader.onloadend = () => {
+            const sizeKB = (file.size / 1024).toFixed(0);
             setNewMedia({ url: reader.result as string, type: 'video' });
-            toast.success("Video yüklendi!");
+            toast.dismiss();
+            toast.success(`Video yüklendi! (${sizeKB}KB)`);
+            console.log(`🎥 Video: ${sizeKB}KB`);
         };
         reader.readAsDataURL(file);
         return;
