@@ -14,8 +14,8 @@ interface User {
   position: string;
   phone: string;
   email: string;
-  izinGunu: number;
-  ekstraIzin: number;
+  ayrilistarihi: string;
+  gemide: string;
 }
 
 function App() {
@@ -27,6 +27,26 @@ function App() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editPhone, setEditPhone] = useState('');
   const [editEmail, setEditEmail] = useState('');
+
+  const calculateIzinDurumu = () => {
+    if (!user) return { text: 'Bilgi yok', days: 0 };
+
+    if (user.ayrilistarihi && user.ayrilistarihi !== '-') {
+      const parts = user.ayrilistarihi.split('.');
+      const ayrilisDate = new Date(
+        parseInt(parts[2]),
+        parseInt(parts[1]) - 1,
+        parseInt(parts[0])
+      );
+      const bugun = new Date();
+      const farkMs = bugun.getTime() - ayrilisDate.getTime();
+      const farkGun = Math.floor(farkMs / (1000 * 60 * 60 * 24));
+      return { text: `${farkGun} gündür izinde`, days: farkGun };
+    } else if (user.gemide && user.gemide !== '-') {
+      return { text: `Gemide: ${user.gemide}`, days: 0 };
+    }
+    return { text: 'Bilgi yok', days: 0 };
+  };
 
   useEffect(() => {
     const savedUser = localStorage.getItem('crewUser');
@@ -198,24 +218,15 @@ function App() {
         </div>
 
         {/* İzin Bilgileri */}
-        <div className="grid md:grid-cols-2 gap-6 mb-6">
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <h3 className="text-xl font-semibold text-gray-800">İzin Günü</h3>
-            </div>
-            <p className="text-5xl font-bold text-blue-600">{user?.izinGunu || 0}</p>
-            <p className="text-gray-600 mt-2">Toplam izin hakkı</p>
+        <div className="bg-white rounded-2xl shadow-xl p-6 mb-6">
+          <div className="flex items-center gap-3 mb-4">
+            <Calendar className="w-6 h-6 text-blue-600" />
+            <h3 className="text-xl font-semibold text-gray-800">İzin Durumu</h3>
           </div>
-
-          <div className="bg-white rounded-2xl shadow-xl p-6">
-            <div className="flex items-center gap-3 mb-4">
-              <Calendar className="w-6 h-6 text-green-600" />
-              <h3 className="text-xl font-semibold text-gray-800">Ekstra İzin</h3>
-            </div>
-            <p className="text-5xl font-bold text-green-600">{user?.ekstraIzin || 0}</p>
-            <p className="text-gray-600 mt-2">Bonus izin günü</p>
-          </div>
+          <p className="text-4xl font-bold text-blue-600">{calculateIzinDurumu().text}</p>
+          {user?.ayrilistarihi && user.ayrilistarihi !== '-' && (
+            <p className="text-gray-600 mt-2">Ayrılış tarihi: {user.ayrilistarihi}</p>
+          )}
         </div>
 
         {/* İletişim Bilgileri */}

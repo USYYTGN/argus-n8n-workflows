@@ -29,7 +29,7 @@
           "value": "gid=0",
           "mode": "id"
         },
-        "lookupColumn": "İsim",
+        "lookupColumn": "Ad Soyad",
         "lookupValue": "={{ $json.body.username }}"
       },
       "id": "google-sheets-1",
@@ -54,7 +54,7 @@
           "conditions": [
             {
               "id": "condition-1",
-              "leftValue": "={{ $json.Şifre }}",
+              "leftValue": "={{ $json.şifre }}",
               "rightValue": "={{ $('Webhook').item.json.body.password }}",
               "operator": {
                 "type": "string",
@@ -74,7 +74,7 @@
     {
       "parameters": {
         "respondWith": "json",
-        "responseBody": "={{ {\n  \"success\": true,\n  \"user\": {\n    \"name\": $json.İsim,\n    \"position\": $json.Pozisyon,\n    \"phone\": $json.Telefon,\n    \"email\": $json.Email || \"\",\n    \"izinGunu\": $json[\"İzin Günü\"] || 0,\n    \"ekstraIzin\": $json[\"Ekstra İzin\"] || 0\n  }\n} }}",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"user\": {\n    \"name\": $json[\"Ad Soyad\"],\n    \"position\": $json.Görevi,\n    \"phone\": $json.Telefon,\n    \"email\": $json[\"E-Posta\"] || \"\",\n    \"ayrilistarihi\": $json[\"Ayrılış Tarihi\"] || \"\",\n    \"gemide\": $json.Gemide || \"\"\n  }\n} }}",
         "options": {}
       },
       "id": "respond-success",

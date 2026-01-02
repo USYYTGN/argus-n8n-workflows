@@ -29,7 +29,7 @@
           "value": "gid=0",
           "mode": "id"
         },
-        "lookupColumn": "İsim",
+        "lookupColumn": "Ad Soyad",
         "lookupValue": "={{ $json.body.name }}"
       },
       "id": "google-sheets-lookup",
@@ -62,10 +62,10 @@
           "mappingMode": "defineBelow",
           "value": {
             "Telefon": "={{ $('Webhook').item.json.body.phone }}",
-            "Email": "={{ $('Webhook').item.json.body.email || '' }}"
+            "E-Posta": "={{ $('Webhook').item.json.body.email || '' }}"
           },
           "matchingColumns": [
-            "İsim"
+            "Ad Soyad"
           ],
           "schema": []
         },
