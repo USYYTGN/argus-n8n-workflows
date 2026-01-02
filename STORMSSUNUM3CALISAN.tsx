@@ -45,37 +45,11 @@ const AdminDashboard = () => {
   const [isReviseOpen, setIsReviseOpen] = useState(false);
   const [reviseNote, setReviseNote] = useState("");
 
-  // --- 1. VERİLERİ BULUTTAN ÇEK (CACHE İLE HIZLANDIRILDI!) ---
+  // --- 1. VERİLERİ BULUTTAN ÇEK ---
   useEffect(() => {
     const loadData = async () => {
         console.log("📥 Veri yükleme başlıyor...");
         setIsLoading(true);
-
-        // ÖNCE CACHE'DEN OKU (HIZLI!)
-        const cachedData = localStorage.getItem('stormsCacheV1');
-        const cacheTime = localStorage.getItem('stormsCacheTime');
-        const now = new Date().getTime();
-
-        // Cache varsa ve 5 dakikadan yeniyse kullan
-        if (cachedData && cacheTime && (now - parseInt(cacheTime)) < 300000) {
-            try {
-                const parsed = JSON.parse(cachedData);
-                setClients(parsed);
-                setIsLoading(false);
-                console.log("⚡ Cache'den yüklendi! (Süper hızlı)", parsed.length, "müşteri");
-                // Arka planda yenile
-                setTimeout(() => loadFromServer(), 1000);
-                return;
-            } catch (e) {
-                console.warn("⚠️ Cache okunamadı, sunucudan çekiliyor...");
-            }
-        }
-
-        // Cache yoksa veya eskiyse sunucudan çek
-        await loadFromServer();
-    };
-
-    const loadFromServer = async () => {
         try {
             const res = await fetch(DB_FILE_URL + "?t=" + new Date().getTime(), {
                 method: 'GET',
@@ -99,10 +73,7 @@ const AdminDashboard = () => {
 
             if (Array.isArray(data)) {
                 setClients(data);
-                // CACHE'E KAYDET (Bir dahaki sefer hızlı!)
-                localStorage.setItem('stormsCacheV1', JSON.stringify(data));
-                localStorage.setItem('stormsCacheTime', new Date().getTime().toString());
-                console.log("✅ Veriler yüklendi ve cache'lendi:", data.length, "müşteri");
+                console.log("✅ Veriler yüklendi:", data.length, "müşteri");
             }
         } catch (e: any) {
             console.error("❌ DB yükleme hatası:", e.message);
@@ -110,19 +81,13 @@ const AdminDashboard = () => {
             setIsLoading(false);
         }
     };
-
     loadData();
   }, []);
 
-  // --- 2. BULUTA KAYDET (DEBOUNCED + CACHE İLE HIZLANDIRILDI!) ---
+  // --- 2. BULUTA KAYDET (DEBOUNCED - HIZLANDIRILDI!) ---
   const saveToCloud = async (updatedClients: Client[]) => {
     // ÖNCE UI'I GÜNCELLE (Optimistic Update - Anında görünsün!)
     setClients(updatedClients);
-
-    // CACHE'İ HEMEN GÜNCELLE (Sayfa yenilendiğinde kaybolmasın!)
-    localStorage.setItem('stormsCacheV1', JSON.stringify(updatedClients));
-    localStorage.setItem('stormsCacheTime', new Date().getTime().toString());
-    console.log("⚡ Cache güncellendi (hızlı!)");
 
     // DEBOUNCING: Önceki kayıt varsa iptal et, 1.5 saniye bekle
     if (saveTimeoutRef.current) {
