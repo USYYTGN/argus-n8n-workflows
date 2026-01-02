@@ -1,0 +1,132 @@
+{
+  "name": "CREW_UPDATE",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "crew-update",
+        "options": {},
+        "method": "POST"
+      },
+      "id": "webhook-crew-update",
+      "name": "Webhook Crew Update",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {
+          "lookupColumn": "Ad Soyad"
+        }
+      },
+      "id": "update-sheet",
+      "name": "Update Google Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [680, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gelen veriyi hazırla\nconst username = $input.first().json.body.username;\nconst updatedFields = $input.first().json.body.updatedFields;\n\n// Google Sheets için format\nconst updateData = {\n  'Ad Soyad': username, // Lookup key\n  ...updatedFields\n};\n\nconsole.log('📝 Güncelleme:', username, updatedFields);\n\nreturn [{\n  json: updateData\n}];"
+      },
+      "id": "prepare-update-data",
+      "name": "Prepare Update Data",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { success: true, message: 'Bilgiler güncellendi!' } }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Crew Update": {
+      "main": [
+        [
+          {
+            "node": "Prepare Update Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Update Data": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Google Sheet": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-02T00:00:00.000Z",
+  "versionId": "1"
+}

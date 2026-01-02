@@ -1,0 +1,130 @@
+{
+  "name": "CREW_LOGIN",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "crew-login",
+        "options": {},
+        "method": "POST"
+      },
+      "id": "webhook-crew-login",
+      "name": "Webhook Crew Login",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData"
+        },
+        "options": {}
+      },
+      "id": "get-crew-data",
+      "name": "Get Crew from Sheet",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [460, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "YOUR_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Login kontrolü ve izin günü hesaplama\nconst username = $input.first().json.body.username;\nconst password = $input.first().json.body.password;\n\n// Sheets'ten gelen tüm satırlar\nconst allRows = $input.all();\n\n// Kullanıcı bul (username ve password eşleşmeli)\nconst user = allRows.find(row => {\n  const data = row.json;\n  // Sheets'te username kolonu (örnek: A kolonu: \"Ad Soyad\")\n  // Password kolonu eklenecek (örnek: yeni kolon ekle)\n  return data['Ad Soyad'] === username && data['Şifre'] === password;\n});\n\nif (!user) {\n  return [{\n    json: {\n      success: false,\n      message: \"Kullanıcı adı veya şifre hatalı!\"\n    }\n  }];\n}\n\n// İzin günü hesapla\nconst sonGemis = user.json['Son Gemiş'];\nlet izinGunu = null;\n\nif (sonGemis && sonGemis !== '') {\n  // Tarih formatı: \"15.12.2024\" veya \"15/12/2024\"\n  const parts = sonGemis.split(/[\\./-]/);\n  if (parts.length === 3) {\n    const day = parseInt(parts[0]);\n    const month = parseInt(parts[1]) - 1; // JS ay 0'dan başlar\n    const year = parseInt(parts[2]);\n    \n    const sonGemisTarih = new Date(year, month, day);\n    const bugun = new Date();\n    \n    // Gün farkı hesapla\n    const fark = bugun - sonGemisTarih;\n    izinGunu = Math.floor(fark / (1000 * 60 * 60 * 24));\n  }\n}\n\n// Başarılı login\nreturn [{\n  json: {\n    success: true,\n    message: \"Giriş başarılı!\",\n    personelData: {\n      ...user.json,\n      izinGunu: izinGunu,\n      durumMesaji: izinGunu !== null ? `${izinGunu} gündür izinde` : \"Gemide\"\n    }\n  }\n}];"
+      },
+      "id": "check-login-calculate-izin",
+      "name": "Check Login & Calculate İzin",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              }
+            ]
+          }
+        }
+      },
+      "id": "respond-to-webhook",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [900, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Crew Login": {
+      "main": [
+        [
+          {
+            "node": "Get Crew from Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Crew from Sheet": {
+      "main": [
+        [
+          {
+            "node": "Check Login & Calculate İzin",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Login & Calculate İzin": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-02T00:00:00.000Z",
+  "versionId": "1"
+}

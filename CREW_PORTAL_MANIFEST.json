@@ -1,0 +1,27 @@
+{
+  "name": "Crew Portal - Personel Takip Sistemi",
+  "short_name": "Crew Portal",
+  "description": "Gemi personeli takip ve yönetim uygulaması",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1e3a8a",
+  "theme_color": "#1e40af",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["productivity", "business"],
+  "lang": "tr-TR",
+  "dir": "ltr"
+}
