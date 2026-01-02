@@ -1,0 +1,182 @@
+{
+  "name": "ARGUS CREW INFO WHATSAPP",
+  "nodes": [
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw",
+          "mode": "list",
+          "cachedResultName": "personel listesi",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw/edit#gid=0"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        432,
+        -272
+      ],
+      "id": "1a5683c6-f2de-4c5a-9573-e2ea4421f30e",
+      "name": "Get row(s) in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "Zptr1iIt7ZAANtqU",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1) PARSEQUERY nodeundan gelen arama ve chat bilgisi\nconst ctx = $node[\"PARSEQUERY\"].json || {};\nlet searchedName = (ctx.searchedName || '').trim();\nlet chatId       = ctx.chatId || ctx.from || '';\n\n// 2) Yardımcı fonksiyonlar\nfunction normalize(str) {\n  return (str || '')\n    .toString()\n    .toLowerCase()\n    .replace(/\\s+/g, '');\n}\n\nconst today = new Date();\n\n// 3) Sheet’ten gelen tüm satırlar\nconst rows       = $input.all();\nconst searchNorm = normalize(searchedName);\n\nlet message;\n\n// İsim yoksa\nif (!searchNorm) {\n  message = '⚠️ Aranan isim alınamadı. Lütfen ismi tekrar yaz.';\n} else {\n  // İsimle eşleşen satırları bul\n  const found = rows.filter(item => {\n    const j = item.json || {};\n    const fullName = j['Ad Soyad'] || j['Adı Soyadı'] || '';\n    return normalize(fullName).includes(searchNorm);\n  });\n\n  if (!found.length) {\n    message = '🚫 Aranan kişi bulunamadı. Lütfen ismi tekrar yaz.';\n  } else {\n    // Her kişi için detaylı mesaj hazırla\n    message = found.map((item, index) => {\n      const j = item.json || {};\n      const lines = [];\n\n      // --- İZİN HESAPLAMA MANTIĞI ---\n      let izinNotu = \"\";\n      const ayrilisStr = j['Ayrılış Tarihi'];\n      if (ayrilisStr) {\n          const ayrilisTarihi = new Date(ayrilisStr);\n          if (!isNaN(ayrilisTarihi)) {\n              const farkMilisaniye = today - ayrilisTarihi;\n              const farkGun = Math.floor(farkMilisaniye / (1000 * 60 * 60 * 24));\n              izinNotu = farkGun > 0 ? ` (${farkGun} gündür izinde)` : \" (Yeni ayrılmış)\";\n          }\n      }\n      // ------------------------------\n\n      lines.push(`👤 *#${index + 1} - ${j['Ad Soyad'] || j['Adı Soyadı'] || '-'}*`);\n      lines.push(`⚓ Görevi: ${j['Görevi'] || '-'}`);\n      lines.push(`🎂 Yaş: ${j['yaş'] || '-'}`);\n      lines.push(`📝 Amir Notu: ${j['Amir Notu'] || '-'}`);\n      lines.push(`📞 Telefon: ${j['Telefon'] || '-'}`);\n      lines.push(`🚢 Son Gemi: ${j['Son Gemi'] || '-'}`);\n      lines.push(`🏥 Rahatsızlık: ${j['Rahatsızlık'] || '-'}`);\n      lines.push(`💊 İlaç/Tedavi: ${j['İlaç/Tedavi (Olası)'] || '-'}`);\n      lines.push(`📧 E-Posta: ${j['E-Posta'] || '-'}`);\n      lines.push(`🚨 Acil Durum Kişisi: ${j['Acil Durum Kişisi'] || '-'}`);\n      lines.push(`☎️ Acil Durum Tel: ${j['Acil Durum Tel'] || '-'}`);\n      lines.push(`📍 GEMİDE: ${j['GEMİDE'] || '-'}`);\n      lines.push(`🗓️ Ayrılış Tarihi: ${j['Ayrılış Tarihi'] || '-'}${izinNotu}`); // Hesaplanan gün buraya eklendi\n      lines.push(`🛂 Pasaport Bitiş: ${j['Pasaport Bitiş'] || '-'}`);\n      lines.push(`🪪 Cüzdan Bitiş: ${j['Cüzdan Bitiş'] || '-'}`);\n      lines.push(`🩺 Sağlık Raporu: ${j['Sağlık Raporu'] || '-'}`);\n      lines.push(`🇺🇸 ABD Vizesi: ${j['ABD Vizesi'] || '-'}`);\n      lines.push(`🇪🇺 Schengen Vizesi: ${j['Schengen Vizesi'] || '-'}`);\n      lines.push(`📜 STCW-1 Temel Güv.: ${j['STCW-1 Temel Güv.'] || '-'}`);\n      lines.push(`📜 STCW-2 Can Kur.: ${j['STCW-2 Can Kur.'] || '-'}`);\n      lines.push(`📜 STCW-3 İleri Yangın: ${j['STCW-3 İleri Yangın'] || '-'}`);\n      lines.push(`📜 STCW-4 İlk Yardım: ${j['STCW-4 İlk Yardım'] || '-'}`);\n      lines.push(`📜 STCW-5 Güvenlik: ${j['STCW-5 Güvenlik'] || '-'}`);\n      lines.push(`📜 STCW-6 BRM/ERM: ${j['STCW-6 BRM/ERM'] || '-'}`);\n      lines.push(`📜 STCW-7 ECDIS/HV: ${j['STCW-7 ECDIS/HV'] || '-'}`);\n      lines.push(`📜 STCW-8 Tanker: ${j['STCW-8 Tanker'] || '-'}`);\n\n      return lines.join('\\n');\n    }).join('\\n\\n' + '─'.repeat(20) + '\\n\\n');\n  }\n}\n\n// 4) Çıktıyı hazırla\nreturn [\n  {\n    json: {\n      chatId,\n      message,\n    },\n  },\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        592,
+        -272
+      ],
+      "id": "465f2f3c-284e-46ad-83a8-2a0b3e2fcaff",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Twilio'dan gelen POST gövdesi\nconst body = $json.body || $json;\n\n// Kullanıcının yazdığı metin\nconst text = (body.Body || '').trim();\n\n// /kim Ali Demir tarzı bir komut gelirse /kim kısmını at\nlet name = text;\nif (name.toLowerCase().startsWith('/kim')) {\n  name = name.slice(4).trim();\n}\n\n// WhatsApp numarası (Twilio formatında)\nconst chatId = body.From || body.WaId || '';\n\n// Sonuç: diğer nodelar bunu kullanacak\nreturn [\n  {\n    json: {\n      searchedName: name,\n      chatId,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        240,
+        -288
+      ],
+      "id": "34aca763-0695-4f17-a17f-bf942e8abecd",
+      "name": "PARSEQUERY"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp/sandbox/send",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        80,
+        -288
+      ],
+      "id": "23fc8540-bd59-4ddf-b04b-9006e26dfc62",
+      "name": "Webhook",
+      "webhookId": "e091da98-17eb-41e5-a682-4dd68dc89338"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.twilio.com/2010-04-01/Accounts/{{ $env.TWILIO_ACCOUNT_SID }}/Messages.json",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "contentType": "form-urlencoded",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "To",
+              "value": "={{$json.chatId}}"
+            },
+            {
+              "name": "Body",
+              "value": "={{$json.message}}"
+            },
+            {
+              "name": "From",
+              "value": "whatsapp:+14155238886"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        784,
+        -256
+      ],
+      "id": "f791831b-ecff-4351-9978-50313dffad48",
+      "name": "HTTP Request1",
+      "retryOnFail": true,
+      "credentials": {
+        "httpBasicAuth": {
+          "id": "Tn2UknHXfLcUtpyN",
+          "name": "twılıo account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PARSEQUERY": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "PARSEQUERY",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "availableInMCP": false
+  },
+  "versionId": "28dcac44-42a3-4576-8e85-ab2baadf835c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "b3095fc29cb871b1a1fa62649bfd13016a8a983bdcd4a1523275b8f83ce36cce"
+  },
+  "id": "SR3VaYRZGFQMonij",
+  "tags": []
+}
