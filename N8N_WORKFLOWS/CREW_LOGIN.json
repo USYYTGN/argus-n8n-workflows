@@ -1,0 +1,150 @@
+{
+  "name": "CREW_LOGIN",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "crew-login",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-1",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "webhookId": "crew-login"
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "operation": "lookup",
+        "documentId": {
+          "__rl": true,
+          "value": "1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "id"
+        },
+        "lookupColumn": "İsim",
+        "lookupValue": "={{ $json.body.username }}"
+      },
+      "id": "google-sheets-1",
+      "name": "Google Sheets - Lookup",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.4,
+      "position": [450, 300],
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "google-sheets-oauth2",
+          "name": "Google Sheets OAuth2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "condition-1",
+              "leftValue": "={{ $json.Şifre }}",
+              "rightValue": "={{ $('Webhook').item.json.body.password }}",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "if-password-match",
+      "name": "IF - Password Match",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": true,\n  \"user\": {\n    \"name\": $json.İsim,\n    \"position\": $json.Pozisyon,\n    \"phone\": $json.Telefon,\n    \"email\": $json.Email || \"\",\n    \"izinGunu\": $json[\"İzin Günü\"] || 0,\n    \"ekstraIzin\": $json[\"Ekstra İzin\"] || 0\n  }\n} }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond - Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 200]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ {\n  \"success\": false,\n  \"error\": \"Kullanıcı adı veya şifre hatalı\"\n} }}",
+        "options": {}
+      },
+      "id": "respond-fail",
+      "name": "Respond - Fail",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [850, 400]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets - Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets - Lookup": {
+      "main": [
+        [
+          {
+            "node": "IF - Password Match",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF - Password Match": {
+      "main": [
+        [
+          {
+            "node": "Respond - Success",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Respond - Fail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2026-01-02T00:00:00.000Z",
+  "versionId": "1"
+}
