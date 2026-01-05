@@ -195,21 +195,21 @@
     },
     {
       "parameters": {
-        "model": "anthropic/claude-sonnet-4.5",
+        "modelName": "gemini-1.5-pro",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
         -144,
         496
       ],
       "id": "1f3822a9-3118-41f7-8ad0-2f3eb0ba127e",
-      "name": "OpenRouter Chat Modeli",
+      "name": "Google Gemini Chat Modeli",
       "credentials": {
-        "openRouterApi": {
-          "id": "{{OPENROUTER_CREDENTIAL_ID}}",
-          "name": "OpenRouter account"
+        "googleGeminiOAuth2Api": {
+          "id": "{{GOOGLE_GEMINI_CREDENTIAL_ID}}",
+          "name": "Google Gemini account"
         }
       }
     },
@@ -232,20 +232,21 @@
     },
     {
       "parameters": {
+        "modelName": "gemini-1.5-pro",
         "options": {}
       },
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
       "typeVersion": 1,
       "position": [
         32,
         672
       ],
       "id": "b0d5dcec-3a55-4bc5-a1bd-45ffd21259c6",
-      "name": "OpenRouter Chat Modeli1",
+      "name": "Google Gemini Chat Modeli1",
       "credentials": {
-        "openRouterApi": {
-          "id": "{{OPENROUTER_CREDENTIAL_ID}}",
-          "name": "OpenRouter account"
+        "googleGeminiOAuth2Api": {
+          "id": "{{GOOGLE_GEMINI_CREDENTIAL_ID}}",
+          "name": "Google Gemini account"
         }
       }
     },
