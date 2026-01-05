@@ -1,0 +1,635 @@
+{
+  "name": "Nano Banana Pro Reklam Fabrikası",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 🛠️ Kurulum Rehberi\n\n**Hazırlayan: [Doruk Yalçınsoy](https://www.youtube.com/@dorukyalcinsoy)**\n📺 **YouTube:** [youtube.com/@dorukyalcinsoy](https://www.youtube.com/@dorukyalcinsoy)\n👥 **Skool Topluluğu:** [skool.com/is-guc-yapayzeka](https://www.skool.com/is-guc-yapayzeka)\n\n---\n\n## 📖 Workflow Ne Yapar?\n\nBu workflow, e-ticaret mağazaları için profesyonel yapay zeka destekli statik reklam görselleri oluşturur. Sohbet arayüzü üzerinden ürün bilgilerinizi paylaştığınızda:\n\n1. 🎯 Size 5 farklı reklam açısı ve hedef kitle önerisi sunar\n2. 🎨 Onayladığınız açı için reklam stilleri ve metin içerikleri geliştirir\n3. 🖼️ Gemini 3 Pro Image modeli ile profesyonel reklam görseli oluşturur\n4. ☁️ Görseli Google Drive'a yükler ve paylaşılabilir link döndürür\n\n**Özellikler:**\n- Ürün referans görseli ile çalışır (ürünün kendisi)\n- İsteğe bağlı kullanım referans görseli desteği (ürünün kullanıldığı/giyildiği hali)\n- Sohbet geçmişi hafızası ile iteratif çalışma\n- Otomatik Google Drive entegrasyonu\n\n---\n\n## 🔄 Nasıl Çalışır?\n\n### 1. Sohbet Başlatma\n- \"When chat message received\" tetikleyicisi ile sohbet başlatılır\n- AI Agent size ürün hakkında sorular sorar\n\n### 2. Reklam Beyin Fırtınası\n- Claude Sonnet 4.5 modeli ile yaratıcı reklam fikirleri üretilir\n- 5 farklı açı ve hedef kitle önerisi\n- Stil ve metin önerileri\n\n### 3. Görsel Üretim Süreci\n\n**Yol 1: Sadece Ürün Görseli**\n- Switch node durumu kontrol eder\n- requires_reference = false ise\n- HTTP Request ile Gemini 3 Pro'ya tek görsel gönderilir\n\n**Yol 2: Ürün + Kullanım Görseli**\n- requires_reference = true ise\n- HTTP Request1 ile her iki görsel de gönderilir\n- Model ürünün nasıl kullanıldığını referans alır\n\n### 4. Görsel İşleme\n- Code node: Base64 verisini temizler ve hazırlar\n- Convert to File: Base64'ü PNG dosyasına dönüştürür\n\n### 5. Google Drive'a Yükleme\n- Upload file: Görseli Drive'a yükler\n- Share file: Dosyayı herkese açık yapar\n- Edit Fields: Paylaşım linkini düzenler ve döndürür\n\n---\n\n## ⚙️ Kurulum Adımları\n\n### 1. OpenRouter API Anahtarı\n\n1. [openrouter.ai](https://openrouter.ai) adresine gidin ve hesap oluşturun\n2. API Keys bölümünden yeni anahtar oluşturun\n3. n8n'de:\n   - **HTTP Request** nodelarına tıklayın\n   - **Credentials** → **OpenRouter Api**\n   - API Key'inizi girin\n4. **OpenRouter Chat Model** nodelarında aynı credential'ı seçin\n\n**Model Ayarları:**\n- Brainstorm Agent: `anthropic/claude-sonnet-4.5`\n- Image Generation Agent: Varsayılan (OpenRouter otomatik seçim)\n- HTTP Request: `google/gemini-3-pro-image-preview`\n\n### 2. Google Drive Entegrasyonu\n\n1. Google Cloud Console'da proje oluşturun\n2. Google Drive API'yi aktif edin\n3. OAuth 2.0 Client ID oluşturun\n4. n8n'de:\n   - **Upload file** ve **Share file** nodelarına tıklayın\n   - **Credentials** → **Google Drive OAuth2 API**\n   - OAuth bilgilerinizi girin ve yetkilendirin\n\n### 3. Workflow Aktivasyonu\n\n1. Workflow'u kaydedin\n2. Chat tetikleyicisini aktif edin\n3. Chat URL'ini alın ve test edin\n\n### 4. Test Etme\n\n**Örnek Kullanım:**\n```\nSiz: \"Merhaba! Yeni çıkan spor ayakkabımız için reklam görselleri oluşturmak istiyorum.\"\n\nAI: \"Harika! Ürün görselinizin URL'sini paylaşır mısınız?\"\n\nSiz: [Ürün görsel URL'si]\n\nAI: \"Size 5 farklı reklam açısı önereyim:\n1. Performans odaklı - Koşucular için\n2. Lifestyle - Şehir yaşamı temalı\n3. Teknoloji vurgusu - Yenilikçi malzeme...\"\n\n[Bir açı seçtikten sonra]\n\nAI: \"Harika seçim! Şimdi stil önerileri:\n- Minimalist beyaz arka plan\n- Dinamik hareket efekti\n- Bold 'LIMITLESS' metni...\"\n\n[Onay verdiğinizde]\n\nAI: \"Görseliniz oluşturuluyor...\"\n[Google Drive linki döner]\n```\n\n---\n\n## 💡 İpuçları\n\n1. **Görsel Kalitesi:** Yüksek çözünürlüklü ürün görselleri kullanın (min 1024x1024)\n2. **Referans Görseller:** Giysi, aksesuar gibi ürünlerde kullanım görseli ekleyin\n3. **Prompt Detayı:** AI'a ne kadar detay verirseniz sonuç o kadar iyi olur\n4. **Iterasyon:** Beğenmediğiniz görselleri tekrar ürettirin, farklı açılar deneyin\n5. **Maliyet:** OpenRouter kredi sistemini kontrol edin (Gemini 3 Pro görsel başı ~$0.05)\n\n---\n\n## 🔧 Özelleştirme Seçenekleri\n\n### System Message Düzenleme\n\nAI Agent'ın davranışını değiştirmek için:\n- **Ad Brainstorm** node → Options → System Message\n- Farklı sektörler için özelleştirin (kozmetik, teknoloji, gıda)\n\n### Görsel Boyutu\n\nVarsayılan 1:1 oranı değiştirmek için:\n- **Image Generation** tool → System Message içinde\n- \"1:1 aspect ratio\" yerine \"16:9\" veya \"9:16\" yazın\n\n### Farklı AI Modelleri\n\n**Görsel Model Değiştirme:**\n- HTTP Request → jsonBody → model\n- Seçenekler: `google/gemini-3-flash-image-preview` (daha ucuz)\n\n**Chat Model Değiştirme:**\n- OpenRouter Chat Model → model\n- Seçenekler: `anthropic/claude-opus-4`, `openai/gpt-4o`\n\n---\n\n## 🐛 Sık Karşılaşılan Sorunlar\n\n**1. \"Invalid API Key\" Hatası**\n- OpenRouter API anahtarınızı kontrol edin\n- Kredininiz bitmiş olabilir\n\n**2. \"Permission Denied\" (Google Drive)**\n- OAuth yetkilendirmesini yenileyin\n- Drive API'nin aktif olduğundan emin olun\n\n**3. Görsel Oluşturulmuyor**\n- Switch node koşullarını kontrol edin\n- requires_reference değerinin doğru set edildiğinden emin olun\n\n**4. Base64 Decode Hatası**\n- Code node içindeki regex kontrol edin\n- Gemini response formatı değişmiş olabilir\n\n---\n\n## 📊 Performans ve Maliyet\n\n**Ortalama Çalışma Süresi:**\n- Brainstorm aşaması: ~10-15 saniye\n- Görsel üretimi: ~20-30 saniye\n- Toplam: ~30-45 saniye\n\n**Tahmini Maliyetler (OpenRouter):**\n- Claude Sonnet 4.5: ~$0.003 per 1K token\n- Gemini 3 Pro Image: ~$0.05 per görsel\n- Toplam reklam başına: ~$0.06-0.10\n\n---\n\n## 🎯 Kullanım Senaryoları\n\n1. **E-ticaret Mağazaları:** Ürün lansmanları için hızlı reklam üretimi\n2. **Sosyal Medya:** Instagram/Facebook ads için çeşitli versiyonlar\n3. **A/B Testing:** Farklı açılar ve stiller deneyerek en iyiyi bulma\n4. **Ajanslar:** Müşterilere hızlı mockup sunumu\n5. **Print Media:** Broşür ve katalog görselleri\n\n---\n\n🎯 **Sorularınız mı var?** [Skool topluluğumuza](https://www.skool.com/is-guc-yapayzeka) katılın!\n\n📺 **Detaylı video anlatım için:** [YouTube kanalımı](https://www.youtube.com/@dorukyalcinsoy) takip edin!\n\n💼 **İşletmeniz için özel AI çözümleri:** [HeyCalli.com](https://heycalli.com)",
+        "height": 4648,
+        "width": 900
+      },
+      "id": "8846c68f-8c7f-4e0c-adaf-8e420a52d120",
+      "name": "📚 Kurulum Rehberi",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1152,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gemini 3 Pro'dan gelen base64 stringini al\nlet base64String = $input.first().json.choices[0].message.images[0].image_url.url;\n\n// Data URI prefix'ini temizle\nif (base64String.startsWith('data:image/')) {\n  // Virgülü bul ve base64 verisini ayır\n  const commaIndex = base64String.indexOf(',');\n  if (commaIndex !== -1) {\n    base64String = base64String.substring(commaIndex + 1);\n  }\n}\n\nreturn [{\n  json: {\n    base64_data: base64String\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1232,
+        432
+      ],
+      "id": "65dc75ef-01f5-43f2-b618-1e9a9945b9c9",
+      "name": "Kod"
+    },
+    {
+      "parameters": {
+        "operation": "toBinary",
+        "sourceProperty": "base64_data",
+        "options": {
+          "fileName": "generated_image",
+          "mimeType": "image/png"
+        }
+      },
+      "type": "n8n-nodes-base.convertToFile",
+      "typeVersion": 1.1,
+      "position": [
+        1424,
+        432
+      ],
+      "id": "ad74929f-9e9c-42ce-a508-b962dde38227",
+      "name": "Dosyaya Dönüştür"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"google/gemini-3-pro-image-preview\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": [\n        {\n          \"type\": \"text\",\n          \"text\": \"{{ $('Başka Bir Workflow Tarafından Çalıştırıldığında').item.json.prompt }}\"\n        },\n        {\n          \"type\": \"image_url\",\n          \"image_url\": {\n            \"url\": \"{{ $('Başka Bir Workflow Tarafından Çalıştırıldığında').item.json.original_image }}\"\n          }\n        }\n      ]\n    }\n  ],\n  \"modalities\": [\"image\", \"text\"]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        256
+      ],
+      "id": "1ce0ce33-c5ef-4c57-bd0f-994859dfb8ae",
+      "name": "HTTP İsteği",
+      "credentials": {
+        "openRouterApi": {
+          "id": "fU36IobCSleyEQNl",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        -96,
+        288
+      ],
+      "id": "25052a33-6ee9-4fe2-aeec-e6c48e23bd1a",
+      "name": "Sohbet Mesajı Alındığında",
+      "webhookId": "cadd6c60-b491-4446-bb2c-b6736a3fa05a"
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        496
+      ],
+      "id": "3bb22f88-595c-4b18-be12-af2550c1c331",
+      "name": "Basit Hafıza"
+    },
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "prompt"
+            },
+            {
+              "name": "original_image"
+            },
+            {
+              "name": "usage_reference_image"
+            },
+            {
+              "name": "requires_reference",
+              "type": "boolean"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        560,
+        432
+      ],
+      "id": "c9fdc676-a25d-41d3-b6d3-9bb12737bd50",
+      "name": "Başka Bir Workflow Tarafından Çalıştırıldığında"
+    },
+    {
+      "parameters": {
+        "name": "infographic",
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "root",
+          "cachedResultName": "/ (Root folder)"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        784,
+        640
+      ],
+      "id": "3b5d03be-4218-48cb-99e4-ee1c054b13c7",
+      "name": "Dosya Yükle"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b8eb1994-3f9d-44f0-8ed7-0241243e179f",
+              "name": "file_id",
+              "value": "={{ $('Dosya Yükle').item.json.webContentLink }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        640
+      ],
+      "id": "237a3e47-236a-4c74-a83a-1b914055bcab",
+      "name": "Alanları Düzenle"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "=Sen e-ticaret mağazaları için profesyonel statik reklam uzmanısın. Görevin, ürünlerim için reklam varyasyonları oluşturmama yardımcı olmak.\n\nSana bir ürün görseli URL'si vereceğim ve ürünün ne olduğunu söyleyeceğim. Sen bana 5 reklam açısı ve hedef kitle önermelisin. Bir açıyı onayladığımda, reklam stilleri ve metinleri üzerinde beyin fırtınası yapmama yardımcı olacaksın.\n\nOnayladığımda, görsel üretim aracını (image generation agent) şu parametrelerle çağır: reklam konsepti, orijinal görsel URL'si ve kullanım referans URL'si (varsa). Araç sana bir Google Drive URL'si döndürecek, bunu bana iletmelisin.",
+          "maxIterations": 10
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        144,
+        288
+      ],
+      "id": "d98d3567-c7c1-4d0d-9c83-eb47f7525eaf",
+      "name": "Reklam Beyin Fırtınası"
+    },
+    {
+      "parameters": {
+        "model": "anthropic/claude-sonnet-4.5",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        496
+      ],
+      "id": "1f3822a9-3118-41f7-8ad0-2f3eb0ba127e",
+      "name": "OpenRouter Chat Modeli",
+      "credentials": {
+        "openRouterApi": {
+          "id": "fU36IobCSleyEQNl",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "toolDescription": "Statik reklam görselleri oluştur",
+        "text": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Prompt__User_Message_', ``, 'string') }}",
+        "options": {
+          "systemMessage": "=Sen, ürün reklamları oluşturacak bir AI görsel üretim modeli için promptlar yazan bir uzmansın.\n\nÖNEMLİ BAĞLAM:\n- Sen hiçbir görseli göremezsin\n- Görsel üretim modeli şunları alacak:\n  1. ÜRÜN REFERANS GÖRSELİ (her zaman sağlanır): Ürünün kendisini gösterir\n  2. KULLANIM REFERANS GÖRSELİ (bazen sağlanır): Ürünün bir kişi tarafından giyildiği/kullanıldığı hali\n- Promptun, modele bu referansları sadık bir şekilde kullanmasını talimatlamalı\n\nPROMPT GEREKSİNİMLERİ:\n\n1. REFERANS SADAKATİ TALİMATLARI (her promptta ekle):\n   \n   Ürün referansı için:\n   'Sağlanan ürün referans görselini dikkatlice incele. Ürünü tam olarak gösterildiği gibi tekrarla - aynı şekil, yapı, malzemeler, renkler, oranlar ve mekanik detaylar. Ürün tasarımını stilize etme, soyutlama veya yeniden yorumlama.'\n   \n   Kullanım referansı sağlanmışsa, ayrıca ekle:\n   'Sağlanan kullanım referans görselini inceleyerek ürünün tam olarak nasıl giyildiğini/tutulduğunu/kullanıldığını anla. Bu pozisyonlamayı, uyumu ve etkileşimi üretilen görselde tam olarak eşleştir.'\n\n2. SAHNE AÇIKLAMASI:\n   - Ortam, arka plan, yüzeyler, aksesuarlar\n   - Işık stili ve atmosfer\n   - Ürün düzeni veya konumlandırma\n\n3. FOTOĞRAFÇILIK STİLİ:\n   - Kamera açısı\n   - Alan derinliği\n   - Genel estetik\n\n4. METİN ÖZELLİKLERİ:\n   - Tam metin içeriği (çıktıdan önce tamlığı doğrula)\n   - Font stili: serif/sans-serif, kalınlık, büyük/küçük harf\n   - Renk ve yerleşim\n   - Metin içeren şekiller veya bannerlar\n\n5. KOMPOZİSYON:\n   - 1:1 en-boy oranı\n   - Karede element yerleşimi\n\nALACAĞIN GİRDİ:\n- Reklam konsept açıklaması (tema, hedef kitle, mesaj)\n- Reklam stil notları (fotoğrafçılık stili, ruh hali, metin içeriği)\n- Kullanım referans görselinin dahil edilip edilmediğinin onayı\n\nGÖRSEL ÜRETIM ARACI İÇİN ÇIKTI FORMATI:\nprompt - 'tek bir JSON-uyumlu string...',\nrequires_usage_reference - true/false\n\nEğer referans için birden fazla URL alıyorsan 'requires_usage_reference' değerini true yap\n\nKRİTİK HATIRLATMALAR:\n- Tüm metnin tam olduğunu doğrula (kesilmiş kelime veya cümle yok)\n- Promptun sadece JSON-uyumlu karakterler içerdiğini doğrula çünkü TÜM prompt TEK BİR JSON string'ine sarılacak. Gerektiğinde çift tırnak yerine tek tırnak kullan. SATIR ATLAMA YOK.\n\nJSON UYUMLULUĞU İÇİN METİN FORMATLAMA:\n- Süslü tırnaklar kullanma (' ' \" \") - düz tırnak kullan veya kaldır\n- Madde işaretleri kullanma (•) - tire (-) veya virgül kullan\n- Birimler için özel semboller kullanma - tam yaz (inç yerine inch)\n- Kısaltmalarda kesme işareti kullanma - tam kelimeler kullan (it is, do not) veya kaldır\n- & işareti kullanma - 've' yaz"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agentTool",
+      "typeVersion": 2.2,
+      "position": [
+        176,
+        496
+      ],
+      "id": "99a55abe-330f-4d4d-b752-b5fd4da5bf73",
+      "name": "Görsel Üretimi"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        32,
+        672
+      ],
+      "id": "b0d5dcec-3a55-4bc5-a1bd-45ffd21259c6",
+      "name": "OpenRouter Chat Modeli1",
+      "credentials": {
+        "openRouterApi": {
+          "id": "fU36IobCSleyEQNl",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        208,
+        672
+      ],
+      "id": "da670f1b-1b5b-437c-a706-5e9540ce0c77",
+      "name": "Basit Hafıza1"
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "reader",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        992,
+        640
+      ],
+      "id": "464547ae-722f-4f2d-b7fe-3ef80bf7cf54",
+      "name": "Dosya Paylaş"
+    },
+    {
+      "parameters": {
+        "description": "Reklamı oluşturmak için bu aracı çağır",
+        "workflowId": {
+          "__rl": true,
+          "value": "5Hh2C5ktVdnCSKPw",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/5Hh2C5ktVdnCSKPw",
+          "cachedResultName": "Nano Banana Pro Ad Factory"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "prompt": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('prompt', ``, 'string') }}",
+            "original_image": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('original_image', ``, 'string') }}",
+            "usage_reference_image": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('usage_reference_image', ``, 'string') }}",
+            "requires_reference": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('requires_reference', ``, 'boolean') }}"
+          },
+          "matchingColumns": [
+            "prompt"
+          ],
+          "schema": [
+            {
+              "id": "prompt",
+              "displayName": "prompt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "original_image",
+              "displayName": "original_image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "usage_reference_image",
+              "displayName": "usage_reference_image",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "requires_reference",
+              "displayName": "requires_reference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "boolean",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        416,
+        656
+      ],
+      "id": "219ef5b5-f03d-4c35-9088-a0edbb76bbaa",
+      "name": "'Nano Banana Pro Reklam Fabrikası' Çağır"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.requires_reference }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    },
+                    "id": "b6b32c52-e94b-466b-aab2-970eb5ed1f01"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "ffc71b94-2a99-4f8c-8676-1822555d0db0",
+                    "leftValue": "={{ $json.requires_reference }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        816,
+        432
+      ],
+      "id": "7d0738e7-c9c0-4ff3-861a-52f77a0c26ca",
+      "name": "Ayraç"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://openrouter.ai/api/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openRouterApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"google/gemini-3-pro-image-preview\",\n  \"messages\": [\n    {\n      \"role\": \"user\",\n      \"content\": \"{{ $('Başka Bir Workflow Tarafından Çalıştırıldığında').item.json.prompt }}\"\n    },\n    {\n      \"type\": \"image_url\",\n      \"imageUrl\": {\n        \"url\": \"{{ $('Başka Bir Workflow Tarafından Çalıştırıldığında').item.json.original_image }}\"\n      }\n    },\n    {\n      \"type\": \"image_url\",\n      \"imageUrl\": {\n        \"url\": \"{{ $('Başka Bir Workflow Tarafından Çalıştırıldığında').item.json.usage_reference_image }}\"\n      }\n    }\n  ],\n  \"modalities\": [\"image\", \"text\"]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1024,
+        448
+      ],
+      "id": "56f10406-8651-4611-8d7d-9bd139677e15",
+      "name": "HTTP İsteği1"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Kod": {
+      "main": [
+        [
+          {
+            "node": "Dosyaya Dönüştür",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP İsteği": {
+      "main": [
+        [
+          {
+            "node": "Kod",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dosyaya Dönüştür": {
+      "main": [
+        [
+          {
+            "node": "Dosya Yükle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sohbet Mesajı Alındığında": {
+      "main": [
+        [
+          {
+            "node": "Reklam Beyin Fırtınası",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basit Hafıza": {
+      "ai_memory": [
+        [
+          {
+            "node": "Reklam Beyin Fırtınası",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Başka Bir Workflow Tarafından Çalıştırıldığında": {
+      "main": [
+        [
+          {
+            "node": "Ayraç",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dosya Yükle": {
+      "main": [
+        [
+          {
+            "node": "Dosya Paylaş",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Modeli": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Reklam Beyin Fırtınası",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Görsel Üretimi": {
+      "ai_tool": [
+        [
+          {
+            "node": "Reklam Beyin Fırtınası",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Modeli1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Görsel Üretimi",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basit Hafıza1": {
+      "ai_memory": [
+        [
+          {
+            "node": "Görsel Üretimi",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Dosya Paylaş": {
+      "main": [
+        [
+          {
+            "node": "Alanları Düzenle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "'Nano Banana Pro Reklam Fabrikası' Çağır": {
+      "ai_tool": [
+        [
+          {
+            "node": "Görsel Üretimi",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ayraç": {
+      "main": [
+        [
+          {
+            "node": "HTTP İsteği",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP İsteği1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP İsteği1": {
+      "main": [
+        [
+          {
+            "node": "Kod",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "15839c36-1ee0-489a-be11-434825d72210",
+  "meta": {
+    "instanceId": "f73f237186f1e65ab60412299716af11ea7dd6f45e4b6f56963001e3dcdba8ed"
+  },
+  "id": "mXyvfJDhx3UOantJ",
+  "tags": []
+}

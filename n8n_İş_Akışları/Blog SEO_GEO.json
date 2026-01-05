@@ -1,0 +1,1083 @@
+{
+  "name": "Blog SEO/GEO",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## blog oluştur ve blogu standart formata dönüştür",
+        "height": 520,
+        "width": 700,
+        "color": 5
+      },
+      "id": "314ef414-56d4-487a-8156-0baaa9aaacaf",
+      "name": "Yapışkan Not15",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6224,
+        528
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "GOOGLE FORMS'DAN BLOG İÇİN FİKİR VE TEMEL TASLAK AL\n",
+        "height": 440,
+        "width": 428,
+        "color": 5
+      },
+      "id": "8c10ba22-c543-44c3-8a64-c10266352d7d",
+      "name": "Yapışkan Not14",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        5760,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## önerilere göre değişiklik yap",
+        "height": 240,
+        "width": 544,
+        "color": 5
+      },
+      "id": "a621a245-57e1-4334-aeb7-8090d96b35e2",
+      "name": "Yapışkan Not13",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        8032,
+        864
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## blogu e-posta ile göndermek için daha okunabilir formata dönüştür",
+        "height": 352,
+        "width": 272,
+        "color": 5
+      },
+      "id": "a73ec7ba-c630-4f80-93de-1911f3019794",
+      "name": "Yapışkan Not12",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        7424,
+        512
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "## blog SEO ve GEO optimizasyonu",
+        "height": 528,
+        "width": 336,
+        "color": 5
+      },
+      "id": "afd66ad1-c01d-421e-aeff-bfafbe2bf6fc",
+      "name": "Yapışkan Not11",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6992,
+        528
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Uzman düzeyinde bir metin yazarısın ve görevin verilen konu ve kullanıcı geri bildirimine göre mevcut bir blog yazısını revize etmektir.\n\nSorumlulukların şunlardır:\n- Kullanıcının tüm geri bildirimlerini blog yazısını geliştirmek için dikkatle uygula.\n- Orijinal içeriğin iyi kısımlarını koru, ancak geri bildirime göre gerekli alanları yeniden yaz veya düzenle.\n- Tonu samimi, profesyonel ve okunması kolay tut.\n- Blog yazısını net başlıklar ve alt başlıklarla düzenle.\n- İçeriği daha anlaşılır kılmak için madde işaretleri veya numaralı listeler kullan.\n- Girişte güçlü bir kanca ve sonuçta eylem çağrısı veya önemli çıkarımlar içeren sağlam bir kapanış olsun.\n\n\n\nKullanıcının geri bildirimi:\n{{ $('Onay için İçerik Gönder1').item.json.data['Content Feedback'] }}\n\nOrijinal içerik:\n{{ $('SEO,GEO Optimizasyonu').item.json.output }}\n\nŞimdi, bu girdileri kullanarak ve geri bildirimi tamamen dahil ederek blog yazısını yeniden yaz.\n",
+        "options": {}
+      },
+      "id": "726ae065-23c9-4a45-a331-83fb68d4ecda",
+      "name": "Geri Bildirime Göre Revizyon",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        8240,
+        928
+      ],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "=Hassas bir HTML biçimlendiricisisin.\n\n\n\nAşağıdaki Markdown formatında yazılmış blog yazısını al ve profesyonel bir pazarlama e-postasının gövdesi olarak gönderilmeye uygun geçerli HTML'e dönüştür.\n\n- Tüm biçimlendirmeyi koru (başlıklar, kalın metin, madde işaretleri, bağlantılar vb.)\n- Harici CSS veya JavaScript ekleme\n- Yalnızca <h1>, <h2>, <p>, <ul>, <li>, <strong>, <a> gibi anlamsal HTML etiketleri kullan\n- <html>, <head> veya <body> etiketleri ekleme\n- Yalnızca HTML çıktısı ver\n\nMarkdown içeriği:\n---\n{{ $json[\"output\"] }}\n"
+        }
+      },
+      "id": "e8f06852-eaed-47df-81ea-d0b2c8b5c20f",
+      "name": "E-posta için HTML'e Dönüştür",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        7440,
+        688
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "317039f4-754e-4cb0-a674-eb8d26c9ed27",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.data['İçeriği Onayla?'] }}",
+                    "rightValue": "Evet"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Evet"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "caace3ea-4ca0-40de-84fb-5a8fd809a0eb",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.data['İçeriği Onayla?'] }}",
+                    "rightValue": "Hayır"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Hayır"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "version": 2,
+                  "leftValue": "",
+                  "caseSensitive": true,
+                  "typeValidation": "strict"
+                },
+                "conditions": [
+                  {
+                    "id": "f93e5649-6a21-49a9-9993-85f1323139b0",
+                    "operator": {
+                      "name": "filter.operator.equals",
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.data['İçeriği Onayla?'] }}",
+                    "rightValue": "İptal"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "İptal"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "146d7344-9472-4383-95b2-476696fbc9ac",
+      "name": "Onay Sonucu1",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        8048,
+        672
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8",
+          "mode": "list",
+          "cachedResultName": "Blog-Ornek",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Onay Durumu": "={{ $json.data['İçeriği Onayla?'] }}",
+            "Geri Bildirim": "={{ $json.data['İçerik Geri Bildirimi'] }}",
+            "Konu": "={{ $('Oluşturulan İçeriği Google Sheets\\'e Ekle').item.json.Konu }}",
+            "Oluşturma Tarihi": "={{ $now }}",
+            "İçerik": "={{ $('SEO,GEO Optimizasyonu').item.json.output }}"
+          },
+          "matchingColumns": [
+            "Konu"
+          ],
+          "schema": [
+            {
+              "id": "İçerik",
+              "displayName": "İçerik",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Oluşturma Tarihi",
+              "displayName": "Oluşturma Tarihi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Onay Durumu",
+              "displayName": "Onay Durumu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Geri Bildirim",
+              "displayName": "Geri Bildirim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Konu",
+              "displayName": "Konu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hangi problemi çözüyor?",
+              "displayName": "Hangi problemi çözüyor?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Denenen alternatifler",
+              "displayName": "Denenen alternatifler",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Çözüme nasıl ulaştınız?",
+              "displayName": "Çözüme nasıl ulaştınız?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Yapılan hatalar",
+              "displayName": "Yapılan hatalar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kişisel öğrenimler",
+              "displayName": "Kişisel öğrenimler",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adımların açıklaması",
+              "displayName": "Adımların açıklaması",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Referanslar",
+              "displayName": "Referanslar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submittedAt",
+              "displayName": "submittedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "formMode",
+              "displayName": "formMode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "05a9eb27-a208-4b47-bdc8-676293e27aed",
+      "name": "Oluşturulan İçeriği Google Sheets'e Ekle1",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        8352,
+        672
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "sendTo": "dorukyalcinsoy@gmail.com",
+        "subject": "Blog İçeriği için Onay Gerekli",
+        "message": "=bu haftanın blogları\n{{ $json.output }}",
+        "responseType": "customForm",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "İçeriği Onayla?",
+              "fieldType": "dropdown",
+              "fieldOptions": {
+                "values": [
+                  {
+                    "option": "Evet"
+                  },
+                  {
+                    "option": "Hayır"
+                  },
+                  {
+                    "option": "İptal"
+                  }
+                ]
+              },
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "İçerik Geri Bildirimi",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "1688c807-ece4-4ff6-b523-003ab06c14f9",
+      "name": "Onay için İçerik Gönder1",
+      "type": "n8n-nodes-base.gmail",
+      "position": [
+        7840,
+        704
+      ],
+      "webhookId": "a23938a4-fc6c-4445-8dee-17e501e92e06",
+      "typeVersion": 2.1,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "R2bN9wsCbuHmnaZW",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "=Aşağıdaki alanlarda eğitilmiş kıdemli bir metin yazarı ve içerik optimizasyon stratejistisin:\n\n1. Üretken Motor Optimizasyonu (GEO) – içeriğin ChatGPT, Claude, Gemini ve Perplexity gibi LLM'ler tarafından referans alınabilir, alıntılanabilir veya yüzeye çıkarılabilir olmasını sağlamak.\n2. Arama Motoru Optimizasyonu (SEO) – içeriğin Google, Bing ve ilgili arama motorlarında organik olarak sıralanmasını sağlamak.\n3. İnsan odaklı ikna edici yazım – içeriği ilgi çekici, kişisel ve duygusal olarak rezonans sağlayıcı hale getirmek.\n4. Yapay zeka tespitini atlatma – içeriğin GPTZero, Originality.ai ve ZeroGPT gibi yapay zeka dedektörlerine karşı tamamen insan yazımı görünmesini sağlamak.\n\nGörevin, aşağıda sağladığım içeriği yeniden yazmak ve 4 optimizasyon katmanını da uygulayarak uzman düzeyinde insan yazımından ayırt edilemez, yayına hazır tek bir son ürün ortaya çıkarmaktır.\n\n---\n\n### ⛓️ ENTEGRASYON KURALLARI (TÜM KATMANLAR MEVCUT OLMALIDIR)\n\n### ✅ 1. GEO KATMANI (Üretken Motor Optimizasyonu)\n- LLM'lere yaygın olarak sorulan soruları işaret etmek için net anlamsal ipuçları kullan (örn., \"Nasıl yapabilirim...\", \"En iyi yol...\", \"En verimli yöntem nedir...\")\n- Çıkarılmaya uygun, eksiksiz ve bağımsız yanıtlar sağla\n- Yapılandırılmış bölümler kullan: H2'ler, H3'ler, numaralı adımlar, kontrol listeleri\n- LLM'lerin konu kümelerini anlamak için kullandığı eşanlamlıları ve ilişkili varlıkları dahil et\n\n### ✅ 2. SEO KATMANI\n- **Ana anahtar kelimenin** şunlarda yer aldığından emin ol:\n  - H1 başlığı (maksimum 60 karakter)\n  - İlk 100 kelime\n  - 2 veya daha fazla alt başlık\n  - Görsel alt metni (varsa)\n  - Meta açıklaması (ilk paragraf)\n- **LSI anahtar kelimelerini** ve ilgili arama terimlerini doğal olarak yerleştir\n- Başlık hiyerarşisi (H1 > H2 > H3), madde işaretleri, gerektiğinde kalın vurgu ile temiz biçimlendir\n\n### ✅ 3. İNSAN TARZI KATMANI\n- Gerçek bir konu uzmanının nasıl yazacağını taklit et\n- Şunlarda çeşitlilik ekle:\n  - Cümle yapısı (kısa, orta, uzun)\n  - Ton (sohbet tarzı, düşünceli, kendinden emin)\n  - Akış (ara sıra yan notlar, açıklamalar veya düşünce ortasında kısmi yeniden yazımlar dahil et)\n- Kullan:\n  - Ara sıra birinci tekil şahıs ifadeleri: \"Bunu yaşadığımı gördüm...\" veya \"Deneyimlerime göre...\"\n  - Geçişsel kusursuzluk: \"Aslında, bunu unutun…\" veya \"İlk başta düşündüm ki…\"\n  - Gayri resmi retorik dokunuşlar: \"Muhtemelen siz de bunu hissetmişsinizdir…\"\n\nKaçın:\n- Robotik yapı (\"Birincisi, İkincisi, Sonuç olarak\" yok)\n- Aşırı cilalı ton (gerçek insanlar küçük sapmalar yapar)\n\n### ✅ 4. YAPAY ZEKA TESPİTİNİ ATLATMA KATMANI\n- LLM'lere özgü dilsel kalıpları kır:\n  - Simetrik paragraf uzunlukları kullanma\n  - Tutarlı şekilde öngörülebilir sözdiziminden kaçın\n  - Paragraf açılış ve kapanış cümlelerini çeşitlendir\n- Kullan:\n  - Kendini düzeltmeler veya ikinci tahminler (örn., \"Bekle—bu tamamen doğru değil…\")\n  - Cümle ritminde küçük hatalar veya doğal duraksamalar\n  - İnsan yazım kadansını simüle eden ifadeli gayri resmi işaretler\n\n---\n\n### ✅ 5. OTORİTE VE GÜVEN SİNYALLERİ\n- İlgili olduğunda araçları, platformları, çerçeveleri ve kullanıcı rollerini belirt\n- Sonuçları, kıyaslamaları veya sorun-çözüm mantığını net bir şekilde referans göster\n- Genel boş laftan kaçın; her şey kullanışlı, spesifik ve gerçek hissettirmeli\n\n---\n\n### ✅ 6. SONUÇ YAPI GEREKSİNİMLERİ\n- En üste ekle:\n  *Yayınlanma Tarihi: [Bugünün Tarihi] • Tahmini okuma süresi: [X] dk*\n- Temiz bölüm başlıklarıyla düzenle\n- Şunları içeren bir sonuç dahil et:\n  - Önemli çıkarımların özeti\n  - Sonraki adımlar / Eylem çağrısı\n  - Etkileşim daveti (uygunsa)\n- Etiketler (isteğe bağlı): sonda 4-6 anahtar kelime etiketi ekle\n\n---\n\n### ÇIKTI KURALLARI:\n- **Yalnızca yeniden yazılmış, optimize edilmiş içeriği** çıktı olarak ver\n- Değişikliklerini **açıklama**\n- Çıktının şu özelliklere sahip olduğundan emin ol:\n  - Anlamsal olarak zengin\n  - SEO optimize edilmiş\n  - LLM tarafından alıntılanabilir\n  - İnsan açısından otantik\n  - Yapay zeka tespitine karşı güvenli\n\n---\n\nYeniden yazılacak içerik:\n\n{{ $json.output }}\n"
+        }
+      },
+      "id": "80873b71-81fa-4fde-a4b8-3b5b782c3046",
+      "name": "SEO,GEO Optimizasyonu",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        7056,
+        688
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.output }}",
+        "options": {
+          "systemMessage": "Üst Düzey Teknik Blog Yazısı Şablonu\n1. ETKİLEYİCİ BAŞLIK (H1)Formül: [Eylem Fiili] + [Spesifik Sonuç] + [Araç/Platform] + [Duygusal Kanca]\n\n\nÖrnekler:\n\"n8n Sohbette Görüntüleri Satır İçinde Nasıl Gösterilir: Eksiksiz Çözüm Rehberi\"\"Salesforce Dağıtımlarını Otomatikleştirin: Haftalık 10 Saat Kazandıran 5 CLI Komutu\"\"n8n ile Gerçek Zamanlı Panolar Oluşturun: Sıfırdan Üretime 30 Dakikada\"Gereksinimler:\n Spesifik fayda/sonuç dahil et Araç/platformu belirt Mümkün olduğunda sayılar kullan Ağrı noktasını doğrudan ele al SEO için 60 karakterin altında tut2. META VERİ BÖLÜMÜYayınlanma Tarihi: [Tarih] • [X] dk okumaOkuma Süresi Hesaplama:\nDakikada ortalama 200-250 kelime\nKod örnekleri için 1-2 dakika ekle\nEn yakın tam sayıya yuvarla3. PROBLEM-KANCA AÇILIŞI (2-3 paragraf)Paragraf 1: İlişkilendirilebilir hayal kırıklığı/senaryo\n\"Hiç... yaşadınız mı\" veya \"Şu anı bilirsiniz...\" ile başla\nSpesifik ağrı noktasını tanımla\nOkuyucunun \"evet, tam da benim sorunum bu\" demesini sağla\nParagraf 2: Problemi doğrula\n\"Yalnız değilsiniz\"\nKısa istatistikler veya yaygın oluşum\nZorluğu kabul et\nParagraf 3: Söz/Önizleme\n\"Bugün size... göstereceğim\"\nEldeki edecekleri spesifik sonuç\nBeceri seviyesini belirt (başlangıç dostu, ileri düzey, vb.)\nŞablon:\nHiç [konunuzla ilgili spesifik hayal kırıklığı yaratan senaryo] yaşadınız mı? Yalnız değilsiniz. Bu [yaygın zorluk/problem], [istenen sonuca] ulaşmak isteyen sayısız [hedef kitle] için [sorun yarattı/hayal kırıklığına uğrattı/engelledi].\n[Doğrulama paragrafı - bu problemin neden var olduğu, ne kadar yaygın olduğu]\nBugün size [tam çözüm/yöntem] konusunda yol göstereceğim, bu da [spesifik sonucu] [dönüştürür/çözer/elde eder]. İster [kullanım durumu 1], ister [kullanım durumu 2], isterse [kullanım durumu 3] için olsun, bu rehber [spesifik faydayı] [açığa çıkaracak/sağlayacak/mümkün kılacak]4. PROBLEM AÇIKLAMA BÖLÜMÜh2: \"Problem: Neden [Sorun] Oluşur\"\nYapı:\nProblemin arkasındaki teknik \"neden\"i açıkla\nBirden fazla senaryo için madde işaretleri kullan\nKullanıcıların tipik olarak ne beklediğini ve gerçeği dahil et\nİlişkilendirilebilir bir kod örneği veya ekran görüntüsü ekle\nŞablon:\nProblem: Neden [X] Varsayılan Olarak Çalışmıyor\n[Araç/platform] ile çalışırken muhtemelen bu senaryoyla karşılaştınız:\n[Kullanıcının attığı Adım 1]\n[Kullanıcının attığı Adım 2]\n[Beklenen sonuç yerine hayal kırıklığı yaratan sonuç]\n\nBu, [teknik açıklama] nedeniyle oluşur. [Bunun neden zor olduğuna dair ek bağlam].5. ÇÖZÜM GENEL BAKIŞH2: \"Eksiksiz Çözüm: [Yöntem Adı]\"\nGereksinimler:\nYaklaşımın kısa özeti\nÖn koşullar bölümü\nBaşlamadan önce nelere ihtiyaç duyulduğu\nŞablon:\nEksiksiz Çözüm: Adım Adım Uygulama\nÖn Koşullar\nDalmadan önce, şunlara sahip olduğunuzdan emin olun:\n[Gereksinim 1]\n[Gereksinim 2]\n[Gereksinim 3]\n[Beceri/bilgi gereksinimi]\n\n6. DETAYLI UYGULAMA (Ana İçerik)Yapı: Farklı yöntemler/yaklaşımlar için birden fazla H3 bölümü\n\n\nYöntem Şablonu:\nYöntem 1: [Açıklayıcı Ad] ([Ne Zaman Kullanılır])\nAdım 1: [Eylem Açıklaması]\n[Bu adımın ne yaptığının kısa açıklaması]\n// Açık, yorumlu kod örneği  const ornek = \"pratik değerlerle\";  Adım 2: [Sonraki Eylem]    [Açıklama + kod örneği]    Adım 3: [Son Eylem]    [Açıklama + kod örneği]      **Kod Örneği Gereksinimleri**:  - Her zaman kodun ne yaptığını açıklayan yorumlar dahil et  - Gerçekçi değişken adları ve değerleri kullan  - Eksiksiz, çalışan örnekler göster  - Uygun yerlerde hata işleme dahil et  - Platform spesifik hususları belirt    ---    ## 7. PLATFORM SPESİFİK VARYASYONLAR  **H2**: \"Platform Spesifik En İyi Uygulamalar\" veya \"Farklı Yaklaşımlar\"    **Şablon**:  Platform Spesifik En İyi Uygulamalar  [Platform 1]  Dosya Boyutu Limiti: [Spesifik limit]  Desteklenen Formatlar: [Format listesi]  En İyi Uygulama: [Anahtar öneri]  İpucu: [İçeriden bilgi]  [Platform 2]  Dosya Boyutu Limiti: [Spesifik limit]  En İyi Uygulama: [Anahtar öneri]  İpucu: [İçeriden bilgi]    ---    ## 8. SORUN GİDERME BÖLÜMÜh2: \"Yaygın Sorunları Giderme\"    **Sorun Şablonu**:  Sorun 1: [Problem Açıklaması]  Belirtiler: [Kullanıcının gördüğü/yaşadığı] Çözümler:    [Çözüm 1]  [Çözüm 2]  [Çözüm 3]  Sorun 2: [Başka Bir Problem]  Belirtiler: [Kullanıcının gördüğü] Çözümler:    [Düzeltmek için spesifik adımlar]    **Gereksinimler**:  - 3-5 en yaygın problemi ele al  - Hem belirtileri hem de çözümleri dahil et  - Karmaşık düzeltmeler için kod örnekleri ekle  - Ek yardım aranması gereken durumları belirt    ---    ## 9. İLERİ DÜZEY KULLANIM DURUMLARI  **H2**: \"İleri Düzey Kullanım Durumları ve Örnekler\" veya \"Daha İleri Götürmek\"    **Şablon**:  İleri Düzey Kullanım Durumları ve Örnekler  [Kullanım Durumu 1]: [Açıklayıcı Ad]  Şunları yapan bir iş akışı oluşturun:    [Adım 1]  [Adım 2]  [Adım 3]  [Kullanım Durumu 2]: [Başka Bir Senaryo]  Şunlar için mükemmel:    [Uygulama 1]  [Uygulama 2]  [Uygulama 3]    ---    ## 10. PERFORMANS & OPTİMİZASYON  **H2**: \"Performans Optimizasyon İpuçları\" veya \"En İyi Uygulamalar\"    **Şablon**:  Performans Optimizasyon İpuçları  [Kategori 1]:    [Spesifik öneri ile İpucu 1]  [Spesifik öneri ile İpucu 2]  [Spesifik öneri ile İpucu 3]  [Kategori 2]:    [İpucu 1]  [İpucu 2]    ---    ## 11. GÜVENLİK DEĞERLENDİRMELERİ (uygunsa)  **H2**: \"Güvenlik Değerlendirmeleri\"    **Şablon**:  Güvenlik Değerlendirmeleri  [Güvenlik Alanı 1]:    [Spesifik öneri]  [Kaçınılması gereken]  [Uygulama ipucu]  [Güvenlik Alanı 2]:    [Spesifik öneri]  [En iyi uygulama]    ---    ## 12. SONUÇ BÖLÜMÜh2: \"Sonuç ve Sonraki Adımlar\"    **Yapı**:  - Neyin başarıldığını özetle  - Önemli çıkarımlar (3-4 madde işareti)  - Sırada ne var/nasıl genişletilir  - Eylem çağrısı    **Şablon**:  Sonuç ve Sonraki Adımlar  [Bu rehberin neyi başardığının ve sağladığı dönüşümün özeti]    Önemli Çıkarımlar:    [Ana nokta 1]  [Ana nokta 2]  [Ana nokta 3]  [Ana nokta 4]  Sırada Ne Var?:    [Sonraki adım 1]  [Sonraki adım 2]  [Sonraki adım 3]  [Başarıyı takip etmek için metrik]  [Uygulamaya teşvik eden eylem çağrısı]      ---    ## 13. ETKİLEŞİM ALT BİLGİSİ  **Şablon**:  [Konu] hakkında sorularınız mı var? Aşağıya yorum bırakın veya [platform] üzerinden ulaşın. Spesifik kullanım durumlarınızı duymak ve karşılaştığınız zorlukları gidermeye yardımcı olmak isterim.    Etiketler: [etiket1], [etiket2], [etiket3], [etiket4], [etiket5]      ---    ## YAZIM KALİTESİ KONTROL LİSTESİ    ### İçerik Kalitesi  - [ ] Gerçek, spesifik bir problemi ele alır  - [ ] Eksiksiz, çalışan çözümler sağlar  - [ ] Hata işleme ve uç durumları dahil eder  - [ ] 3+ farklı yöntem/yaklaşım içerir  - [ ] Gerçek kod örnekleri içerir (sahte kod değil)  - [ ] Her adımın arkasındaki \"neden\"i açıklar    ### Yapı & Akış  - [ ] Problemden çözüme mantıksal ilerleme  - [ ] Net başlıklar ve alt başlıklar  - [ ] Tutarlı biçimlendirme  - [ ] Madde işaretleri ve numaralı listeleri uygun şekilde kullanır  - [ ] Bölümler arasında yumuşak geçişler    ### Teknik Doğruluk  - [ ] Tüm kod örnekleri test edilmiş ve çalışıyor  - [ ] Platform spesifik detaylar dahil edilmiş  - [ ] Dosya boyutu limitleri ve kısıtlamalar belirtilmiş  - [ ] Yaygın hatalar ve çözümler sağlanmış  - [ ] Güvenlik değerlendirmeleri ele alınmış    ### Etkileşim Faktörleri  - [ ] Fayda içeren etkileyici başlık  - [ ] Okuyucuyu yakalayan ilişkilendirilebilir açılış  - [ ] Okuyucuların hemen kullanabileceği pratik örnekler  - [ ] Genişlemeye ilham veren ileri düzey kullanım durumları  - [ ] Net sonraki adımlar ve eylem çağrısı    ### SEO & Keşfedilebilirlik  - [ ] Başlıkta hedef anahtar kelime  - [ ] Anahtar kelime içerik boyunca doğal olarak kullanılmış  - [ ] Uygun başlık hiyerarşisi (H1, H2, H3)  - [ ] Meta açıklaması hazır (ilk paragraf)  - [ ] İç bağlantı fırsatları belirlenmiş    ---    ## ARAŞTIRMA KONTROL LİSTESİ    ### Yazmadan Önce  - [ ] Problemin var olduğunu ve yaygın olduğunu doğrula  - [ ] Tüm kod örneklerini iyice test et  - [ ] Platform spesifik sınırlamaları araştır  - [ ] 3-5 yaygın hata senaryosu belirle  - [ ] Mevcut çözümleri ve boşlukları kontrol et    ### Yazarken  - [ ] Tüm teknik detayları doğrula  - [ ] Uygunsa birden fazla platformda kodu test et  - [ ] Anahtar adımların ekran görüntüsünü al (görsel kullanılıyorsa)  - [ ] Tüm sınırlamaları ve kısıtlamaları doğrula    ### Yazdıktan Sonra  - [ ] Dil bilgisi ve akış için düzeltme yap  - [ ] Tüm kod örneklerini son bir kez daha test et  - [ ] Tüm bağlantıların çalıştığını doğrula  - [ ] Başlık hiyerarşisini ve biçimlendirmeyi kontrol et  - [ ] Hedef anahtar kelime yoğunluğu için optimize et    ---    ## KELIME SAYISI HEDEFLERİ    - **Toplam Yazı**: 3.000-5.000 kelime  - **Giriş**: 300-400 kelime  - **Problem Bölümü**: 200-300 kelime  - **Her Yöntem**: 400-600 kelime  - **Sorun Giderme**: 400-500 kelime  - **İleri Düzey Kullanım Durumları**: 300-400 kelime  - **Sonuç**: 200-300 kelime    Bu şablon, okuyucu etkileşimini tüm yazı boyunca korurken kapsamlı kapsam sağlar.      Bu formatta bir blog yaz"
+        }
+      },
+      "id": "40cda108-9ae4-4d59-b3ed-1fce4819f401",
+      "name": "Şablona Uydurma",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        6624,
+        688
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=yeni {{ $json['Konu'] }} Mana AI v2 için blog oluştur",
+        "options": {
+          "systemMessage": "=profesyonel bir teknik yazar ve geliştiricisin.  \nAşağıdaki notları kullanarak,   \n*araç \nGüncel Tarihi almak için tarih aracını kullan\n\nkonu: {{ $json['Konu'] }},\nhangi problemi çözüyor: {{ $json['Hangi problemi çözüyor?'] }},\ndenenen seçenekler: {{ $json['Denenen alternatifler'] }},\nbuluş: {{ $json['Çözüme nasıl ulaştınız?'] }},\nhatalar: {{ $json['Yapılan hatalar'] }},\nne öğrendik: {{ $json['Kişisel öğrenimler'] }},\naçıklama: {{ $json['Adımların açıklaması'] }},\nreferans: {{ $json['Referanslar'] }}\n\nTonu pratik tut, gerçek bir geliştiricinin çözümünü açıklaması gibi.  \nBaşlıkları şablonda tanımlandığı gibi tam olarak kullan. İlgi çekici olmalı. \nbloglar satır içi yorumlar ve gerçekçi değişken adlarıyla tam çalışan kod örnekleri içermeli. daha sonra eklenecek görseller\nçıktı formatı\n{\n  \"title\": \"\",\n  \"published_date\": \"\",\n  \"read_time_minutes\": 0,\n  \"focus_keyword\": \"\",\n  \"meta_description\": \"\",\n  \"intro\": {\n    \"problem\": \"\",\n    \"validation\": \"\",\n    \"preview\": \"\"\n  },\n  \"problem_section\": {\n    \"title\": \"\",\n    \"steps\": [\"\", \"\", \"\"],\n    \"technical_reason\": \"\",\n    \"image_tag\": \"<!-- gorsel: problem aciklamasi -->\"\n  },\n  \"solution_overview\": {\n    \"title\": \"\",\n    \"prerequisites\": [\"\", \"\", \"\"],\n    \"why_it_works\": \"\"\n  },\n  \"methods\": [\n    {\n      \"method_title\": \"\",\n      \"when_to_use\": \"\",\n      \"steps\": [\n        {\n          \"step_title\": \"\",\n          \"description\": \"\",\n          \"code_block\": \"\",\n          \"image_tag\": \"<!-- gorsel: yontem adimi -->\"\n        }\n      ]\n    }\n  ],\n  \"platform_variations\": [\n    {\n      \"platform\": \"\",\n      \"file_size_limit\": \"\",\n      \"supported_formats\": [],\n      \"best_practice\": \"\",\n      \"tip\": \"\"\n    }\n  ],\n  \"troubleshooting\": [\n    {\n      \"issue\": \"\",\n      \"symptoms\": \"\",\n      \"solutions\": [\"\", \"\", \"\"],\n      \"image_tag\": \"<!-- gorsel: sorun giderme -->\"\n    }\n  ],\n  \"advanced_use_cases\": [\n    {\n      \"use_case_title\": \"\",\n      \"steps\": [\"\", \"\", \"\"],\n      \"applications\": [\"\", \"\", \"\"]\n    }\n  ],\n  \"performance_optimization\": {\n    \"category_1\": {\n      \"tips\": [\"\", \"\", \"\"]\n    },\n    \"category_2\": {\n      \"tips\": [\"\", \"\"]\n    }\n  },\n  \"security\": [\n    {\n      \"area\": \"\",\n      \"recommendation\": \"\",\n      \"avoid\": \"\",\n      \"tip\": \"\"\n    }\n  ],\n  \"conclusion\": {\n    \"summary\": \"\",\n    \"takeaways\": [\"\", \"\", \"\", \"\"],\n    \"next_steps\": [\"\", \"\", \"\"],\n    \"metric\": \"\",\n    \"call_to_action\": \"\"\n  },\n  \"engagement\": {\n    \"question_prompt\": \"\",\n    \"platform_link\": \"\",\n    \"tags\": [\"\", \"\", \"\", \"\", \"\"]\n  }\n}"
+        }
+      },
+      "id": "f950cb92-40d3-4200-a656-71556c535024",
+      "name": "Blog Oluşturucu",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [
+        6240,
+        704
+      ],
+      "typeVersion": 2
+    },
+    {
+      "parameters": {
+        "content": "# 🛠️ Kurulum Rehberi\n\n## **Hazırlayan: [Doruk Yalçınsoy](https://www.youtube.com/@dorukyalcinsoy) | [YouTube](https://www.youtube.com/@dorukyalcinsoy) | [Skool Topluluğu](https://www.skool.com/is-guc-yapayzeka)**\n\n---\n\n## 📖 Workflow Ne Yapar?\n\nBu workflow, **Google Form gönderimini** SEO optimize edilmiş, profesyonel bir teknik blog yazısına dönüştürür. Yayınlamadan önce **insan onayı** adımı içerir.\n\n---\n\n## 🔄 Nasıl Çalışır?\n\n### 1️⃣ n8n Form Gönderimi (Tetikleyici)\n- İşlem **n8n Form** doldurulduğunda başlar\n- Yanıtlar **Google Sheets**'e kaydedilir ve workflow tetiklenir ([Buradan](https://docs.google.com/spreadsheets/d/13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8/edit?usp=sharing) kopyalayınız)\n\n### 2️⃣ AI Blog Taslağı Oluşturma\nForm girdilerini alır ve **yapılandırılmış JSON blog taslağı** üretir:\n- Başlık & metadata\n- Problem açıklaması\n- Çözüm detayları\n- **Gerçekçi kod snippet'leri** ile uygulama yöntemleri\n- Sorun giderme, performans ipuçları, güvenlik notları\n- Geliştirici odaklı sonuç\n\n### 3️⃣ Şablona Uydurma\nTaslağı **profesyonel uzun form blog yapısına** dönüştürür:\n- Tutarlı başlıklar (H1, H2, H3)\n- Kod blokları\n- Net formatlama\n\n### 4️⃣ Optimizasyon Katmanı\nBlogu çok katmanlı optimizasyondan geçirir:\n- **SEO-uyumlu** (anahtar kelimeler, meta açıklaması, yapılandırılmış başlıklar)\n- **GEO-hazır** (ChatGPT, Claude, Gemini'de görünürlük için Üretken Motor Optimizasyonu)\n- **İnsan tarzı** ton (doğal okunur, AI dedektör uyarılarından kaçınır)\n\n### 5️⃣ İnsan Onay Döngüsü\n**Gmail (Gönder + Yanıt Bekle)** ile taslak editöre gönderilir:\n- ✅ **Onayla** → Blog kaydedilir & tamamlandı olarak işaretlenir\n- ❌ **Reddet** → Geri bildirim ile revizyon yapılır\n- 🚫 **İptal** → Workflow sonlanır, durum sheets'e kaydedilir\n\n### 6️⃣ Yayınlama / Depolama\n- Onaylanan bloglar ayrı **Google Sheet**'e kaydedilir\n- Orijinal sheet'teki durum **Tamamlandı** olarak güncellenir\n\n---\n\n## ⚙️ Kurulum Adımları\n\n### ✅ Adım 1: Google Sheets & Gmail Bağlantısı\nn8n'de **Google Sheets** ve **Gmail** hesaplarınızı bağlayın.\n\n**Gerekli Credential'lar:**\n- Google Sheets OAuth2\n- Gmail OAuth2\n\n### ✅ Adım 2: Google Form'u Tetikleyici Sheet'e Bağlayın\nGoogle Form yanıtlarının workflow'u tetikleyecek sheet'e gitmesini sağlayın.\n\n**Google Form Alanları:**\n- TOPIC (Konu)\n- What problem does this solve? (Hangi problemi çözüyor?)\n- Different option you tried? (Denediğiniz farklı seçenekler)\n- How you came with this solution? (Bu çözüme nasıl ulaştınız?)\n- Mistake you made? (Yaptığınız hatalar)\n- Any personal learning from this (Kişisel öğrenimler)\n- Brief explanation of steps (Adımların kısa açıklaması)\n- Reference (Referanslar)\n\n### ✅ Adım 3: LLM AI Sağlayıcı Credential'larını Ekleyin\n\nClaude, ChatGPT, Gemini vb.\n\n*Alternatif olarak OpenRouter da kullanabilirsiniz.*\n\n### ✅ Adım 4: Blog Yapısını Özelleştirin\nGerekirse prompt'lardaki blog yapısını (problem, çözüm, kod, referanslar vb.) düzenleyin.\n\n### ✅ Adım 5: Onaylayıcı E-postasını Ayarlayın\n`Onay için İçerik Gönder1` node'unda `sendTo` alanına onaylayıcı e-posta adresini yazın.\n\n### ✅ Adım 6: Workflow'u Test Edin\nÖrnek bir Google Form yanıtı göndererek test edin.\n\n---\n\n🎯 **Sorularınız mı var?** [Skool topluluğumuza](https://www.skool.com/is-guc-yapayzeka) katılın!\n\n📺 **Video anlatım için:** [YouTube kanalımı](https://www.youtube.com/@dorukyalcinsoy) takip edin!\n\n",
+        "height": 2368,
+        "width": 850
+      },
+      "id": "70f4ba47-48fd-4333-81ed-38e76c489b60",
+      "name": "Kurulum Rehberi1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        4880,
+        -48
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "claude-sonnet-4-5-20250929",
+          "cachedResultName": "Claude Sonnet 4.5"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.3,
+      "position": [
+        6528,
+        1104
+      ],
+      "id": "58fde7ff-c60e-4c36-b830-ec010f85b76a",
+      "name": "Anthropic Chat Model",
+      "credentials": {
+        "anthropicApi": {
+          "id": "MZ4EHzZGApmCqPzS",
+          "name": "Anthropic account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        7216,
+        1200
+      ],
+      "id": "c407ecde-c56c-49e8-a3b3-8d93f47cba80",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "8Wb0jFJElMh3bRaa",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "chatgpt-4o-latest",
+          "mode": "list",
+          "cachedResultName": "chatgpt-4o-latest"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        8096,
+        1152
+      ],
+      "id": "551639e3-4333-4974-8580-6d95ede05f7e",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "9fiL1VgiVRQfmoEc",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# 🥉 Ekonomik (Yüksek Hacim)\nBlog Oluşturucu: DeepSeek V3 veya Llama 3.3 70B (Groq)\nŞablona Uydurma: Gemini 2.0 Flash\nSEO Optimizasyonu: GPT-4o-mini\nHTML Dönüştür: Template (LLM yok)\nRevizyon: DeepSeek V3\nMaliyet: ~$0.02-0.05 / blog",
+        "height": 192,
+        "width": 850,
+        "color": 7
+      },
+      "id": "ca27edd8-04f1-4148-b116-f5bc765dc981",
+      "name": "Kurulum Rehberi",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6336,
+        1952
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "# 🥉 Dengeli (Yüksek Kalite)\nBlog Oluşturucu: Claude 4 Sonnet\nŞablona Uydurma: Claude 4 Sonnet\nSEO Optimizasyonu: Gemini 2.5 Flash\nHTML Dönüştür: Gemini 2.5 Flash\nRevizyon: GPT-4o\nMaliyet: ~$0.11-0.17 / blog",
+        "height": 192,
+        "width": 850,
+        "color": 7
+      },
+      "id": "32c42061-d047-4356-8778-d68e1f88acd2",
+      "name": "Kurulum Rehberi2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        7312,
+        1952
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "formTitle": "Blog İçerik Formu",
+        "formDescription": "AI destekli blog oluşturmak için bilgileri girin",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Konu",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Hangi problemi çözüyor?",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Denenen alternatifler",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Çözüme nasıl ulaştınız?",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Yapılan hatalar",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Kişisel öğrenimler",
+              "fieldType": "textarea"
+            },
+            {
+              "fieldLabel": "Adımların açıklaması",
+              "fieldType": "textarea",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Referanslar",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {
+          "buttonLabel": "Blog Oluştur"
+        }
+      },
+      "name": "Blog Formu",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        5808,
+        688
+      ],
+      "id": "38c1772d-8d65-4ed5-84b6-d2c820c1e8c0",
+      "webhookId": "67b7b171-6b96-448f-933a-624a3c421caa"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8",
+          "mode": "list",
+          "cachedResultName": "Blog-Ornek",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sayfa1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/13muP28o7D4lhBFC7l55uTvWjoneUE5YlIcUbg7a4yS8/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Konu": "={{ $json.Konu }}",
+            "Başlık": "=",
+            "Hangi problemi çözüyor?": "={{ $json['Hangi problemi çözüyor?'] }}",
+            "Denenen alternatifler": "={{ $json['Denenen alternatifler'] }}",
+            "Çözüme nasıl ulaştınız?": "={{ $json['Çözüme nasıl ulaştınız?'] }}",
+            "Yapılan hatalar": "={{ $json['Yapılan hatalar'] }}",
+            "Kişisel öğrenimler": "={{ $json['Kişisel öğrenimler'] }}",
+            "Adımların açıklaması": "={{ $json['Adımların açıklaması'] }}",
+            "Referanslar": "={{ $json.Referanslar }}",
+            "submittedAt": "={{ $json.submittedAt }}",
+            "formMode": "={{ $json.formMode }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Başlık",
+              "displayName": "Başlık",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "İçerik",
+              "displayName": "İçerik",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Oluşturma Tarihi",
+              "displayName": "Oluşturma Tarihi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Onay Durumu",
+              "displayName": "Onay Durumu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Geri Bildirim",
+              "displayName": "Geri Bildirim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Revizyon Sayısı",
+              "displayName": "Revizyon Sayısı",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Konu",
+              "displayName": "Konu",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Hangi problemi çözüyor?",
+              "displayName": "Hangi problemi çözüyor?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Denenen alternatifler",
+              "displayName": "Denenen alternatifler",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Çözüme nasıl ulaştınız?",
+              "displayName": "Çözüme nasıl ulaştınız?",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Yapılan hatalar",
+              "displayName": "Yapılan hatalar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Kişisel öğrenimler",
+              "displayName": "Kişisel öğrenimler",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Adımların açıklaması",
+              "displayName": "Adımların açıklaması",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Referanslar",
+              "displayName": "Referanslar",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "submittedAt",
+              "displayName": "submittedAt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "formMode",
+              "displayName": "formMode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d902abe7-33bc-445f-9d38-ec391d5e11bf",
+      "name": "Oluşturulan İçeriği Google Sheets'e Ekle",
+      "type": "n8n-nodes-base.googleSheets",
+      "position": [
+        6000,
+        704
+      ],
+      "typeVersion": 4.5,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        5824,
+        896
+      ],
+      "id": "bd689ea3-2caa-4e95-8372-ee27282f76e7",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Geri Bildirime Göre Revizyon": {
+      "main": [
+        [
+          {
+            "node": "SEO,GEO Optimizasyonu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "E-posta için HTML'e Dönüştür": {
+      "main": [
+        [
+          {
+            "node": "Onay için İçerik Gönder1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Onay Sonucu1": {
+      "main": [
+        [
+          {
+            "node": "Oluşturulan İçeriği Google Sheets'e Ekle1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Geri Bildirime Göre Revizyon",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Oluşturulan İçeriği Google Sheets'e Ekle1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Onay için İçerik Gönder1": {
+      "main": [
+        [
+          {
+            "node": "Onay Sonucu1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO,GEO Optimizasyonu": {
+      "main": [
+        [
+          {
+            "node": "E-posta için HTML'e Dönüştür",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Şablona Uydurma": {
+      "main": [
+        [
+          {
+            "node": "SEO,GEO Optimizasyonu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blog Oluşturucu": {
+      "main": [
+        [
+          {
+            "node": "Şablona Uydurma",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Blog Oluşturucu",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "SEO,GEO Optimizasyonu",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "E-posta için HTML'e Dönüştür",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "Şablona Uydurma",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Geri Bildirime Göre Revizyon",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Blog Formu": {
+      "main": [
+        [
+          {
+            "node": "Oluşturulan İçeriği Google Sheets'e Ekle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Oluşturulan İçeriği Google Sheets'e Ekle": {
+      "main": [
+        [
+          {
+            "node": "Blog Oluşturucu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Oluşturulan İçeriği Google Sheets'e Ekle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "5892831a-7d21-4fbc-a6b3-3c2a126e78aa",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f73f237186f1e65ab60412299716af11ea7dd6f45e4b6f56963001e3dcdba8ed"
+  },
+  "id": "UCUrHAGLtc9F4vYx",
+  "tags": []
+}

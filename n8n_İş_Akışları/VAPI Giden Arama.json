@@ -1,0 +1,1092 @@
+{
+  "name": "VAPI Giden Arama",
+  "nodes": [
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "22d9c3a4-56ac-4a45-98ba-5ac113fcf598",
+              "name": "body.message.customer.number",
+              "value": "={{ $json.body.message.customer.number.replace(/^0/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "d88e30bd-29d7-4734-b139-7ff12ac48828",
+              "name": "time",
+              "value": "={{ $now.setZone('Europe/Istanbul').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7760,
+        512
+      ],
+      "id": "7ed4fe95-6dfd-4132-a612-6eca6354336c",
+      "name": "Numaradan 0'ı atalım1"
+    },
+    {
+      "parameters": {
+        "content": "# Stajyer İşe Alım",
+        "height": 800,
+        "width": 2460
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6752,
+        -544
+      ],
+      "typeVersion": 1,
+      "id": "b56e193e-26c8-4c88-a8d1-7bcc5cdac7bb",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "22d9c3a4-56ac-4a45-98ba-5ac113fcf598",
+              "name": "body.message.customer.number",
+              "value": "={{ $json.body.message.customer.number.replace(/^0/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "d88e30bd-29d7-4734-b139-7ff12ac48828",
+              "name": "time",
+              "value": "={{ $now.setZone('Europe/Istanbul').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        7344,
+        1008
+      ],
+      "id": "8ac90aa1-95b4-4a3a-ba80-19b5534089a6",
+      "name": "Numaradan 0'ı atalım2"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Numara": "={{ $json.body.message.customer.number }}",
+            "Not": "=Arama Gerçekleşmedi (Kredinizi Kontrol Ediniz)",
+            "Kayıt": "=",
+            "Tarih": "={{ $json.time }}",
+            "Aksiyon": "=Başarısız"
+          },
+          "matchingColumns": [
+            "Numara"
+          ],
+          "schema": [
+            {
+              "id": "İsim",
+              "displayName": "İsim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Numara",
+              "displayName": "Numara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Not",
+              "displayName": "Not",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kayıt",
+              "displayName": "Kayıt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Aksiyon",
+              "displayName": "Aksiyon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        6704,
+        1008
+      ],
+      "id": "f0af6261-eccd-4445-8648-1b7dcbcb27b0",
+      "name": "Başarısız",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        7312,
+        64
+      ],
+      "id": "48dc0f14-3643-4cda-87f1-fa54d3b9eb18",
+      "name": "Bekle",
+      "webhookId": "d6b7979d-713b-4783-a24a-49563f274a4c"
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "arama-sonu",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        7024,
+        528
+      ],
+      "id": "3657f54f-bd07-4f0e-a21a-04dc34417569",
+      "name": "Arama Sonu Webhook",
+      "webhookId": "0a02b0c6-59c3-431a-984c-7e383d506307"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Numara": "={{ $('Numaradan 0\\'ı atalım1').item.json.body.message.customer.number }}",
+            "Not": "={{ $('Arama Sonu Webhook').item.json.body.message.summary }}",
+            "Kayıt": "={{ $('Arama Sonu Webhook').item.json.body.message.recordingUrl }}",
+            "Tarih": "={{ $('Numaradan 0\\'ı atalım1').item.json.time }}",
+            "Aksiyon": "={{ $('Arama Sonu Webhook').item.json.body.message.analysis.structuredData.Sonuc }}"
+          },
+          "matchingColumns": [
+            "Numara"
+          ],
+          "schema": [
+            {
+              "id": "İsim",
+              "displayName": "İsim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Numara",
+              "displayName": "Numara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Not",
+              "displayName": "Not",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kayıt",
+              "displayName": "Kayıt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Aksiyon",
+              "displayName": "Aksiyon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8224,
+        512
+      ],
+      "id": "96fb3fe6-13ec-4bf1-ad68-cfa11e93d7d5",
+      "name": "Arama Sonuç Güncelleme",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Aksiyon",
+              "lookupValue": "ARA"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        7120,
+        -240
+      ],
+      "id": "d0f6f2a3-ced4-4241-b431-f7c248104ca8",
+      "name": "Numara Kontrol",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        7920,
+        -240
+      ],
+      "id": "83863333-2eb9-45ca-a49c-2f135da2251c",
+      "name": "Teker Teker Ara"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "48b24ad1-b8e7-44bb-9236-f24c5de7e777",
+              "name": "İsim",
+              "value": "={{ $json[\"İsim\"] }}{{ $json.body.message.call.assistantOverrides.variableValues.isim }}",
+              "type": "string"
+            },
+            {
+              "id": "354a50ff-b1fe-42b6-b81f-0a8906116d96",
+              "name": "Numara",
+              "value": "={{ $json.Numara }}{{ $json.body.message.customer.number.replace(/^0/, '') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8192,
+        -160
+      ],
+      "id": "37f15d31-ce69-4b6a-bae8-c0bac96fe647",
+      "name": "Arama Değişkenleri Tanımla"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.vapi.ai/call",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API ANAHTARIINIZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"assistantId\": \"ASISTAN ID'SI\",\n  \"assistantOverrides\": {\n    \"variableValues\": {\n      \"isim\": \"{{ $json[\"İsim\"] }}\"\n    }\n  },\n  \"customer\": {\n    \"number\": \"0{{ $json.Numara }}\",\n    \"numberE164CheckEnabled\": false\n  },\n  \"phoneNumberId\": \"TELEFON IDSI\"\n}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        8432,
+        -160
+      ],
+      "id": "da04a093-504e-4200-8308-50564ed488e0",
+      "name": "Arama Yap (VAPI AI)"
+    },
+    {
+      "parameters": {
+        "amount": 12
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        8704,
+        -64
+      ],
+      "id": "bbb6a198-18f9-47ba-b8f7-e0c66f1551b1",
+      "name": "12sn Bekle",
+      "webhookId": "6d55600a-1275-4f77-94b4-a1eb4ad567c5"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Numara": "={{ $('Arama Değişkenleri Tanımla').item.json.Numara }}",
+            "Kayıt": "={{ $json.monitor.listenUrl }}",
+            "Aksiyon": "Görüşmede"
+          },
+          "matchingColumns": [
+            "Numara"
+          ],
+          "schema": [
+            {
+              "id": "İsim",
+              "displayName": "İsim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Numara",
+              "displayName": "Numara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Not",
+              "displayName": "Not",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kayıt",
+              "displayName": "Kayıt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Aksiyon",
+              "displayName": "Aksiyon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8992,
+        0
+      ],
+      "id": "a7838529-c03e-44c1-be3e-ae18041ff24c",
+      "name": "Güncelle",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        8208,
+        -416
+      ],
+      "id": "2f5785c6-a870-4dc0-964f-68a93ab6c982",
+      "name": "Tamamlandı"
+    },
+    {
+      "parameters": {
+        "content": "# Arama Sonu Raporu",
+        "height": 320,
+        "width": 1640,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6944,
+        432
+      ],
+      "typeVersion": 1,
+      "id": "c9a703b7-e7f3-4d4f-8708-68e90a413a5f",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "# Başarısız ise buradan tekrar ara",
+        "height": 320,
+        "width": 1640,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        6224,
+        928
+      ],
+      "typeVersion": 1,
+      "id": "1d156520-0357-4929-8870-71e4c6054bde",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.body.message.type }}",
+                    "rightValue": "end-of-call-report",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "60f19ef2-c2c0-474a-a96d-08ae595e0f0c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tamamlandı"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "245b2289-e90a-4ff5-afe0-136b4c28af02",
+                    "leftValue": "={{ $json.body.message.endedReason }}",
+                    "rightValue": "call.in-progress.error-sip-telephony-provider-failed-to-connect-call",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Tamamlanmadı"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "562c2e66-b534-4466-b188-f849e918c3b3",
+                    "leftValue": "={{ $json.body.message.endedReason }}",
+                    "rightValue": "customer-busy",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Meşgul"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        7328,
+        464
+      ],
+      "id": "24e4cc25-6728-4777-812c-2bdb54f33c50",
+      "name": "Görüşme Durumu"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "22d9c3a4-56ac-4a45-98ba-5ac113fcf598",
+              "name": "body.message.customer.number",
+              "value": "={{ $json.body.message.customer.number.replace(/^0/, '') }}",
+              "type": "string"
+            },
+            {
+              "id": "d88e30bd-29d7-4734-b139-7ff12ac48828",
+              "name": "time",
+              "value": "={{ $now.setZone('Europe/Istanbul').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        8240,
+        1008
+      ],
+      "id": "2f7a2948-9542-46c3-a68d-77b1d616e618",
+      "name": "Numaradan 0'ı atalım3"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Numara": "={{ $('Numaradan 0\\'ı atalım3').item.json.body.message.customer.number }}",
+            "Not": "={{ $('Arama Sonu Webhook').item.json.body.message.summary }}",
+            "Kayıt": "={{ $('Arama Sonu Webhook').item.json.body.message.recordingUrl }}",
+            "Tarih": "={{ $('Numaradan 0\\'ı atalım3').item.json.time }}",
+            "Aksiyon": "=Meşgul"
+          },
+          "matchingColumns": [
+            "Numara"
+          ],
+          "schema": [
+            {
+              "id": "İsim",
+              "displayName": "İsim",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Numara",
+              "displayName": "Numara",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Not",
+              "displayName": "Not",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Tarih",
+              "displayName": "Tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Kayıt",
+              "displayName": "Kayıt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Aksiyon",
+              "displayName": "Aksiyon",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        8704,
+        1008
+      ],
+      "id": "6bc72661-3328-4250-a755-818b68948a6c",
+      "name": "Arama Sonuç Güncelleme1",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "# Meşgul",
+        "height": 320,
+        "width": 960,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        8032,
+        912
+      ],
+      "typeVersion": 1,
+      "id": "71bbbbf2-967b-4958-8202-7518d60fef2f",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM",
+          "mode": "list",
+          "cachedResultName": "CONTACTS_TR",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 820653646,
+          "mode": "list",
+          "cachedResultName": "Stajyer",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1o08mcZjTwp3Ziyj_WSrsio5A-UMLcuL_WJvTpdoASSM/edit#gid=820653646"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Numara",
+              "lookupValue": "={{ $json.Numara }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [
+        6832,
+        64
+      ],
+      "id": "3a2a363b-14c1-45b3-baa3-ad3eb2880b4e",
+      "name": "Google Sheets4",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        6832,
+        -224
+      ],
+      "id": "a26d3211-5008-468d-b909-679beb18208c",
+      "name": "When clicking ‘Execute workflow’"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Numaradan 0'ı atalım1": {
+      "main": [
+        [
+          {
+            "node": "Arama Sonuç Güncelleme",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Numaradan 0'ı atalım2": {
+      "main": [
+        [
+          {
+            "node": "Başarısız",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Başarısız": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Bekle": {
+      "main": [
+        [
+          {
+            "node": "Teker Teker Ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arama Sonu Webhook": {
+      "main": [
+        [
+          {
+            "node": "Görüşme Durumu",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arama Sonuç Güncelleme": {
+      "main": [
+        []
+      ]
+    },
+    "Numara Kontrol": {
+      "main": [
+        [
+          {
+            "node": "Teker Teker Ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Teker Teker Ara": {
+      "main": [
+        [
+          {
+            "node": "Tamamlandı",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Arama Değişkenleri Tanımla",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arama Değişkenleri Tanımla": {
+      "main": [
+        [
+          {
+            "node": "Arama Yap (VAPI AI)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Arama Yap (VAPI AI)": {
+      "main": [
+        [
+          {
+            "node": "12sn Bekle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "12sn Bekle": {
+      "main": [
+        [
+          {
+            "node": "Güncelle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Güncelle": {
+      "main": [
+        [
+          {
+            "node": "Teker Teker Ara",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Görüşme Durumu": {
+      "main": [
+        [
+          {
+            "node": "Numaradan 0'ı atalım1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Numaradan 0'ı atalım2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Numaradan 0'ı atalım3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Numaradan 0'ı atalım3": {
+      "main": [
+        [
+          {
+            "node": "Arama Sonuç Güncelleme1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets4": {
+      "main": [
+        [
+          {
+            "node": "Bekle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Numara Kontrol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "63e4957a-e4f7-4700-a0b6-65033fb0d0ff",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f73f237186f1e65ab60412299716af11ea7dd6f45e4b6f56963001e3dcdba8ed"
+  },
+  "id": "S4SEPF0BILPcSVJk",
+  "tags": []
+}

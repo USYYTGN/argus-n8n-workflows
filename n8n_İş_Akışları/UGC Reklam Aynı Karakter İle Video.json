@@ -1,0 +1,747 @@
+{
+  "name": "UGC Reklam Egitim",
+  "nodes": [
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contents\": [{\n    \"parts\": [\n      { \"text\": {{ JSON.stringify($json.prompt) }} }\n    ]\n  }]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3104,
+        1296
+      ],
+      "id": "5c3b7afa-9163-40f2-a442-825cfc8a7a76",
+      "name": "generate_ugc_ad_prompts",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "MSRvH7OvaY2w8Q38",
+          "name": "gemini"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a4100a8c-1a19-4b66-8690-4867068c2fb4",
+              "name": "prompt",
+              "value": "=<identity>\nYou are an expert AI Creative Director specializing in generating high-impact, direct-response video ads using generative models like SORA. Your task is to translate a creative brief into three distinct, ready-to-use SORA prompts for short, UGC-style video ads.\n</identity>\n\n<core_task>\nFirst, analyze the provided **Creative Brief**, including the raw text and product image, to synthesize the product's core message and visual identity. Then, for each of the three **UGC Ad Archetypes**, generate a **Prompt Packet** according to the specified **Output Format**. All generated content must strictly adhere to both the **SORA Prompting Guide** and the **Core Directives**.\n</core_task>\n\n<output_format>\nFor each of the three archetypes, you must generate a complete \"Prompt Packet\" using the following markdown structure:\n\n---\n### **[Archetype Name]**\n\n**SORA Prompt:**\n[Insert the generated SORA prompt text here.]\n\n**Production Notes:**\n*   **Camera:** The entire scene must be filmed to look as if it were shot on an iPhone in a vertical 9:16 aspect ratio. The style must be authentic UGC, not cinematic.\n*   **Audio:** Any spoken dialogue described in the prompt must be accurately and naturally lip-synced by the protagonist (`@username`).\n*   **Product Scale & Fidelity:** The product's appearance, particularly its scale and proportions, must be rendered with high fidelity to the provided product image. Ensure it looks true-to-life in the hands of the protagonist and within the scene's environment.\n---\n</output_format>\n\n<creative_brief>\nYou will be provided with the following inputs:\n\n1.  **Raw Website Content:** [User will insert scraped, markdown-formatted content from the product's homepage. You must analyze this to extract the core value proposition, key features, and target audience.]\n2.  **Product Image:** [User will insert the product image for visual reference.]\n3.  **Protagonist:** [User will insert the @username of the character to be featured.]\n4.  **SORA Prompting Guide:** [User will insert the official prompting guide for the SORA 2 model, which you must follow.]\n</creative_brief>\n\n<ugc_ad_archetypes>\n1.  **The On-the-Go Testimonial (Walk-and-talk)**\n2.  **The Driver's Seat Review**\n3.  **The At-Home Demo**\n</ugc_ad_archetypes>\n\n<core_directives>\n1.  **iPhone Production Aesthetic:** This is a non-negotiable constraint. All SORA prompts must explicitly describe a scene that is **shot entirely on an iPhone**. The visual language should be authentic to this format. Use specific descriptors such as: \"selfie-style perspective shot on an iPhone,\" \"vertical 9:16 aspect ratio,\" \"crisp smartphone video quality,\" \"natural lighting,\" and \"slight, realistic handheld camera shake.\"\n2.  **Tone & Performance:** The protagonist's energy must be high and their delivery authentic, enthusiastic, and conversational. The feeling should be a genuine recommendation, not a polished advertisement.\n3.  **Timing & Pacing:** The total video duration described in the prompt must be approximately 15 seconds. Crucially, include a 1-2 second buffer of ambient, non-dialogue action at both the beginning and the end.\n4.  **Clarity & Focus:** Each prompt must be descriptive, evocative, and laser-focused on a single, clear scene. The protagonist (`@username`) must be the central figure, and the product, matching the provided **Product Image**, should be featured clearly and positively.\n5.  **Brand Safety & Content Guardrails:** All generated prompts and the scenes they describe must be strictly PG and family-friendly. Avoid any suggestive, controversial, or inappropriate language, visuals, or themes. The overall tone must remain positive, safe for all audiences, and aligned with a mainstream brand image.\n</core_directives>\n6.  **Lanuage:** All speech and conversations should be performed in Turkish, therefore fill quotations with Turkish language.\n\n<protagonist_username>\n{{ $('form_trigger1').item.json['Sora 2 Karakter İsmi'] }}\n</protagonist_username>\n\n<product_home_page>\n{{ $node['scrape_home_page'].json.data.markdown }}\n</product_home_page>\n\n<sora2_prompting_guide>\n{{ $node['scrape_sora2_prompting_guide'].json.data.markdown }}\n</sora2_prompting_guide>",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2848,
+        1296
+      ],
+      "id": "f3a3c1cb-7d26-45e1-9eee-ed8bbc7ea077",
+      "name": "build_prompt"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Please extract the full three prompts for generating AI video ads from the provided text. Please include production notes for each prompt. Each full prompt will be separated by `---` so include the contents between each.\n\n{{ $json.candidates[0].content.parts[0].text }}",
+        "hasOutputParser": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.7,
+      "position": [
+        3360,
+        1296
+      ],
+      "id": "4d498524-8033-4be9-b86c-a0987985d711",
+      "name": "extract_sora2_prompts"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n\t\"type\": \"object\",\n\t\"properties\": {\n\t\t\"prompts\": {\n\t\t\t\"type\": \"array\",\n\t\t\t\"items\": {\n\t\t\t\t\"type\": \"string\",\n                \"description\": \"An individual UGC video ad prompt to be provided to an AI video generator\"\n\t\t\t}\n\t\t}\n\t}\n}",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        3424,
+        1552
+      ],
+      "id": "17b76f97-8d2d-4812-8cfd-9011025d344a",
+      "name": "video-prompts-parser"
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "output.prompts",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [
+        3760,
+        1296
+      ],
+      "id": "de4d5b3d-4dcc-44cf-9c10-275065e727f5",
+      "name": "split_prompts"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        1744,
+        1632
+      ],
+      "id": "2ab415e2-0abe-4bf0-a33a-c632624bb962",
+      "name": "iterate_prompts"
+    },
+    {
+      "parameters": {
+        "url": "https://api.kie.ai/api/v1/jobs/recordInfo",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "taskId",
+              "value": "={{ $node['generate_video1'].json.data.taskId }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API ANAHTARINIIZ"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2560,
+        1648
+      ],
+      "id": "b8e601eb-ce0e-4990-b427-4c1228f912fd",
+      "name": "get_status"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.data.state }}",
+                    "rightValue": "success",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "e96b9197-f90e-4dc6-903a-cd3b908f175c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "success"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "d0020e71-3860-4069-a2ac-1c10245b5c85",
+                    "leftValue": "={{ $json.data.state }}",
+                    "rightValue": "generating",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "generating"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "48a71f7c-b1d7-4c65-87e1-526a86105f0c",
+                    "leftValue": "={{ $json.data.state }}",
+                    "rightValue": "fail",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "fail"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        2848,
+        1664
+      ],
+      "id": "35a2f4c2-b893-4705-86a4-dfb46c08cde8",
+      "name": "switch_status"
+    },
+    {
+      "parameters": {
+        "formTitle": "UGC Devamlı Karakter Form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Sora 2 Karakter İsmi",
+              "placeholder": "@olipop.ashley",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Urun Fotografi",
+              "fieldType": "file",
+              "multipleFiles": false,
+              "acceptFileTypes": ".png",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Websitesi",
+              "placeholder": "https://gruns.co/",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.3,
+      "position": [
+        1744,
+        1296
+      ],
+      "id": "c7b8b605-e80c-4c88-9a19-a8c04daea664",
+      "name": "form_trigger1",
+      "webhookId": "ddb88a69-8b90-4305-82cd-cb47479b056a"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-pro",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        1920
+      ],
+      "id": "1aa076d4-b92b-4c1e-b4ed-ada76a2e0d20",
+      "name": "gemini-2.5-pro1",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "8Wb0jFJElMh3bRaa",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.kie.ai/api/v1/jobs/createTask",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API ANAHTARINIZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"model\": \"sora-2-pro-image-to-video\",\n  \"input\": {\n    \"prompt\": {{ JSON.stringify($json['output.prompts']) }},\n    \"image_urls\": [\n      \"{{ $node['upload_image'].json.data.url }}\"\n    ], \n    \"size\": \"standard\",\n    \"aspect_ratio\": \"portrait\",\n    \"n_frames\": \"15\",\n    \"remove_watermark\": true\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2032,
+        1648
+      ],
+      "id": "04a57b61-5048-411d-83c6-91d51ed7f1f5",
+      "name": "generate_video1"
+    },
+    {
+      "parameters": {
+        "amount": 10
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        2288,
+        1648
+      ],
+      "id": "e5eb9900-ba40-466e-8cdf-b8c4a5b7b84a",
+      "name": "wait1",
+      "webhookId": "6a9ef97f-ef19-4bb4-abcc-ff03d53f7c9a"
+    },
+    {
+      "parameters": {
+        "content": "## Sora 2 UGC Devamlı Aynı Karakter Reklam Üretimi",
+        "height": 848,
+        "width": 2304,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1664,
+        1200
+      ],
+      "typeVersion": 1,
+      "id": "fe60aaca-a986-4aef-a549-1fe861130a36",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API ANAHTARINIZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n    \"url\": \"{{ $('form_trigger1').item.json.Websitesi }}\",\n    \"formats\": [\"markdown\"],\n    \"onlyMainContent\": true,\n    \"removeBase64Images\": true,\n    \"excludeTags\": [\"nav\", \"footer\", \"aside\", \"script\", \"style\", \"iframe\", \"ad\", \"advertisement\"]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2320,
+        1296
+      ],
+      "id": "7bb5ac5c-e8ee-482f-bce9-7790af08f108",
+      "name": "scrape_home_page"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v1/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer API ANAHTARINIZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n    \"url\": \"https://cookbook.openai.com/examples/sora/sora2_prompting_guide\",\n    \"formats\": [\"markdown\"],\n    \"onlyMainContent\": true,\n    \"removeBase64Images\": true,\n    \"excludeTags\": [\"nav\", \"footer\", \"aside\", \"script\", \"style\", \"iframe\", \"ad\", \"advertisement\"]\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2592,
+        1296
+      ],
+      "id": "3c7f3b1e-e584-4011-a7cd-e6763ef6f646",
+      "name": "scrape_sora2_prompting_guide"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.imgbb.com/1/upload",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "API ANAHTARINIZ"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "multipart-form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "parameterType": "formBinaryData",
+              "name": "image",
+              "inputDataFieldName": "Urun_Fotografi"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2016,
+        1296
+      ],
+      "id": "05e11cbc-c005-4238-aeb8-bdb882b1c4d0",
+      "name": "upload_image"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "19LNck6HpztDgvakNcr76EukhmNHp-cMN1SQKBDppVvI",
+          "mode": "list",
+          "cachedResultName": "EGITIM",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19LNck6HpztDgvakNcr76EukhmNHp-cMN1SQKBDppVvI/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/19LNck6HpztDgvakNcr76EukhmNHp-cMN1SQKBDppVvI/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "influencer": "={{ $('form_trigger1').item.json['Sora 2 Karakter İsmi'] }}",
+            "websitesi": "={{ $('form_trigger1').item.json.Websitesi }}",
+            "tarih": "={{ $('form_trigger1').item.json.submittedAt }}",
+            " video linki": "={{ JSON.parse($('get_status').item.json.data.resultJson).resultUrls[0] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "tarih",
+              "displayName": "tarih",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "websitesi",
+              "displayName": "websitesi",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": " video linki",
+              "displayName": " video linki",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "influencer",
+              "displayName": "influencer",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3120,
+        1824
+      ],
+      "id": "1c17bba3-f921-469c-811c-1a4a5f93414e",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "SZwvkzlmHIj2yxoG",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Gemini API anahtarınızı ekleyiniz",
+        "height": 400
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3040,
+        1072
+      ],
+      "typeVersion": 1,
+      "id": "c97b7177-95bf-4cff-ba00-778a00fcfd18",
+      "name": "Sticky Note"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "build_prompt": {
+      "main": [
+        [
+          {
+            "node": "generate_ugc_ad_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_ugc_ad_prompts": {
+      "main": [
+        [
+          {
+            "node": "extract_sora2_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "video-prompts-parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "extract_sora2_prompts",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "extract_sora2_prompts": {
+      "main": [
+        [
+          {
+            "node": "split_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "split_prompts": {
+      "main": [
+        [
+          {
+            "node": "iterate_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "iterate_prompts": {
+      "main": [
+        [],
+        [
+          {
+            "node": "generate_video1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_status": {
+      "main": [
+        [
+          {
+            "node": "switch_status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "switch_status": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "wait1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "iterate_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "form_trigger1": {
+      "main": [
+        [
+          {
+            "node": "upload_image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "gemini-2.5-pro1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "extract_sora2_prompts",
+            "type": "ai_languageModel",
+            "index": 0
+          },
+          {
+            "node": "video-prompts-parser",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "generate_video1": {
+      "main": [
+        [
+          {
+            "node": "wait1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "wait1": {
+      "main": [
+        [
+          {
+            "node": "get_status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scrape_home_page": {
+      "main": [
+        [
+          {
+            "node": "scrape_sora2_prompting_guide",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "scrape_sora2_prompting_guide": {
+      "main": [
+        [
+          {
+            "node": "build_prompt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "upload_image": {
+      "main": [
+        [
+          {
+            "node": "scrape_home_page",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "iterate_prompts",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "5757dd59-2a4f-40cd-86e1-ff45141e0ef1",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f73f237186f1e65ab60412299716af11ea7dd6f45e4b6f56963001e3dcdba8ed"
+  },
+  "id": "owvOBv7FYMBMmMlG",
+  "tags": []
+}
