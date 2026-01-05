@@ -15,7 +15,7 @@
     },
     {
       "parameters": {
-        "operation": "append",
+        "operation": "getAll",
         "documentId": {
           "__rl": true,
           "value": "1zwJMW_265pUuivAiqJ46OFpwbWjifKeaK-OXZgH8lRw",
@@ -26,10 +26,9 @@
           "value": "gid=0",
           "mode": "id"
         },
-        "columns": {
-          "mappingMode": "autoMapInputData"
-        },
-        "options": {}
+        "options": {
+          "returnAllMatches": true
+        }
       },
       "id": "get-crew-data",
       "name": "Get Crew from Sheet",
