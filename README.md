@@ -9,24 +9,26 @@ Bu repo, ARGUS için özel olarak hazırlanmış n8n workflow'larını içerir.
 Bu klasörde güncel ve aktif workflow'lar bulunur:
 
 #### 🎨 Nano Banana Pro Reklam Fabrikası
-**AI-Powered Advertisement Factory**
+**AI-Powered Advertisement Factory** - 100% Google Gemini Powered ⚡
 
 E-ticaret mağazaları için profesyonel yapay zeka destekli statik reklam görselleri oluşturur.
 
 **Özellikler:**
-- 🤖 Claude Sonnet 4.5 ile reklam beyin fırtınası
-- 🖼️ Gemini 3 Pro Image ile görsel oluşturma
+- 🤖 Gemini 1.5 Pro ile reklam beyin fırtınası
+- 🖼️ Gemini Imagen 3.0 ile görsel oluşturma (Nano Banana desteği)
 - ☁️ Otomatik Google Drive entegrasyonu
 - 💬 Sohbet tabanlı interaktif arayüz
 - 🎯 5 farklı reklam açısı önerisi
 - 🎨 Özelleştirilebilir stil ve metin içerikleri
+- 💰 **UNLIMITED Gemini Pro ile maliyet SIFIR!**
 
 **Kurulum:**
 1. Workflow'u n8n'e import edin
-2. OpenRouter API credential'larınızı ekleyin
+2. Google Gemini API credential'larınızı ekleyin (OAuth2 veya API Key)
 3. Google Drive OAuth2 credential'larınızı yapılandırın
 4. Workflow içindeki `{{WORKFLOW_ID}}` placeholder'ını kendi workflow ID'niz ile değiştirin
-5. Workflow'u aktif edin
+5. `{{GOOGLE_GEMINI_CREDENTIAL_ID}}` placeholder'ını güncelleyin
+6. Workflow'u aktif edin
 
 **Kullanım:**
 ```
@@ -35,7 +37,7 @@ AI: "Harika! Ürün görselinizin URL'sini paylaşır mısınız?"
 [Süreç devam eder...]
 ```
 
-**Maliyet:** ~$0.06-0.10 per reklam görseli
+**Maliyet:** ✅ ÜCRETSIZ (Unlimited Gemini Pro subscription ile)
 
 ---
 
@@ -53,24 +55,27 @@ Legacy workflow'lar ve test dosyaları bu klasörde bulunur.
 ## 🔧 Genel Kurulum Gereksinimleri
 
 ### API Anahtarları
-- **OpenRouter**: [openrouter.ai](https://openrouter.ai) - AI modelleri için
-- **Anthropic**: Claude API erişimi için
-- **Google Cloud**: Drive, Sheets entegrasyonları için
+- **Google Gemini**: [aistudio.google.com](https://aistudio.google.com) - UNLIMITED Pro subscription önerilir ⚡
+- **Google Cloud**: Drive, Sheets, Gemini API entegrasyonları için
+- **Anthropic** (opsiyonel): Bazı legacy workflow'lar için
 
 ### n8n Credential'ları Yapılandırma
 
-1. **OpenRouter API**
-   - n8n → Credentials → Add Credential → OpenRouter Api
-   - API anahtarınızı girin
+1. **Google Gemini API**
+   - [Google AI Studio](https://aistudio.google.com) veya Google Cloud Console kullanın
+   - API Key veya OAuth2 credential oluşturun
+   - n8n → Credentials → Add Credential → Google PaLM / Google Gemini
+   - Credential'ınızı yapılandırın
 
-2. **Google OAuth2**
+2. **Google OAuth2 (Drive & Sheets)**
    - Google Cloud Console'da proje oluşturun
+   - Drive API ve Sheets API'yi aktif edin
    - OAuth 2.0 Client ID oluşturun
    - n8n'de credential'ı yapılandırın
 
-3. **Anthropic API**
+3. **Anthropic API** (opsiyonel)
+   - Legacy workflow'lar için gerekebilir
    - Anthropic Console'dan API key alın
-   - n8n credential'ına ekleyin
 
 ## 📝 Workflow Import Etme
 
@@ -83,8 +88,11 @@ Legacy workflow'lar ve test dosyaları bu klasörde bulunur.
 
 ## ⚠️ Önemli Notlar
 
-- Workflow'lardaki `{{WORKFLOW_ID}}` ve `{{OPENROUTER_CREDENTIAL_ID}}` gibi placeholder'ları kendi değerlerinizle değiştirmeyi unutmayın
+- Workflow'lardaki placeholder'ları kendi değerlerinizle değiştirin:
+  - `{{WORKFLOW_ID}}` - n8n workflow ID'niz
+  - `{{GOOGLE_GEMINI_CREDENTIAL_ID}}` - Google Gemini credential ID'niz
 - API anahtarlarınızı asla commit etmeyin
+- **UNLIMITED Gemini Pro subscription önerilir** - Maliyet sıfır, performans maksimum! ⚡
 - Workflow'ları test ortamında test ettikten sonra production'a alın
 
 ## 🐛 Sorun Giderme
