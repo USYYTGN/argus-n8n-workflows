@@ -293,9 +293,9 @@
         "description": "Reklamı oluşturmak için bu aracı çağır",
         "workflowId": {
           "__rl": true,
-          "value": "{{WORKFLOW_ID}}",
+          "value": "itZjFwgL3Od1hktl",
           "mode": "list",
-          "cachedResultUrl": "/workflow/{{WORKFLOW_ID}}",
+          "cachedResultUrl": "/workflow/itZjFwgL3Od1hktl",
           "cachedResultName": "Nano Banana Pro Reklam Fabrikası"
         },
         "workflowInputs": {
