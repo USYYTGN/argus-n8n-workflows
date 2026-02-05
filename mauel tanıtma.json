@@ -1,0 +1,247 @@
+{
+  "name": "mauel tanıtma",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1e7fce44-a69a-4993-9201-7d8437fe9bb2",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "fileSelector": "C:\\Users\\usyyt\\.n8n-files\\M-67 INCINERATOR.pdf",
+        "options": {
+          "fileName": "data"
+        }
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [
+        208,
+        0
+      ],
+      "id": "29e584ca-b702-42e1-a4e9-923c97506441",
+      "name": "Read/Write Files from Disk"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        0
+      ],
+      "id": "123572da-bb25-4afc-9a1b-df57246485df",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gelen veriden \"text\" kısmını alıyoruz\nconst text = items[0].json.text; \n// Kaç harflik parçalara böleceğiz?\nconst chunkSize = 1000; \nconst chunks = [];\n\n// Metni dilimliyoruz\nfor (let i = 0; i < text.length; i += chunkSize) {\n  chunks.push({\n    json: {\n      pageContent: text.substring(i, i + chunkSize), // Parçalanmış metin\n      source: \"Manual_Vol3\" // Hangi dosyadan geldiği\n    }\n  });\n}\n\nreturn chunks;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        0
+      ],
+      "id": "76c9d677-1d47-419b-aeec-7e660d7086d3",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "ship_manuals_v3",
+          "mode": "list",
+          "cachedResultName": "ship_manuals_v3"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        832,
+        0
+      ],
+      "id": "972ed440-c847-465c-a120-897fde2ef5f5",
+      "name": "Qdrant Vector Store1",
+      "credentials": {
+        "qdrantApi": {
+          "id": "X0pbbSADyJw0n4U8",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        768,
+        208
+      ],
+      "id": "1b90266a-6837-4c35-a799-274cd8915c51",
+      "name": "Embeddings Ollama2",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        976,
+        208
+      ],
+      "id": "cc527de6-5a1e-4ebc-87ba-20dce02fbff0",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "4ae08110-d17f-43fe-a11f-14ac321f44c7",
+              "name": "status",
+              "value": "ok",
+              "type": "string"
+            },
+            {
+              "id": "60d88031-1107-4864-9c4d-bb3e59df1e86",
+              "name": "inserted",
+              "value": "={{$items().length}}",
+              "type": "number"
+            },
+            {
+              "id": "4b0342de-8fc8-4ac5-b1fb-e259eac27d5f",
+              "name": "collection",
+              "value": "shıp_manuaal_v3",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "10749cfc-49af-4ec2-8073-9813b466d0ad",
+      "name": "Edit Fields"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Read/Write Files from Disk",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read/Write Files from Disk": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama2": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Vector Store1",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store1": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Istanbul",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "5527870f-5e35-48f2-a5ed-4e71e22cff89",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "id": "kP-8ZySUr_tcvBBhcuE4C",
+  "tags": []
+}

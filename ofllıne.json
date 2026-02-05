@@ -1,0 +1,358 @@
+{
+  "name": "ofllıne",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -896,
+        -512
+      ],
+      "id": "30f45c2f-6262-44c0-b25b-0a0996008bd3",
+      "name": "Webhook",
+      "webhookId": "a7ae4b5a-7a1c-4b21-b465-29310b473ae7",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "ship_manuals_v3",
+          "mode": "list",
+          "cachedResultName": "ship_manuals_v3"
+        },
+        "prompt": "={{$json.q_search ?? $json.question}}\n\n",
+        "topK": 30,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        -512
+      ],
+      "id": "70e9377a-7cd3-43b5-adda-39062ac36625",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "X0pbbSADyJw0n4U8",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -512,
+        -288
+      ],
+      "id": "d4e41ed1-4255-41ea-95ee-4f3f8fe39c43",
+      "name": "Embeddings Ollama1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Sen bir gemi başmühendisisin.\n\nKURAL 1: SADECE BAĞLAM içindeki metinden ALINTI yap. BAĞLAM dışında tek kelime ekleme.\nKURAL 2: ASLA BAĞLAM’ı özetleme/anlatma. “BAĞLAM: …” gibi bir bölüm YAZMA.\nKURAL 3: ASLA “referansını kontrol edin / manualı kontrol edin” gibi cümle kurma.\nKURAL 4: Başlık uydurma. İngilizce başlıkları ÇEVİRME. Manualde ne yazıyorsa aynen kopyala.\nKURAL 5: Her satırın sonunda SADECE 1 referans olacak: [#n]\nKURAL 6: Eğer BAĞLAM’da troubleshooting/fault/alarms/interlock ile ilgili arıza teşhisi adımı yoksa,\nÖZET satırı AYNEN şu olacak: \"ÖZET: Arıza teşhisi bu doküman parçasında yok.\"\nKURAL 7: Madde satırları mümkünse “Open… / Make sure… / Remove… / The incinerator is operated…” gibi\nBAĞLAM’da geçen gerçek prosedür cümleleri olsun. Parafraz yok.\nKURAL 8: Eğer BAĞLAM boşsa veya çok kısaysa SADECE şu iki satırı yaz ve DUR:\n        ÖZET: Dokümanda geçmiyor (RAG sonuçları yetersiz).\n        SON: Arıza teşhisi bu doküman parçasında yok.\n\nÇIKTI (başka hiçbir şey yazma):\nÖZET: ...\n1) <BAĞLAM’dan aynen kopyalanmış TEK cümle/satır> [#n]\n2) <BAĞLAM’dan aynen kopyalanmış TEK cümle/satır> [#n]\n3) ...\n(4-10 madde arası, tekrar yok)\n\nBAĞLAM:\n{{$json.context}}\n\nSORU:\n{{$json.question}}\n",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        -32,
+        -560
+      ],
+      "id": "e8c7962a-1b9e-4a50-a3a9-d751f54456b5",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {
+          "temperature": 0.1
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        -144,
+        -272
+      ],
+      "id": "eeaf945d-d16b-4e6b-bad9-64c0a2e72d75",
+      "name": "Ollama Model",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [
+        128,
+        -256
+      ],
+      "id": "6bbc0b2d-7f58-4dac-aa9f-6174cad14398",
+      "name": "Ollama Model1",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        416,
+        -560
+      ],
+      "id": "6f183dff-6336-4e1d-96c0-b3aed1974363",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Webhook input normalize\nconst body = $json.body ?? $json;\n\nconst q0 =\n  body.message ??\n  body.query ??\n  body.question ??\n  $json.query?.query ??\n  $json.query?.message ??\n  \"\";\n\nconst q = String(q0).trim();\nconst ql = q.toLowerCase();\n\n// Ekipman tespiti (sadece gerektiğinde ek terim bas)\nconst isIncinerator = /(incinerat|yakma fırın|yakma firin|waste\\s*oil|md1|burner|flame)/i.test(ql);\nconst isSeparator   = /(separator|separatör|seperator|purifier|centrifuge)/i.test(ql);\nconst isBoiler      = /(boiler|kazan)/i.test(ql);\n\n// TR -> EN arama genişletme (soruya göre)\nconst addIf = (re, add) => (re.test(ql) ? add : \"\");\n\nconst generic =\n  \"manual procedure operating instructions start-up startup shutdown operation checklist\";\n\nconst faultPack =\n  \"fault location alarm troubleshooting cause remedy corrective action interlock permissive\";\n\nconst flamePack = addIf(/flame|alev|ateş|ates|ignit|ateşleme|atesleme|burner/i,\n  'flame failure burner flame fail ignition \"Primary D.O burner flame fail\" \"Secondary D.O burner flame fail\"');\n\nconst fuelPack = addIf(/yakıt gelmiyor|yakit gelmiyor|fuel gelmiyor|yakıt yok|yakit yok|no fuel|fuel not/i,\n  \"no fuel supply fuel not reaching burner fuel pump solenoid valve filter strainer clogged fuel line blocked air in line low pressure\");\n\nconst startFailPack = addIf(/çalışmıyor|calismiyor|start almıyor|baslamiyor|başlamıyor|won't start|wont start/i,\n  \"won't start start failure start inhibited interlock active reset\");\n\nconst alarmPack = addIf(/alarm|arıza|ariza|fault/i, \"alarm active fault code control panel message\");\n\nconst equipPack =\n  (isIncinerator ? \"incinerator waste oil DO diesel oil primary secondary burner control panel md1 waste oil\" :\n   isSeparator   ? \"separator purifier centrifuge bowl motor lube oil feed pump alarm\" :\n   isBoiler      ? \"boiler burner ignition flame failure fuel supply\" :\n   \"\");\n\n// Qdrant için arama metni (TR soru + EN paketler)\nconst q_search = [\n  q,\n  generic,\n  faultPack,\n  equipPack,\n  flamePack,\n  fuelPack,\n  startFailPack,\n  alarmPack\n].filter(Boolean).join(\" \");\n\nreturn [{\n  question: q,     // LLM'e giden soru\n  q_search         // Qdrant araması\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -672,
+        -512
+      ],
+      "id": "e75b60d1-3bed-4047-ad96-d77b0c988797",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Qdrant -> LLM için context + kaynak haritası\n// Mode: Run Once for All Items\n\nconst items = $input.all();\n\n// Soru: Qdrant sonucu item'larında soru yoksa, Qdrant öncesi node'dan çek\n// Aşağıdaki node adını kendi flow'unda \"Webhook sonrası normalize\" olan node adıyla aynı yap.\nconst pre = $items(\"Code in JavaScript\")[0]?.json ?? {};\n\nconst q = String(\n  pre.question ??\n  pre.question_original ??\n  pre.q_search ??\n  \"\"\n).trim();\n\nconst chunks = items\n  .map((it, i) => {\n    const doc = it.json.document ?? it.json;\n\n    const text = String(doc.pageContent ?? doc.text ?? \"\").trim();\n\n    const meta = it.json.metadata ?? doc.metadata ?? {};\n    const from = meta?.loc?.lines?.from;\n    const to = meta?.loc?.lines?.to;\n\n    const name =\n      meta?.sourceName ??\n      meta?.fileName ??\n      meta?.title ??\n      meta?.source ??\n      \"manual\";\n\n    const score = it.json.score;\n\n    const source =\n      `${name}` +\n      ((from != null && to != null) ? ` L${from}-${to}` : \"\") +\n      ((score != null) ? ` (score ${Number(score).toFixed(3)})` : \"\");\n\n    return { idx: i + 1, text, source };\n  })\n  .filter(c => c.text.length > 20);\n\n// Context: LLM’in okuyacağı kısım\nconst context = chunks.map(c => `[#${c.idx}] ${c.text}`).join(\"\\n\\n---\\n\\n\");\n\n// Kaynak haritası: UI'da göstereceğin temiz kaynak listesi\nconst sources_map = chunks.map(c => `[#${c.idx}] ${c.source}`).join(\"\\n\");\n\n// İstersen array olarak da kalsın\nconst sources = chunks.map(c => c.source);\n\nreturn [\n  {\n    json: {\n      question: q,\n      question_original: q,\n      context,\n      sources,\n      sources_map,\n      hitCount: chunks.length,\n    },\n  },\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -224,
+        -704
+      ],
+      "id": "072de5c0-3b8c-40be-8f2d-a670b0c48deb",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "c20e175d-5353-46be-80c2-1fef34ad7a42",
+              "name": "text",
+              "value": "={{ ($json.text ?? $json.output ?? $json.answer ?? $json.result ?? \"\").toString().replace(/^=+/, \"\").trim() }}\n",
+              "type": "string"
+            },
+            {
+              "id": "d5825a22-e4ef-4194-bcbf-6f069f93cdec",
+              "name": "sources",
+              "value": "={{ $node[\"Code in JavaScript1\"].json.sources_map ?? \"\" }}\n",
+              "type": "string"
+            },
+            {
+              "id": "13c5968e-202f-442c-9ae1-5d2a489c2d0f",
+              "name": "question",
+              "value": "={{ $node[\"Code in JavaScript1\"].json.question ?? $node[\"Code in JavaScript1\"].json.question_original ?? \"\" }}\n",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        240,
+        -528
+      ],
+      "id": "a604257b-5f3b-4abe-8dd6-7528dacadc8a",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -352,
+        -304
+      ],
+      "id": "c6283f8c-78f8-4516-b1f0-37cfeaffabc8",
+      "name": "Default Data Loader"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Basic LLM Chain": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "ai_languageModel",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Basic LLM Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "a4226e9a-1bd1-4397-9d65-4e4afe0089b0",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "id": "Pk7Iu57AH9jRuAQthFtaT",
+  "tags": []
+}
