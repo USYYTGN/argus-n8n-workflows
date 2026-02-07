@@ -1,5 +1,5 @@
 {
-  "name": "mauel tanıtma",
+  "name": "manuel tanıtma",
   "nodes": [
     {
       "parameters": {},
@@ -44,7 +44,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Gelen veriden \"text\" kısmını alıyoruz\nconst text = items[0].json.text; \n// Kaç harflik parçalara böleceğiz?\nconst chunkSize = 1000; \nconst chunks = [];\n\n// Metni dilimliyoruz\nfor (let i = 0; i < text.length; i += chunkSize) {\n  chunks.push({\n    json: {\n      pageContent: text.substring(i, i + chunkSize), // Parçalanmış metin\n      source: \"Manual_Vol3\" // Hangi dosyadan geldiği\n    }\n  });\n}\n\nreturn chunks;"
+        "jsCode": "// Gelen veriden \"text\" kısmını alıyoruz\nconst text = items[0].json.text;\n// Dosya adını önceki node'dan al\nconst fileName = items[0].json.fileName ?? items[0].json.name ?? \"unknown\";\nconst source = fileName.replace(/\\.[^.]+$/, \"\");\n// Kaç harflik parçalara böleceğiz?\nconst chunkSize = 1000;\nconst overlap = 200;\nconst chunks = [];\n\n// Metni overlap ile dilimliyoruz\nfor (let i = 0; i < text.length; i += (chunkSize - overlap)) {\n  chunks.push({\n    json: {\n      pageContent: text.substring(i, i + chunkSize),\n      source: source\n    }\n  });\n  if (i + chunkSize >= text.length) break;\n}\n\nreturn chunks;"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -132,7 +132,7 @@
             {
               "id": "4b0342de-8fc8-4ac5-b1fb-e259eac27d5f",
               "name": "collection",
-              "value": "shıp_manuaal_v3",
+              "value": "ship_manuals_v3",
               "type": "string"
             }
           ]
