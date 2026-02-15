@@ -11,8 +11,8 @@
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
       "position": [
-        -896,
-        -512
+        -1120,
+        -528
       ],
       "id": "30f45c2f-6262-44c0-b25b-0a0996008bd3",
       "name": "Webhook",
@@ -25,19 +25,20 @@
         "mode": "load",
         "qdrantCollection": {
           "__rl": true,
-          "value": "ship_manuals_v3",
-          "mode": "list",
-          "cachedResultName": "ship_manuals_v3"
+          "value": "={{$json.collection}}",
+          "mode": "id"
         },
-        "prompt": "={{$json.q_search ?? $json.question}}\n\n",
+        "prompt": "={{$json.query_en}}\n\n",
         "topK": 30,
-        "options": {}
+        "options": {
+          "searchFilterJson": "={{ $json.folder ? { must: [{ key:\"metadata.folder\", match:{ value:$json.folder } }] } : {} }}"
+        }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
       "typeVersion": 1.3,
       "position": [
-        -480,
-        -512
+        -256,
+        -528
       ],
       "id": "70e9377a-7cd3-43b5-adda-39062ac36625",
       "name": "Qdrant Vector Store",
@@ -55,11 +56,12 @@
       "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
       "typeVersion": 1,
       "position": [
-        -512,
-        -288
+        -256,
+        -304
       ],
       "id": "d4e41ed1-4255-41ea-95ee-4f3f8fe39c43",
       "name": "Embeddings Ollama1",
+      "alwaysOutputData": true,
       "credentials": {
         "ollamaApi": {
           "id": "m56zkpBYscfCoPii",
@@ -69,31 +71,16 @@
     },
     {
       "parameters": {
-        "promptType": "define",
-        "text": "=Sen bir gemi başmühendisisin.\n\nKURAL 1: SADECE BAĞLAM içindeki metinden ALINTI yap. BAĞLAM dışında tek kelime ekleme.\nKURAL 2: ASLA BAĞLAM’ı özetleme/anlatma. “BAĞLAM: …” gibi bir bölüm YAZMA.\nKURAL 3: ASLA “referansını kontrol edin / manualı kontrol edin” gibi cümle kurma.\nKURAL 4: Başlık uydurma. İngilizce başlıkları ÇEVİRME. Manualde ne yazıyorsa aynen kopyala.\nKURAL 5: Her satırın sonunda SADECE 1 referans olacak: [#n]\nKURAL 6: Eğer BAĞLAM’da troubleshooting/fault/alarms/interlock ile ilgili arıza teşhisi adımı yoksa,\nÖZET satırı AYNEN şu olacak: \"ÖZET: Arıza teşhisi bu doküman parçasında yok.\"\nKURAL 7: Madde satırları mümkünse “Open… / Make sure… / Remove… / The incinerator is operated…” gibi\nBAĞLAM’da geçen gerçek prosedür cümleleri olsun. Parafraz yok.\nKURAL 8: Eğer BAĞLAM boşsa veya çok kısaysa SADECE şu iki satırı yaz ve DUR:\n        ÖZET: Dokümanda geçmiyor (RAG sonuçları yetersiz).\n        SON: Arıza teşhisi bu doküman parçasında yok.\n\nÇIKTI (başka hiçbir şey yazma):\nÖZET: ...\n1) <BAĞLAM’dan aynen kopyalanmış TEK cümle/satır> [#n]\n2) <BAĞLAM’dan aynen kopyalanmış TEK cümle/satır> [#n]\n3) ...\n(4-10 madde arası, tekrar yok)\n\nBAĞLAM:\n{{$json.context}}\n\nSORU:\n{{$json.question}}\n",
-        "needsFallback": true,
-        "batching": {}
-      },
-      "type": "@n8n/n8n-nodes-langchain.chainLlm",
-      "typeVersion": 1.9,
-      "position": [
-        -32,
-        -560
-      ],
-      "id": "e8c7962a-1b9e-4a50-a3a9-d751f54456b5",
-      "name": "Basic LLM Chain"
-    },
-    {
-      "parameters": {
         "model": "llama3.1:latest",
         "options": {
-          "temperature": 0.1
+          "temperature": 0.1,
+          "numPredict": 200
         }
       },
       "type": "@n8n/n8n-nodes-langchain.lmOllama",
       "typeVersion": 1,
       "position": [
-        -144,
+        224,
         -272
       ],
       "id": "eeaf945d-d16b-4e6b-bad9-64c0a2e72d75",
@@ -113,7 +100,7 @@
       "type": "@n8n/n8n-nodes-langchain.lmOllama",
       "typeVersion": 1,
       "position": [
-        128,
+        496,
         -256
       ],
       "id": "6bbc0b2d-7f58-4dac-aa9f-6174cad14398",
@@ -153,37 +140,11 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
       "position": [
-        416,
-        -560
+        832,
+        -544
       ],
       "id": "6f183dff-6336-4e1d-96c0-b3aed1974363",
       "name": "Respond to Webhook"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Webhook input normalize\nconst body = $json.body ?? $json;\n\nconst q0 =\n  body.message ??\n  body.query ??\n  body.question ??\n  $json.query?.query ??\n  $json.query?.message ??\n  \"\";\n\nconst q = String(q0).trim();\nconst ql = q.toLowerCase();\n\n// Ekipman tespiti (sadece gerektiğinde ek terim bas)\nconst isIncinerator = /(incinerat|yakma fırın|yakma firin|waste\\s*oil|md1|burner|flame)/i.test(ql);\nconst isSeparator   = /(separator|separatör|seperator|purifier|centrifuge)/i.test(ql);\nconst isBoiler      = /(boiler|kazan)/i.test(ql);\n\n// TR -> EN arama genişletme (soruya göre)\nconst addIf = (re, add) => (re.test(ql) ? add : \"\");\n\nconst generic =\n  \"manual procedure operating instructions start-up startup shutdown operation checklist\";\n\nconst faultPack =\n  \"fault location alarm troubleshooting cause remedy corrective action interlock permissive\";\n\nconst flamePack = addIf(/flame|alev|ateş|ates|ignit|ateşleme|atesleme|burner/i,\n  'flame failure burner flame fail ignition \"Primary D.O burner flame fail\" \"Secondary D.O burner flame fail\"');\n\nconst fuelPack = addIf(/yakıt gelmiyor|yakit gelmiyor|fuel gelmiyor|yakıt yok|yakit yok|no fuel|fuel not/i,\n  \"no fuel supply fuel not reaching burner fuel pump solenoid valve filter strainer clogged fuel line blocked air in line low pressure\");\n\nconst startFailPack = addIf(/çalışmıyor|calismiyor|start almıyor|baslamiyor|başlamıyor|won't start|wont start/i,\n  \"won't start start failure start inhibited interlock active reset\");\n\nconst alarmPack = addIf(/alarm|arıza|ariza|fault/i, \"alarm active fault code control panel message\");\n\nconst equipPack =\n  (isIncinerator ? \"incinerator waste oil DO diesel oil primary secondary burner control panel md1 waste oil\" :\n   isSeparator   ? \"separator purifier centrifuge bowl motor lube oil feed pump alarm\" :\n   isBoiler      ? \"boiler burner ignition flame failure fuel supply\" :\n   \"\");\n\n// Qdrant için arama metni (TR soru + EN paketler)\nconst q_search = [\n  q,\n  generic,\n  faultPack,\n  equipPack,\n  flamePack,\n  fuelPack,\n  startFailPack,\n  alarmPack\n].filter(Boolean).join(\" \");\n\nreturn [{\n  question: q,     // LLM'e giden soru\n  q_search         // Qdrant araması\n}];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -672,
-        -512
-      ],
-      "id": "e75b60d1-3bed-4047-ad96-d77b0c988797",
-      "name": "Code in JavaScript"
-    },
-    {
-      "parameters": {
-        "jsCode": "// Qdrant -> LLM için context + kaynak haritası\n// Mode: Run Once for All Items\n\nconst items = $input.all();\n\n// Soru: Qdrant sonucu item'larında soru yoksa, Qdrant öncesi node'dan çek\n// Aşağıdaki node adını kendi flow'unda \"Webhook sonrası normalize\" olan node adıyla aynı yap.\nconst pre = $items(\"Code in JavaScript\")[0]?.json ?? {};\n\nconst q = String(\n  pre.question ??\n  pre.question_original ??\n  pre.q_search ??\n  \"\"\n).trim();\n\nconst chunks = items\n  .map((it, i) => {\n    const doc = it.json.document ?? it.json;\n\n    const text = String(doc.pageContent ?? doc.text ?? \"\").trim();\n\n    const meta = it.json.metadata ?? doc.metadata ?? {};\n    const from = meta?.loc?.lines?.from;\n    const to = meta?.loc?.lines?.to;\n\n    const name =\n      meta?.sourceName ??\n      meta?.fileName ??\n      meta?.title ??\n      meta?.source ??\n      \"manual\";\n\n    const score = it.json.score;\n\n    const source =\n      `${name}` +\n      ((from != null && to != null) ? ` L${from}-${to}` : \"\") +\n      ((score != null) ? ` (score ${Number(score).toFixed(3)})` : \"\");\n\n    return { idx: i + 1, text, source };\n  })\n  .filter(c => c.text.length > 20);\n\n// Context: LLM’in okuyacağı kısım\nconst context = chunks.map(c => `[#${c.idx}] ${c.text}`).join(\"\\n\\n---\\n\\n\");\n\n// Kaynak haritası: UI'da göstereceğin temiz kaynak listesi\nconst sources_map = chunks.map(c => `[#${c.idx}] ${c.source}`).join(\"\\n\");\n\n// İstersen array olarak da kalsın\nconst sources = chunks.map(c => c.source);\n\nreturn [\n  {\n    json: {\n      question: q,\n      question_original: q,\n      context,\n      sources,\n      sources_map,\n      hitCount: chunks.length,\n    },\n  },\n];\n"
-      },
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [
-        -224,
-        -704
-      ],
-      "id": "072de5c0-3b8c-40be-8f2d-a670b0c48deb",
-      "name": "Code in JavaScript1"
     },
     {
       "parameters": {
@@ -192,20 +153,26 @@
             {
               "id": "c20e175d-5353-46be-80c2-1fef34ad7a42",
               "name": "text",
-              "value": "={{ ($json.text ?? $json.output ?? $json.answer ?? $json.result ?? \"\").toString().replace(/^=+/, \"\").trim() }}\n",
+              "value": "={{ ($json.text ?? $json.output ?? $json.content ?? $json.answer ?? $json.result ?? \"Cevap üretilemedi.\").toString().trim() }}\n",
               "type": "string"
             },
             {
               "id": "d5825a22-e4ef-4194-bcbf-6f069f93cdec",
               "name": "sources",
-              "value": "={{ $node[\"Code in JavaScript1\"].json.sources_map ?? \"\" }}\n",
+              "value": "={{ $json.sources_map ?? \"\" }}\n",
               "type": "string"
             },
             {
               "id": "13c5968e-202f-442c-9ae1-5d2a489c2d0f",
               "name": "question",
-              "value": "={{ $node[\"Code in JavaScript1\"].json.question ?? $node[\"Code in JavaScript1\"].json.question_original ?? \"\" }}\n",
+              "value": "={{ $json.question_tr ?? $json.question ?? \"\" }}\n",
               "type": "string"
+            },
+            {
+              "id": "03c36e38-81c0-45f8-8865-195f4b3ff1cd",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
             }
           ]
         },
@@ -214,7 +181,7 @@
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
       "position": [
-        240,
+        640,
         -528
       ],
       "id": "a604257b-5f3b-4abe-8dd6-7528dacadc8a",
@@ -222,16 +189,82 @@
     },
     {
       "parameters": {
-        "options": {}
+        "jsCode": "const route = $node[\"Code in JavaScript2\"].json; // APPLY_ROUTE node adın buysa böyle kalır\nconst question = route.question || \"\";\n\n// Qdrant’tan gelen items burada\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || \"\").trim();\n    const md = d.metadata || {};\n    return {\n      text,\n      source: md.sourceName || md.fileName || md.source || \"unknown\",\n      folder: md.folder || \"\",\n      page: md.page ?? \"\",\n      chunk: md.chunk ?? \"\",\n      score: d.score ?? \"\"\n    };\n  })\n  // sembol / boş sayfaları at\n  .filter(h => h.text.length > 80)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\n// Top 12 yeter (yoksa prompt şişer)\nconst top = cleaned.slice(0, 12);\n\nconst context = top.map((h, i) => {\n  return `[#${i+1}] ${h.source} | p:${h.page} | c:${h.chunk}\\n${h.text}`;\n}).join(\"\\n\\n\");\n\nconst sources = top.map((h, i) => `[#${i+1}] ${h.source} p:${h.page}`).join(\"\\n\");\n\nconst prompt = `\nSen bir gemi teknik manual asistanısın.\nSADECE aşağıdaki CONTEXT'e dayanarak cevap ver. Uydurma yapma.\n\nKURAL:\n- Cevabın sonunda mutlaka \"Kaynaklar\" listesi olacak ve her maddede dosya adı + sayfa yazacak.\n- Eğer context yetersizse: \"Bulunamadı\" de ve yine hangi kaynakların geldiğini yaz.\n\nSORU (TR): ${question}\n\nCONTEXT:\n${context}\n\nKaynaklar:\n${sources}\n`.trim();\n\nreturn [{\n  json: {\n    question,\n    context,\n    sources,\n    prompt\n  }\n}];\n"
       },
-      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
-      "typeVersion": 1.1,
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
       "position": [
-        -352,
-        -304
+        32,
+        -576
       ],
-      "id": "c6283f8c-78f8-4516-b1f0-37cfeaffabc8",
-      "name": "Default Data Loader"
+      "id": "2dee6792-10b4-4b02-8b7f-5ecfb2935ed2",
+      "name": "BUILD_PROMPT"
+    },
+    {
+      "parameters": {
+        "jsCode": "// APPLY_ROUTE - parse router JSON safely, sanitize, and output fields for Qdrant\n\nfunction getRouterText(item) {\n  // Depending on Simplify Output, content may be in different places\n  return (\n    item.json.content ||\n    item.json.message?.content ||\n    item.json.data?.message?.content ||\n    \"\"\n  ).trim();\n}\n\nconst item0 = items[0] || { json: {} };\nconst raw = getRouterText(item0);\n\n// Parse JSON from model\nlet obj = {};\ntry {\n  obj = JSON.parse(raw);\n} catch (e) {\n  // If model returned extra text, try to extract first JSON block\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) {\n    try { obj = JSON.parse(m[0]); } catch (e2) { obj = {}; }\n  }\n}\n\n// Pull original question from webhook as ultimate fallback\nlet wbMsg = \"\";\ntry {\n  const wb = $items(\"Webhook\")[0].json;\n  wbMsg = wb.body?.message || wb.body?.question || wb.message || wb.question || \"\";\n} catch (e) {}\n\nconst question = (obj.question || wbMsg || \"\").trim();\n\n// Sanitize collection\nlet collection = String(obj.collection || \"ship_manuals_v3\").trim().replace(/^=+/, \"\");\nconst allowed = new Set([\"ship_electric\",\"ship_ccr\",\"ship_manuals\",\"ship_manuals_v2\",\"ship_manuals_v3\"]);\nif (!allowed.has(collection)) collection = \"ship_manuals_v3\";\n\n// Folder (exact match or null)\nlet folder = obj.folder ?? null;\nif (typeof folder === \"string\") {\n  folder = folder.trim();\n  if (!folder) folder = null;\n}\n\n// Query\nlet query_en = String(obj.query_en || \"\").trim();\nif (!query_en) query_en = question;\n\n// Final\nreturn [{\n  json: { question, query_en, collection, folder }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        -528
+      ],
+      "id": "ac117763-1f38-4168-ac78-9f8f05774d7c",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "llama3.1:latest",
+          "mode": "list",
+          "cachedResultName": "llama3.1:latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a router for ship manuals.\n\nReturn ONLY this JSON:\n{\"question\":\"...\",\"collection\":\"...\",\"folder\":null or \"...\",\"query_en\":\"...\"}\n\nCollections that currently contain data:\n- ship_electric\n- ship_ccr\n- ship_manuals\n- ship_manuals_v2\n- ship_manuals_v3\n\nFolder MUST match EXACTLY one of these Windows folder names (or null):\n\"ELECTRIC\", \"CCR\", \"BRIDGE_EQUIPMENT\", \"MACHINERY\", \"ACCOMMODATION\", \"HULL PIPING\", \"HULL OUTFITTING\", \"BWTS TRAINING\", \"8189 YARD DWG\", \"F\"\n\nRules:\n- electric/switchboard/msb/esb/transformer/generator/power -> collection=ship_electric, folder=\"ELECTRIC\"\n- cargo/ccr/pump/valve/ows/tank/line -> collection=ship_ccr, folder=\"CCR\"\n- bridge/autopilot/radar/gyro/ais/echo sounder/ecdis -> collection=ship_manuals_v3, folder=\"BRIDGE_EQUIPMENT\"\n- if unsure -> collection=ship_manuals_v3, folder=null\n\nMake query_en a short English search query with synonyms.\n\nQuestion:\n{{$json.body.message || $json.body.question || $json.question || $json.message}}\n"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "Sadece geçerli JSON döndür. Markdown yok, açıklama yok, ekstra metin yok.\n",
+          "temperature": 0.1,
+          "num_predict": 200
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        -560
+      ],
+      "id": "d9e77522-c50d-48b1-ad22-094048c66e6a",
+      "name": "ROUTER",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.prompt}}\n",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        368,
+        -560
+      ],
+      "id": "e8c7962a-1b9e-4a50-a3a9-d751f54456b5",
+      "name": "ANSWER"
     }
   ],
   "pinData": {},
@@ -240,7 +273,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "ROUTER",
             "type": "main",
             "index": 0
           }
@@ -251,7 +284,7 @@
       "main": [
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "BUILD_PROMPT",
             "type": "main",
             "index": 0
           }
@@ -269,22 +302,11 @@
         ]
       ]
     },
-    "Basic LLM Chain": {
-      "main": [
-        [
-          {
-            "node": "Edit Fields",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
     "Ollama Model": {
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "ANSWER",
             "type": "ai_languageModel",
             "index": 0
           }
@@ -295,31 +317,9 @@
       "ai_languageModel": [
         [
           {
-            "node": "Basic LLM Chain",
+            "node": "ANSWER",
             "type": "ai_languageModel",
             "index": 1
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript": {
-      "main": [
-        [
-          {
-            "node": "Qdrant Vector Store",
-            "type": "main",
-            "index": 0
-          }
-        ]
-      ]
-    },
-    "Code in JavaScript1": {
-      "main": [
-        [
-          {
-            "node": "Basic LLM Chain",
-            "type": "main",
-            "index": 0
           }
         ]
       ]
@@ -335,9 +335,48 @@
         ]
       ]
     },
-    "Default Data Loader": {
-      "ai_document": [
-        []
+    "BUILD_PROMPT": {
+      "main": [
+        [
+          {
+            "node": "ANSWER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ROUTER": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ANSWER": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     }
   },
@@ -348,7 +387,7 @@
     "timeSavedMode": "fixed",
     "callerPolicy": "workflowsFromSameOwner"
   },
-  "versionId": "a4226e9a-1bd1-4397-9d65-4e4afe0089b0",
+  "versionId": "b4368e3f-cc17-4b32-af93-f8bcd231025c",
   "meta": {
     "templateCredsSetupCompleted": true,
     "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
