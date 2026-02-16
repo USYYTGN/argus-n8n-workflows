@@ -5,18 +5,18 @@
       "parameters": {},
       "type": "n8n-nodes-base.manualTrigger",
       "typeVersion": 1,
-      "position": [-600, 0],
-      "id": "batch-trigger-001",
+      "position": [-800, 0],
+      "id": "a1b2c3d4-0001-4000-8000-000000000001",
       "name": "Baslat"
     },
     {
       "parameters": {
-        "jsCode": "// =====================================================\n// AYARLAR - HER KLASOR ICIN BURADAN DEGISTIR\n// =====================================================\n// Her calistirmada sadece BIR klasor yukle.\n// Bitince collection adini ve folderPath'i degistirip tekrar calistir.\n//\n// YUKLEME SIRASI (oneri):\n// 1) MACHINERY       -> ship_machinery\n// 2) ACCOMMODATION   -> ship_accommodation\n// 3) HULL PIPING     -> ship_hull_piping\n// 4) HULL OUTFITTING -> ship_hull_outfitting\n// 5) BWTS TRAINING   -> ship_bwts_training\n// 6) F               -> ship_f\n// 7) 8189 YARD DWG   -> ship_8189_yard_dwg\n// 8) BRIDGE_ EQUIPMENT -> ship_bridge_equipment  (en buyuk, en son)\n//\n// NOT: ELECTRIC ve CCR zaten yuklu, tekrar yukleme!\n// =====================================================\n\nconst CONFIG = {\n  // Windows klasor yolu\n  folderPath: \"D:\\\\MANTA ANADOLU\\\\MACHINERY\",\n  \n  // Qdrant collection adi\n  collection: \"ship_machinery\",\n  \n  // Metadata folder adi (arama filtresinde kullanilir)\n  folderTag: \"MACHINERY\",\n  \n  // Chunk ayarlari\n  chunkSize: 800,\n  chunkOverlap: 150\n};\n\nreturn [{ json: CONFIG }];\n"
+        "jsCode": "// =====================================================\n// AYARLAR - HER KLASOR ICIN BURADAN DEGISTIR\n// =====================================================\n// Her calistirmada sadece BIR klasor yukle.\n// Bitince collection adini ve folderPath'i degistirip tekrar calistir.\n//\n// YUKLEME SIRASI (oneri):\n// 1) MACHINERY       -> ship_machinery\n// 2) ACCOMMODATION   -> ship_accommodation\n// 3) HULL PIPING     -> ship_hull_piping\n// 4) HULL OUTFITTING -> ship_hull_outfitting\n// 5) BWTS TRAINING   -> ship_bwts_training\n// 6) F               -> ship_f\n// 7) 8189 YARD DWG   -> ship_8189_yard_dwg\n// 8) BRIDGE_ EQUIPMENT -> ship_bridge_equipment  (en buyuk, en son)\n//\n// NOT: ELECTRIC ve CCR zaten yuklu, tekrar yukleme!\n// =====================================================\n\nconst CONFIG = {\n  folderPath: \"D:\\\\MANTA ANADOLU\\\\MACHINERY\",\n  collection: \"ship_machinery\",\n  folderTag: \"MACHINERY\",\n  chunkSize: 800,\n  chunkOverlap: 150\n};\n\nreturn [{ json: CONFIG }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-400, 0],
-      "id": "batch-config-001",
+      "position": [-500, 0],
+      "id": "a1b2c3d4-0002-4000-8000-000000000002",
       "name": "CONFIG"
     },
     {
@@ -26,18 +26,18 @@
       },
       "type": "n8n-nodes-base.executeCommand",
       "typeVersion": 1,
-      "position": [-200, 0],
-      "id": "batch-listfiles-001",
+      "position": [-160, 0],
+      "id": "a1b2c3d4-0003-4000-8000-000000000003",
       "name": "PDF Listele"
     },
     {
       "parameters": {
-        "jsCode": "// PowerShell ciktisini satirlara bol, her PDF bir item olsun\nconst config = $node[\"CONFIG\"].json;\nconst stdout = items[0].json.stdout || \"\";\nconst lines = stdout.split(/\\r?\\n/).map(l => l.trim()).filter(l => l.length > 0 && l.toLowerCase().endsWith('.pdf'));\n\nif (lines.length === 0) {\n  throw new Error(\"Klasorde PDF bulunamadi: \" + config.folderPath);\n}\n\nreturn lines.map((filePath, index) => {\n  // Dosya adindan source name cikar\n  const fileName = filePath.split('\\\\').pop().replace('.pdf', '').replace('.PDF', '');\n  return {\n    json: {\n      filePath,\n      fileName,\n      index: index + 1,\n      total: lines.length,\n      collection: config.collection,\n      folderTag: config.folderTag,\n      chunkSize: config.chunkSize,\n      chunkOverlap: config.chunkOverlap\n    }\n  };\n});\n"
+        "jsCode": "// PowerShell ciktisini satirlara bol, her PDF bir item olsun\nconst config = $node[\"CONFIG\"].json;\nconst stdout = items[0].json.stdout || \"\";\nconst lines = stdout.split(/\\r?\\n/).map(l => l.trim()).filter(l => l.length > 0 && l.toLowerCase().endsWith('.pdf'));\n\nif (lines.length === 0) {\n  throw new Error(\"Klasorde PDF bulunamadi: \" + config.folderPath);\n}\n\nreturn lines.map((filePath, index) => {\n  const fileName = filePath.split('\\\\').pop().replace('.pdf', '').replace('.PDF', '');\n  return {\n    json: {\n      filePath,\n      fileName,\n      index: index + 1,\n      total: lines.length,\n      collection: config.collection,\n      folderTag: config.folderTag,\n      chunkSize: config.chunkSize,\n      chunkOverlap: config.chunkOverlap\n    }\n  };\n});\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [0, 0],
-      "id": "batch-split-001",
+      "position": [180, 0],
+      "id": "a1b2c3d4-0004-4000-8000-000000000004",
       "name": "PDF Listesini Bol"
     },
     {
@@ -47,8 +47,8 @@
       },
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [200, 0],
-      "id": "batch-loop-001",
+      "position": [520, 0],
+      "id": "a1b2c3d4-0005-4000-8000-000000000005",
       "name": "Tek Tek Yukle"
     },
     {
@@ -58,8 +58,8 @@
       },
       "type": "n8n-nodes-base.readWriteFile",
       "typeVersion": 1.1,
-      "position": [400, 0],
-      "id": "batch-read-001",
+      "position": [860, 0],
+      "id": "a1b2c3d4-0006-4000-8000-000000000006",
       "name": "PDF Oku"
     },
     {
@@ -69,18 +69,18 @@
       },
       "type": "n8n-nodes-base.extractFromFile",
       "typeVersion": 1.1,
-      "position": [600, 0],
-      "id": "batch-extract-001",
+      "position": [1160, 0],
+      "id": "a1b2c3d4-0007-4000-8000-000000000007",
       "name": "PDF Text Cikar"
     },
     {
       "parameters": {
-        "jsCode": "// SMART CHUNKER - Overlap ile akilli parcalama + metadata\n\nconst loopItem = $node[\"Tek Tek Yukle\"].json;\nconst text = items[0].json.text || items[0].json.data || \"\";\n\nif (!text || text.length < 50) {\n  // Bos veya cok kisa PDF - atla\n  return [{\n    json: {\n      pageContent: \"[Bu PDF'den metin cikarilmadi: \" + loopItem.fileName + \"]\",\n      metadata: {\n        sourceName: loopItem.fileName,\n        fileName: loopItem.fileName,\n        source: loopItem.fileName,\n        folder: loopItem.folderTag,\n        page: 0,\n        chunk: 0\n      }\n    }\n  }];\n}\n\nconst chunkSize = loopItem.chunkSize || 800;\nconst overlap = loopItem.chunkOverlap || 150;\nconst chunks = [];\n\n// Sayfa ayiricilari\nconst pages = text.split(/\\f/);\nif (pages.length <= 1) {\n  // Formfeed yoksa tum metni tek sayfa say\n  pages.length = 0;\n  pages.push(text);\n}\n\nlet globalChunkIndex = 0;\n\nfor (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {\n  const pageText = pages[pageIdx].trim();\n  if (pageText.length < 30) continue;\n  \n  let pos = 0;\n  while (pos < pageText.length) {\n    let end = Math.min(pos + chunkSize, pageText.length);\n    \n    // Cumle sonunda kesmeye calis\n    if (end < pageText.length) {\n      const lastPeriod = pageText.lastIndexOf('.', end);\n      const lastNewline = pageText.lastIndexOf('\\n', end);\n      const bestBreak = Math.max(lastPeriod, lastNewline);\n      if (bestBreak > pos + chunkSize * 0.4) {\n        end = bestBreak + 1;\n      }\n    }\n    \n    const chunkText = pageText.substring(pos, end).trim();\n    \n    if (chunkText.length > 30) {\n      chunks.push({\n        json: {\n          pageContent: chunkText,\n          metadata: {\n            sourceName: loopItem.fileName,\n            fileName: loopItem.fileName,\n            source: loopItem.fileName,\n            folder: loopItem.folderTag,\n            page: pageIdx + 1,\n            chunk: globalChunkIndex\n          }\n        }\n      });\n      globalChunkIndex++;\n    }\n    \n    pos = end - overlap;\n    if (pos <= 0 && end >= pageText.length) break;\n    if (end >= pageText.length) break;\n  }\n}\n\nif (chunks.length === 0) {\n  return [{\n    json: {\n      pageContent: \"PDF icerigi bos: \" + loopItem.fileName,\n      metadata: {\n        sourceName: loopItem.fileName,\n        fileName: loopItem.fileName,\n        source: loopItem.fileName,\n        folder: loopItem.folderTag,\n        page: 0,\n        chunk: 0\n      }\n    }\n  }];\n}\n\nreturn chunks;\n"
+        "jsCode": "// SMART CHUNKER - Overlap ile akilli parcalama + metadata\n\nconst loopItem = $node[\"Tek Tek Yukle\"].json;\nconst text = items[0].json.text || items[0].json.data || \"\";\n\nif (!text || text.length < 50) {\n  return [{\n    json: {\n      pageContent: \"[Bu PDF'den metin cikarilmadi: \" + loopItem.fileName + \"]\",\n      metadata: {\n        sourceName: loopItem.fileName,\n        fileName: loopItem.fileName,\n        source: loopItem.fileName,\n        folder: loopItem.folderTag,\n        page: 0,\n        chunk: 0\n      }\n    }\n  }];\n}\n\nconst chunkSize = loopItem.chunkSize || 800;\nconst overlap = loopItem.chunkOverlap || 150;\nconst chunks = [];\n\nconst pages = text.split(/\\f/);\nif (pages.length <= 1) {\n  pages.length = 0;\n  pages.push(text);\n}\n\nlet globalChunkIndex = 0;\n\nfor (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {\n  const pageText = pages[pageIdx].trim();\n  if (pageText.length < 30) continue;\n  \n  let pos = 0;\n  while (pos < pageText.length) {\n    let end = Math.min(pos + chunkSize, pageText.length);\n    \n    if (end < pageText.length) {\n      const lastPeriod = pageText.lastIndexOf('.', end);\n      const lastNewline = pageText.lastIndexOf('\\n', end);\n      const bestBreak = Math.max(lastPeriod, lastNewline);\n      if (bestBreak > pos + chunkSize * 0.4) {\n        end = bestBreak + 1;\n      }\n    }\n    \n    const chunkText = pageText.substring(pos, end).trim();\n    \n    if (chunkText.length > 30) {\n      chunks.push({\n        json: {\n          pageContent: chunkText,\n          metadata: {\n            sourceName: loopItem.fileName,\n            fileName: loopItem.fileName,\n            source: loopItem.fileName,\n            folder: loopItem.folderTag,\n            page: pageIdx + 1,\n            chunk: globalChunkIndex\n          }\n        }\n      });\n      globalChunkIndex++;\n    }\n    \n    pos = end - overlap;\n    if (pos <= 0 && end >= pageText.length) break;\n    if (end >= pageText.length) break;\n  }\n}\n\nif (chunks.length === 0) {\n  return [{\n    json: {\n      pageContent: \"PDF icerigi bos: \" + loopItem.fileName,\n      metadata: {\n        sourceName: loopItem.fileName,\n        fileName: loopItem.fileName,\n        source: loopItem.fileName,\n        folder: loopItem.folderTag,\n        page: 0,\n        chunk: 0\n      }\n    }\n  }];\n}\n\nreturn chunks;\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [800, 0],
-      "id": "batch-chunk-001",
+      "position": [1460, 0],
+      "id": "a1b2c3d4-0008-4000-8000-000000000008",
       "name": "SMART_CHUNKER"
     },
     {
@@ -95,8 +95,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
       "typeVersion": 1.3,
-      "position": [1000, 0],
-      "id": "batch-qdrant-001",
+      "position": [1800, 0],
+      "id": "a1b2c3d4-0009-4000-8000-000000000009",
       "name": "Qdrant Yukle",
       "credentials": {
         "qdrantApi": {
@@ -111,8 +111,8 @@
       },
       "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
       "typeVersion": 1,
-      "position": [940, 220],
-      "id": "batch-embed-001",
+      "position": [1720, 240],
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
       "name": "Embeddings Ollama",
       "credentials": {
         "ollamaApi": {
@@ -127,48 +127,133 @@
       },
       "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
       "typeVersion": 1.1,
-      "position": [1060, 220],
-      "id": "batch-loader-001",
+      "position": [1880, 240],
+      "id": "a1b2c3d4-0011-4000-8000-000000000011",
       "name": "Default Data Loader"
     }
   ],
   "pinData": {},
   "connections": {
     "Baslat": {
-      "main": [[{ "node": "CONFIG", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "CONFIG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "CONFIG": {
-      "main": [[{ "node": "PDF Listele", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "PDF Listele",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "PDF Listele": {
-      "main": [[{ "node": "PDF Listesini Bol", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "PDF Listesini Bol",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "PDF Listesini Bol": {
-      "main": [[{ "node": "Tek Tek Yukle", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Tek Tek Yukle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Tek Tek Yukle": {
       "main": [
-        [{ "node": "PDF Oku", "type": "main", "index": 0 }],
-        []
+        [
+          {
+            "node": "PDF Oku",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "PDF Oku": {
-      "main": [[{ "node": "PDF Text Cikar", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "PDF Text Cikar",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "PDF Text Cikar": {
-      "main": [[{ "node": "SMART_CHUNKER", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "SMART_CHUNKER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "SMART_CHUNKER": {
-      "main": [[{ "node": "Qdrant Yukle", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Qdrant Yukle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Qdrant Yukle": {
-      "main": [[{ "node": "Tek Tek Yukle", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Tek Tek Yukle",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Embeddings Ollama": {
-      "ai_embedding": [[{ "node": "Qdrant Yukle", "type": "ai_embedding", "index": 0 }]]
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Yukle",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Default Data Loader": {
-      "ai_document": [[{ "node": "Qdrant Yukle", "type": "ai_document", "index": 0 }]]
+      "ai_document": [
+        [
+          {
+            "node": "Qdrant Yukle",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
