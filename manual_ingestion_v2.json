@@ -1,0 +1,151 @@
+{
+  "name": "Manual Ingestion v2 - Akıllı Yükleme",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [-400, 0],
+      "id": "ingest-trigger-001",
+      "name": "Manuel Başlat"
+    },
+    {
+      "parameters": {
+        "jsCode": "// AYARLAR - BURADAN DÜZENLE\n// Her çalıştırmada sadece BİR PDF dosya yolu gir\n// Dosya yolunu ve metadata bilgilerini burada ayarla\n\nconst CONFIG = {\n  // PDF dosya yolu (n8n'in erişebildiği bir path olmalı)\n  filePath: \"C:\\\\Users\\\\usyyt\\\\.n8n-files\\\\M-67 INCINERATOR.pdf\",\n  \n  // Qdrant collection adı\n  collection: \"ship_manuals_v3\",\n  \n  // Klasör adı (EXACT match ile arama yapılacak)\n  // Geçerli değerler: ELECTRIC, CCR, BRIDGE_EQUIPMENT, MACHINERY,\n  //   ACCOMMODATION, HULL PIPING, HULL OUTFITTING, BWTS TRAINING, 8189 YARD DWG\n  folder: \"MACHINERY\",\n  \n  // Dosya/kaynak adı (cevapta gösterilecek)\n  sourceName: \"M-67 INCINERATOR\",\n  \n  // Chunk ayarları\n  chunkSize: 800,    // Her parçanın karakter uzunluğu\n  chunkOverlap: 150  // Parçalar arası örtüşme (context kaybını önler)\n};\n\nreturn [{ json: CONFIG }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-200, 0],
+      "id": "ingest-config-001",
+      "name": "CONFIG"
+    },
+    {
+      "parameters": {
+        "fileSelector": "={{ $json.filePath }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.readWriteFile",
+      "typeVersion": 1.1,
+      "position": [0, 0],
+      "id": "ingest-read-001",
+      "name": "PDF Oku"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [200, 0],
+      "id": "ingest-extract-001",
+      "name": "PDF Text Çıkar"
+    },
+    {
+      "parameters": {
+        "jsCode": "// SMART CHUNKER - Overlap ile akıllı parçalama\n// Cümle ortasından kesmez, metadata ekler\n\nconst config = $node[\"CONFIG\"].json;\nconst text = items[0].json.text || \"\";\n\nif (!text || text.length < 50) {\n  return [{ json: { error: true, message: \"PDF'den metin çıkarılamadı veya çok kısa.\" } }];\n}\n\nconst chunkSize = config.chunkSize || 800;\nconst overlap = config.chunkOverlap || 150;\nconst chunks = [];\n\n// Sayfa ayırıcılarını tespit et (PDF genelde \\f veya benzeri kullanır)\nconst pages = text.split(/\\f|\\n(?=\\s*Page\\s+\\d)|\\n{4,}/);\n\nlet globalChunkIndex = 0;\n\nfor (let pageIdx = 0; pageIdx < pages.length; pageIdx++) {\n  const pageText = pages[pageIdx].trim();\n  if (pageText.length < 30) continue; // Çok kısa sayfaları atla\n  \n  let pos = 0;\n  while (pos < pageText.length) {\n    let end = Math.min(pos + chunkSize, pageText.length);\n    \n    // Cümle sonunda kesmeye çalış\n    if (end < pageText.length) {\n      const lastPeriod = pageText.lastIndexOf('.', end);\n      const lastNewline = pageText.lastIndexOf('\\n', end);\n      const bestBreak = Math.max(lastPeriod, lastNewline);\n      if (bestBreak > pos + chunkSize * 0.5) {\n        end = bestBreak + 1;\n      }\n    }\n    \n    const chunkText = pageText.substring(pos, end).trim();\n    \n    if (chunkText.length > 30) {\n      chunks.push({\n        json: {\n          pageContent: chunkText,\n          metadata: {\n            sourceName: config.sourceName,\n            fileName: config.sourceName,\n            source: config.sourceName,\n            folder: config.folder,\n            collection: config.collection,\n            page: pageIdx + 1,\n            chunk: globalChunkIndex,\n            chunkSize: chunkText.length\n          }\n        }\n      });\n      globalChunkIndex++;\n    }\n    \n    // Overlap ile ilerleme\n    pos = end - overlap;\n    if (pos <= 0 && end >= pageText.length) break;\n    if (end >= pageText.length) break;\n  }\n}\n\nif (chunks.length === 0) {\n  return [{ json: { error: true, message: \"Hiç chunk oluşturulamadı.\" } }];\n}\n\nreturn chunks;\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 0],
+      "id": "ingest-chunk-001",
+      "name": "SMART_CHUNKER"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "={{ $node[\"CONFIG\"].json.collection }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [640, 0],
+      "id": "ingest-qdrant-001",
+      "name": "Qdrant'a Yükle",
+      "credentials": {
+        "qdrantApi": { "id": "X0pbbSADyJw0n4U8", "name": "QdrantApi account" }
+      }
+    },
+    {
+      "parameters": { "model": "nomic-embed-text:latest" },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [580, 200],
+      "id": "ingest-embed-001",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": { "id": "m56zkpBYscfCoPii", "name": "Ollama account" }
+      }
+    },
+    {
+      "parameters": { "options": {} },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [720, 200],
+      "id": "ingest-loader-001",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "res-status", "name": "status", "value": "ok", "type": "string" },
+            { "id": "res-count", "name": "chunks_inserted", "value": "={{ $items().length }}", "type": "number" },
+            { "id": "res-coll", "name": "collection", "value": "={{ $node[\"CONFIG\"].json.collection }}", "type": "string" },
+            { "id": "res-folder", "name": "folder", "value": "={{ $node[\"CONFIG\"].json.folder }}", "type": "string" },
+            { "id": "res-source", "name": "source", "value": "={{ $node[\"CONFIG\"].json.sourceName }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [880, 0],
+      "id": "ingest-result-001",
+      "name": "Sonuç"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Manuel Başlat": {
+      "main": [[{ "node": "CONFIG", "type": "main", "index": 0 }]]
+    },
+    "CONFIG": {
+      "main": [[{ "node": "PDF Oku", "type": "main", "index": 0 }]]
+    },
+    "PDF Oku": {
+      "main": [[{ "node": "PDF Text Çıkar", "type": "main", "index": 0 }]]
+    },
+    "PDF Text Çıkar": {
+      "main": [[{ "node": "SMART_CHUNKER", "type": "main", "index": 0 }]]
+    },
+    "SMART_CHUNKER": {
+      "main": [[{ "node": "Qdrant'a Yükle", "type": "main", "index": 0 }]]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [[{ "node": "Qdrant'a Yükle", "type": "ai_embedding", "index": 0 }]]
+    },
+    "Default Data Loader": {
+      "ai_document": [[{ "node": "Qdrant'a Yükle", "type": "ai_document", "index": 0 }]]
+    },
+    "Qdrant'a Yükle": {
+      "main": [[{ "node": "Sonuç", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Istanbul",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "tags": []
+}

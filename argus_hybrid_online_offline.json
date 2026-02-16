@@ -1,0 +1,371 @@
+{
+  "name": "ARGUS Hybrid - Online/Offline",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1200, -400],
+      "id": "wh-hybrid-001",
+      "name": "Webhook",
+      "webhookId": "a7ae4b5a-7a1c-4b21-b465-29310b473ae7",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// MODE DETECTOR - internet var mi? body.mode ile override edilebilir\n// POST body: { \"message\": \"soru\", \"mode\": \"online\" | \"offline\" | \"auto\" }\n\nconst body = items[0].json.body || items[0].json || {};\nconst message = body.message || body.question || body.text || \"\";\nconst modeOverride = (body.mode || \"auto\").toLowerCase().trim();\n\nlet mode = \"offline\"; // default\n\nif (modeOverride === \"online\") {\n  mode = \"online\";\n} else if (modeOverride === \"offline\") {\n  mode = \"offline\";\n} else {\n  // Auto mode: Ollama her zaman mevcut (lokal), online icin API key kontrolu\n  // Burada basit bir yaklasim: environment variable veya hardcoded flag\n  // Kullanici isterse body.mode ile zorlar\n  mode = \"offline\";\n}\n\nreturn [{\n  json: {\n    message,\n    mode,\n    original_body: body\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-1000, -400],
+      "id": "mode-detect-001",
+      "name": "MODE_DETECT"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "llama3.1:latest",
+          "mode": "list",
+          "cachedResultName": "llama3.1:latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a router for ship manuals.\n\nReturn ONLY valid JSON:\n{\"question\":\"original question in Turkish\",\"collection\":\"...\",\"folder\":null or \"EXACT_FOLDER_NAME\",\"query_en\":\"short English search query\"}\n\nCollections: ship_electric, ship_ccr, ship_manuals_v3\n\nFolders (EXACT names or null):\n\"ELECTRIC\", \"CCR\", \"BRIDGE_EQUIPMENT\", \"MACHINERY\", \"ACCOMMODATION\", \"HULL PIPING\", \"HULL OUTFITTING\", \"BWTS TRAINING\", \"8189 YARD DWG\"\n\nRouting:\n- electric/switchboard/msb/esb/transformer/generator/power/shore connection -> ship_electric, \"ELECTRIC\"\n- cargo/ccr/pump/valve/ows/tank/ballast -> ship_ccr, \"CCR\"\n- bridge/autopilot/radar/gyro/ais/ecdis/echo sounder/vdr -> ship_manuals_v3, \"BRIDGE_EQUIPMENT\"\n- engine/main engine/aux engine/purifier/boiler/compressor/separator/incinerator -> ship_manuals_v3, \"MACHINERY\"\n- hvac/air conditioning/provision/galley/freshwater -> ship_manuals_v3, \"ACCOMMODATION\"\n- ballast water/bwts -> ship_manuals_v3, \"BWTS TRAINING\"\n- hull/pipe/piping -> ship_manuals_v3, \"HULL PIPING\"\n- unsure -> ship_manuals_v3, null\n\nQuestion: {{$json.message}}\n"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "Return ONLY valid JSON. No markdown, no explanation.",
+          "temperature": 0.05,
+          "num_predict": 250
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [-780, -400],
+      "id": "router-hybrid-001",
+      "name": "ROUTER",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// APPLY_ROUTE - parse + sanitize\n\nfunction getRouterText(item) {\n  return (item.json.content || item.json.message?.content || item.json.data?.message?.content || \"\").trim();\n}\n\nconst raw = getRouterText(items[0] || { json: {} });\nlet obj = {};\ntry {\n  let c = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  obj = JSON.parse(c);\n} catch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) { try { obj = JSON.parse(m[0]); } catch (_) {} }\n}\n\n// Fallback: webhook'tan orijinal mesaj\nlet wbMsg = \"\";\ntry {\n  wbMsg = $node[\"MODE_DETECT\"].json.message || \"\";\n} catch (_) {}\n\nconst question = (obj.question || wbMsg || \"\").trim();\nconst mode = $node[\"MODE_DETECT\"].json.mode || \"offline\";\n\nif (!question) {\n  return [{ json: { error: true, message: \"Soru alınamadı. Lütfen tekrar deneyin.\" } }];\n}\n\nlet collection = String(obj.collection || \"ship_manuals_v3\").trim().replace(/^=+/, \"\");\nconst allowed = new Set([\"ship_electric\", \"ship_ccr\", \"ship_manuals_v3\"]);\nif (!allowed.has(collection)) collection = \"ship_manuals_v3\";\n\nconst validFolders = new Set([\"ELECTRIC\",\"CCR\",\"BRIDGE_EQUIPMENT\",\"MACHINERY\",\"ACCOMMODATION\",\"HULL PIPING\",\"HULL OUTFITTING\",\"BWTS TRAINING\",\"8189 YARD DWG\"]);\nlet folder = obj.folder ?? null;\nif (typeof folder === \"string\") {\n  folder = folder.trim().toUpperCase();\n  if (!folder || !validFolders.has(folder)) folder = null;\n}\n\nlet query_en = String(obj.query_en || \"\").trim();\nif (!query_en) query_en = question;\n\nreturn [{ json: { question, query_en, collection, folder, mode } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-560, -400],
+      "id": "apply-route-hybrid-001",
+      "name": "APPLY_ROUTE"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "err-chk-hybrid",
+              "leftValue": "={{ $json.error }}",
+              "rightValue": true,
+              "operator": { "type": "boolean", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [-380, -400],
+      "id": "err-check-hybrid-001",
+      "name": "Route Error?"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": { "__rl": true, "value": "={{$json.collection}}", "mode": "id" },
+        "prompt": "={{$json.query_en}}",
+        "topK": 15,
+        "options": {
+          "searchFilterJson": "={{ $json.folder ? { must: [{ key:\"metadata.folder\", match:{ value:$json.folder } }] } : {} }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-160, -400],
+      "id": "qdrant-hybrid-001",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": { "id": "X0pbbSADyJw0n4U8", "name": "QdrantApi account" }
+      }
+    },
+    {
+      "parameters": { "model": "nomic-embed-text:latest" },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [-160, -200],
+      "id": "embed-hybrid-001",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": { "id": "m56zkpBYscfCoPii", "name": "Ollama account" }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// BUILD_PROMPT - context ve prompt olustur\n\nconst route = $node[\"APPLY_ROUTE\"].json;\nconst question = route.question || \"\";\nconst mode = route.mode || \"offline\";\n\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || d.text || \"\").trim();\n    const md = d.metadata || {};\n    return {\n      text,\n      source: md.sourceName || md.fileName || md.source || md.file || \"Manuel\",\n      folder: md.folder || \"\",\n      page: md.page ?? md.loc?.pageNumber ?? \"\",\n      chunk: md.chunk ?? \"\"\n    };\n  })\n  .filter(h => h.text.length > 50)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\nconst maxChunks = mode === \"online\" ? 8 : 6;\nconst top = cleaned.slice(0, maxChunks);\n\nlet context, sources;\nif (top.length === 0) {\n  context = \"İlgili dokümanlarda bilgi bulunamadı.\";\n  sources = \"Kaynak bulunamadı\";\n} else {\n  context = top.map((h, i) => {\n    const pg = h.page ? ` | Sayfa: ${h.page}` : \"\";\n    return `[Kaynak ${i+1}] ${h.source}${pg}\\n${h.text}`;\n  }).join(\"\\n---\\n\");\n  sources = top.map((h, i) => {\n    const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n    return `${i+1}. ${h.source}${pg}`;\n  }).join(\"\\n\");\n}\n\nconst prompt = `Sen MANTA ANADOLU gemisinin teknik arıza asistanısın. Adın ARGUS.\n\nGÖREV: Gemi teknik manuallerine dayanarak arıza teşhisi yap ve çözüm sun.\n\nKRİTİK KURALLAR:\n1. SADECE aşağıdaki CONTEXT bilgisini kullan. Bilmediğini UYDURMA.\n2. Arıza soruluyorsa:\n   a) Olası nedenleri listele\n   b) Adım adım çözüm prosedürü yaz\n   c) Gerekli alet/malzeme varsa belirt\n3. Cevabın SONUNDA mutlaka \"📚 KAYNAKLAR:\" bölümü olacak (dosya adı + sayfa no).\n4. Context yetersizse: \"Bu konuda manuallerde yeterli bilgi bulunamadı\" de.\n5. Türkçe cevap ver.\n\nKULLANICI SORUSU: ${question}\n\n--- DÖKÜMAN BİLGİLERİ ---\n${context}\n--- DÖKÜMAN SONU ---\n\nBulunan Kaynaklar:\n${sources}`;\n\nreturn [{\n  json: { question, context, sources, prompt, mode }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [80, -440],
+      "id": "build-prompt-hybrid-001",
+      "name": "BUILD_PROMPT"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "conditions": [
+            {
+              "id": "mode-check-1",
+              "leftValue": "={{ $json.mode }}",
+              "rightValue": "online",
+              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [300, -440],
+      "id": "mode-switch-hybrid-001",
+      "name": "Online mi?"
+    },
+    {
+      "parameters": {
+        "model": "llama3.1:latest",
+        "options": {
+          "temperature": 0.2,
+          "numPredict": 2048
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmOllama",
+      "typeVersion": 1,
+      "position": [560, -280],
+      "id": "ollama-llm-hybrid-001",
+      "name": "Ollama LLM",
+      "credentials": {
+        "ollamaApi": { "id": "m56zkpBYscfCoPii", "name": "Ollama account" }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{$json.prompt}}",
+        "needsFallback": true,
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [560, -500],
+      "id": "answer-offline-hybrid-001",
+      "name": "ANSWER_OFFLINE"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY || 'YOUR_KEY_HERE' }}" },
+            { "name": "anthropic-version", "value": "2023-06-01" },
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({ model: \"claude-sonnet-4-5-20250929\", max_tokens: 2048, messages: [{ role: \"user\", content: $json.prompt }] }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [560, -680],
+      "id": "answer-online-hybrid-001",
+      "name": "ANSWER_ONLINE (Claude)"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Claude API response parse\nconst input = items[0].json;\nlet text = \"Cevap üretilemedi.\";\n\ntry {\n  if (input.content && Array.isArray(input.content) && input.content[0]) {\n    text = input.content[0].text || text;\n  } else if (input.error) {\n    text = \"Online API hatası: \" + JSON.stringify(input.error);\n  }\n} catch (e) {\n  text = \"API yanıtı parse edilemedi: \" + e.message;\n}\n\nreturn [{ json: { text, sources: $node[\"BUILD_PROMPT\"].json.sources || \"\", question: $node[\"BUILD_PROMPT\"].json.question || \"\" } }];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [780, -680],
+      "id": "parse-online-hybrid-001",
+      "name": "Parse Online Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "final-text-1",
+              "name": "text",
+              "value": "={{ ($json.text ?? $json.output ?? $json.content ?? $json.answer ?? \"Cevap üretilemedi.\").toString().trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "final-src-1",
+              "name": "sources",
+              "value": "={{ $json.sources || $node[\"BUILD_PROMPT\"].json.sources || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "final-q-1",
+              "name": "question",
+              "value": "={{ $json.question || $node[\"APPLY_ROUTE\"].json.question || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "final-mode-1",
+              "name": "mode",
+              "value": "={{ $node[\"APPLY_ROUTE\"].json.mode || \"offline\" }}",
+              "type": "string"
+            },
+            {
+              "id": "final-ok-1",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1020, -500],
+      "id": "final-fields-hybrid-001",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "err-t-1", "name": "text", "value": "={{ $json.message || \"Bir hata oluştu.\" }}", "type": "string" },
+            { "id": "err-o-1", "name": "ok", "value": false, "type": "boolean" },
+            { "id": "err-s-1", "name": "sources", "value": "", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [-200, -240],
+      "id": "err-resp-hybrid-001",
+      "name": "Error Response"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              { "name": "Content-Type", "value": "application/json" },
+              { "name": "Access-Control-Allow-Origin", "value": "*" },
+              { "name": "Access-Control-Allow-Headers", "value": "Content-Type" },
+              { "name": "Access-Control-Allow-Methods", "value": "POST, OPTIONS" }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1260, -500],
+      "id": "respond-hybrid-001",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "MODE_DETECT", "type": "main", "index": 0 }]]
+    },
+    "MODE_DETECT": {
+      "main": [[{ "node": "ROUTER", "type": "main", "index": 0 }]]
+    },
+    "ROUTER": {
+      "main": [[{ "node": "APPLY_ROUTE", "type": "main", "index": 0 }]]
+    },
+    "APPLY_ROUTE": {
+      "main": [[{ "node": "Route Error?", "type": "main", "index": 0 }]]
+    },
+    "Route Error?": {
+      "main": [
+        [{ "node": "Error Response", "type": "main", "index": 0 }],
+        [{ "node": "Qdrant Vector Store", "type": "main", "index": 0 }]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [[{ "node": "BUILD_PROMPT", "type": "main", "index": 0 }]]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [[{ "node": "Qdrant Vector Store", "type": "ai_embedding", "index": 0 }]]
+    },
+    "BUILD_PROMPT": {
+      "main": [[{ "node": "Online mi?", "type": "main", "index": 0 }]]
+    },
+    "Online mi?": {
+      "main": [
+        [{ "node": "ANSWER_ONLINE (Claude)", "type": "main", "index": 0 }],
+        [{ "node": "ANSWER_OFFLINE", "type": "main", "index": 0 }]
+      ]
+    },
+    "Ollama LLM": {
+      "ai_languageModel": [[{ "node": "ANSWER_OFFLINE", "type": "ai_languageModel", "index": 0 }]]
+    },
+    "ANSWER_OFFLINE": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "ANSWER_ONLINE (Claude)": {
+      "main": [[{ "node": "Parse Online Response", "type": "main", "index": 0 }]]
+    },
+    "Parse Online Response": {
+      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+    },
+    "Format Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    },
+    "Error Response": {
+      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "tags": []
+}
