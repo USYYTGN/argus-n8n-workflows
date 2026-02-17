@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARGUS - Gemi Asistani</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0a;
+      color: #e0e0e0;
+      font-family: "Segoe UI", "Courier New", monospace;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      height: 100vh;
+      padding: 20px;
+    }
+    .chat-container {
+      width: 100%;
+      max-width: 800px;
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
+      box-shadow: 0 0 30px rgba(0, 255, 65, 0.05);
+    }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 20px;
+      border-bottom: 1px solid #2a2a2a;
+      background: #141414;
+    }
+    .header h2 {
+      color: #00ff41;
+      text-shadow: 0 0 8px rgba(0, 255, 65, 0.3);
+      font-size: 18px;
+      letter-spacing: 2px;
+    }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .mode-select {
+      background: #222;
+      color: #aaa;
+      border: 1px solid #444;
+      border-radius: 4px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-family: inherit;
+      outline: none;
+      cursor: pointer;
+    }
+    .mode-select:focus { border-color: #00ff41; }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+      transition: background 0.3s;
+    }
+    .status-dot.online { background: #00ff41; box-shadow: 0 0 6px #00ff41; }
+    .status-dot.busy { background: #ffab00; box-shadow: 0 0 6px #ffab00; }
+    .status-dot.error { background: #ff4444; box-shadow: 0 0 6px #ff4444; }
+
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      scroll-behavior: smooth;
+    }
+    #messages::-webkit-scrollbar { width: 6px; }
+    #messages::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+
+    .msg {
+      margin: 8px 0;
+      padding: 12px 16px;
+      border-radius: 8px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+      font-size: 14px;
+      max-width: 85%;
+    }
+    .user {
+      background: #003d33;
+      color: #e0f2f1;
+      margin-left: auto;
+      border-bottom-right-radius: 2px;
+    }
+    .argus {
+      background: #1e272e;
+      color: #b0bec5;
+      border-left: 3px solid #00ff41;
+      border-bottom-left-radius: 2px;
+    }
+    .argus strong, .argus b { color: #00ff41; }
+    .argus h1, .argus h2, .argus h3 { color: #00ff41; margin: 8px 0 4px; }
+    .waiting {
+      opacity: 0.7;
+      font-style: italic;
+      color: #666;
+    }
+    .waiting::after {
+      content: '';
+      animation: dots 1.5s infinite;
+    }
+    @keyframes dots {
+      0% { content: '.'; }
+      33% { content: '..'; }
+      66% { content: '...'; }
+    }
+    .error-msg {
+      background: #2a1515;
+      color: #ff8a80;
+      border-left: 3px solid #ff4444;
+    }
+    .sources {
+      margin-top: 8px;
+      padding: 8px 12px;
+      background: #162016;
+      border-radius: 4px;
+      font-size: 12px;
+      color: #81c784;
+      border-left: 2px solid #00ff41;
+    }
+    .sources-title {
+      font-weight: bold;
+      color: #00ff41;
+      margin-bottom: 4px;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .input-area {
+      display: flex;
+      gap: 10px;
+      padding: 16px;
+      border-top: 1px solid #2a2a2a;
+      background: #141414;
+    }
+    input {
+      flex: 1;
+      padding: 14px 16px;
+      background: #222;
+      border: 1px solid #333;
+      color: white;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input:focus { border-color: #00ff41; }
+    input::placeholder { color: #555; }
+    button {
+      padding: 14px 24px;
+      background: #00ff41;
+      color: #000;
+      border: none;
+      font-weight: bold;
+      cursor: pointer;
+      border-radius: 8px;
+      font-size: 14px;
+      transition: all 0.2s;
+      font-family: inherit;
+    }
+    button:hover { background: #00cc33; box-shadow: 0 0 12px rgba(0, 255, 65, 0.3); }
+    button:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 16px;
+      font-size: 11px;
+      color: #444;
+      border-top: 1px solid #1e1e1e;
+    }
+    .footer-btns { display: flex; gap: 8px; }
+    .smallbtn {
+      padding: 4px 10px;
+      background: transparent;
+      color: #555;
+      border: 1px solid #333;
+      font-size: 11px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-family: inherit;
+      min-width: unset;
+    }
+    .smallbtn:hover { color: #aaa; border-color: #555; background: transparent; box-shadow: none; }
+  </style>
+</head>
+<body>
+  <div class="chat-container">
+    <div class="header">
+      <h2>ARGUS SYSTEM</h2>
+      <div class="header-controls">
+        <select class="mode-select" id="modeSelect">
+          <option value="offline">OFFLINE (Ollama)</option>
+          <option value="online">ONLINE (API)</option>
+          <option value="auto">AUTO</option>
+        </select>
+        <div class="status-dot" id="statusDot" title="Baglanti durumu"></div>
+      </div>
+    </div>
+
+    <div id="messages">
+      <div class="msg argus">ARGUS hazir. MANTA ANADOLU gemi manualleri hakkinda soru sorabilirsin.</div>
+    </div>
+
+    <div class="input-area">
+      <input type="text" id="userInput" placeholder="Sorunuzu yazin..." autocomplete="off" />
+      <button id="sendBtn">GONDER</button>
+    </div>
+
+    <div class="footer">
+      <span id="endpointText"></span>
+      <div class="footer-btns">
+        <button class="smallbtn" id="clearBtn">Temizle</button>
+        <button class="smallbtn" id="pingBtn">Ping</button>
+        <button class="smallbtn" id="testToggle">Test Mode</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =====================
+    //  AYARLAR
+    // =====================
+    const N8N_BASE = "http://localhost:5678";
+    const WEBHOOK_PATH = "chat";
+    let useTest = false;
+
+    function getWebhookUrl() {
+      return useTest
+        ? `${N8N_BASE}/webhook-test/${WEBHOOK_PATH}`
+        : `${N8N_BASE}/webhook/${WEBHOOK_PATH}`;
+    }
+
+    // =====================
+    //  UI ELEMANLARI
+    // =====================
+    const messagesEl = document.getElementById("messages");
+    const inputEl    = document.getElementById("userInput");
+    const sendBtn    = document.getElementById("sendBtn");
+    const clearBtn   = document.getElementById("clearBtn");
+    const pingBtn    = document.getElementById("pingBtn");
+    const testToggle = document.getElementById("testToggle");
+    const modeSelect = document.getElementById("modeSelect");
+    const statusDot  = document.getElementById("statusDot");
+    const endpointText = document.getElementById("endpointText");
+
+    endpointText.innerText = getWebhookUrl();
+
+    function setStatus(state) {
+      statusDot.className = "status-dot " + state;
+    }
+
+    function addMessage(text, role, extraClass = "") {
+      const div = document.createElement("div");
+      div.className = `msg ${role} ${extraClass}`.trim();
+      if (role === "argus" && !extraClass) {
+        div.innerHTML = formatText(text);
+      } else {
+        div.innerText = text;
+      }
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+      return div;
+    }
+
+    function addSources(sourcesText) {
+      if (!sourcesText || sourcesText === "Kaynak bulunamadi") return;
+      const div = document.createElement("div");
+      div.className = "sources";
+      div.innerHTML = '<div class="sources-title">Kaynaklar</div>' +
+        sourcesText.replace(/\n/g, "<br/>");
+      messagesEl.appendChild(div);
+      messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+
+    // Basit markdown -> HTML (bold, baslik, liste)
+    function formatText(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+        .replace(/^### (.+)$/gm, "<h3>$1</h3>")
+        .replace(/^## (.+)$/gm, "<h2>$1</h2>")
+        .replace(/^# (.+)$/gm, "<h1>$1</h1>")
+        .replace(/^[-*] (.+)$/gm, "  &bull; $1")
+        .replace(/^\d+\.\s(.+)$/gm, function(m, p1, offset, str) {
+          return "  &bull; " + p1;
+        })
+        .replace(/\n/g, "<br/>");
+    }
+
+    function setUiBusy(isBusy) {
+      sendBtn.disabled = isBusy;
+      inputEl.disabled = isBusy;
+      if (isBusy) setStatus("busy");
+    }
+
+    async function callN8n(messageText, waitingEl) {
+      const url = getWebhookUrl();
+      const mode = modeSelect.value;
+
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: messageText, mode: mode })
+      });
+
+      const raw = await response.text();
+
+      if (!response.ok) {
+        waitingEl.remove();
+        addMessage(`HATA (HTTP ${response.status})\n${raw}`, "argus", "error-msg");
+        setStatus("error");
+        return;
+      }
+
+      let data = {};
+      try {
+        data = raw && raw.trim() ? JSON.parse(raw) : {};
+      } catch (e) {
+        data = { text: raw };
+      }
+
+      waitingEl.remove();
+
+      const botReply =
+        data.text ||
+        data.output ||
+        data.answer ||
+        data.content ||
+        (raw && raw.trim() ? raw : "n8n bos cevap dondurdu.");
+
+      addMessage(botReply, "argus");
+
+      // Kaynaklari goster
+      if (data.sources) {
+        addSources(data.sources);
+      }
+
+      setStatus("online");
+    }
+
+    async function sendMessage() {
+      const messageText = inputEl.value.trim();
+      if (!messageText) return;
+
+      addMessage(messageText, "user");
+      inputEl.value = "";
+      setUiBusy(true);
+
+      const waitingEl = addMessage("Analiz ediliyor", "argus", "waiting");
+
+      try {
+        await callN8n(messageText, waitingEl);
+      } catch (err) {
+        waitingEl.remove();
+        addMessage(
+          "BAGLANTI HATASI\n\n" +
+          "Kontrol et:\n" +
+          "- n8n acik mi?\n" +
+          "- Workflow aktif mi? (Production = Publish gerekli)\n" +
+          "- Test mode icin workflow ekranda Execute acik olmali\n\n" +
+          String(err),
+          "argus",
+          "error-msg"
+        );
+        setStatus("error");
+      } finally {
+        setUiBusy(false);
+        inputEl.focus();
+      }
+    }
+
+    // =====================
+    //  EVENTLER
+    // =====================
+    sendBtn.addEventListener("click", sendMessage);
+    inputEl.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") sendMessage();
+    });
+
+    clearBtn.addEventListener("click", () => {
+      messagesEl.innerHTML = '<div class="msg argus">Temizlendi.</div>';
+      inputEl.focus();
+    });
+
+    pingBtn.addEventListener("click", async () => {
+      addMessage("ping", "user");
+      const w = addMessage("Ping atiliyor", "argus", "waiting");
+      try { await callN8n("ping", w); }
+      catch (err) { w.remove(); addMessage("Ping basarisiz: " + err, "argus", "error-msg"); setStatus("error"); }
+    });
+
+    testToggle.addEventListener("click", () => {
+      useTest = !useTest;
+      testToggle.innerText = useTest ? "Production Mode" : "Test Mode";
+      testToggle.style.color = useTest ? "#ffab00" : "#555";
+      testToggle.style.borderColor = useTest ? "#ffab00" : "#333";
+      endpointText.innerText = getWebhookUrl();
+    });
+
+    inputEl.focus();
+    setStatus("online");
+  </script>
+</body>
+</html>
