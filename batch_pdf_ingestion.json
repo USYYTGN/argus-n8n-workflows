@@ -160,14 +160,14 @@
       "main": [
         [
           {
-            "node": "PDF Text Cikar",
+            "node": "Bitti - Ozet",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Bitti - Ozet",
+            "node": "PDF Text Cikar",
             "type": "main",
             "index": 0
           }
