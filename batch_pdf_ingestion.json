@@ -11,7 +11,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// =====================================================\n// AYARLAR - HER KLASOR ICIN BURADAN DEGISTIR\n// =====================================================\n// Her calistirmada sadece BIR klasor yukle.\n// Bitince folderPath, collection, folderTag degistirip tekrar calistir.\n//\n// YUKLEME SIRASI (oneri):\n// 1) MACHINERY       -> ship_machinery\n// 2) ACCOMMODATION   -> ship_accommodation\n// 3) HULL PIPING     -> ship_hull_piping\n// 4) HULL OUTFITTING -> ship_hull_outfitting\n// 5) BWTS TRAINING   -> ship_bwts_training\n// 6) F               -> ship_f\n// 7) 8189 YARD DWG   -> ship_8189_yard_dwg\n// 8) BRIDGE_ EQUIPMENT -> ship_bridge_equipment  (en buyuk, en son)\n//\n// NOT: ELECTRIC ve CCR zaten yuklu, tekrar yuklemeyin!\n// =====================================================\n\nconst CONFIG = {\n  folderPath: \"D:/MANTA ANADOLU/MACHINERY/*.pdf\",\n  collection: \"ship_machinery\",\n  folderTag: \"MACHINERY\",\n  chunkSize: 800,\n  chunkOverlap: 150\n};\n\nreturn [{ json: CONFIG }];\n"
+        "jsCode": "// =====================================================\n// AYARLAR - HER KLASOR ICIN BURADAN DEGISTIR\n// =====================================================\n// Her calistirmada sadece BIR klasor yukle.\n// Bitince folderPath, collection, folderTag degistirip tekrar calistir.\n//\n// YUKLEME SIRASI (oneri):\n// 1) MACHINERY       -> ship_machinery\n// 2) ACCOMMODATION   -> ship_accommodation\n// 3) HULL PIPING     -> ship_hull_piping\n// 4) HULL OUTFITTING -> ship_hull_outfitting\n// 5) BWTS TRAINING   -> ship_bwts_training\n// 6) F               -> ship_f\n// 7) 8189 YARD DWG   -> ship_8189_yard_dwg\n// 8) BRIDGE_ EQUIPMENT -> ship_bridge_equipment  (en buyuk, en son)\n//\n// NOT: ELECTRIC ve CCR zaten yuklu, tekrar yuklemeyin!\n// =====================================================\n\nconst CONFIG = {\n  folderPath: \"D:/MANTA ANADOLU/MACHINERY/**/*.pdf\",\n  collection: \"ship_machinery\",\n  folderTag: \"MACHINERY\",\n  chunkSize: 800,\n  chunkOverlap: 150\n};\n\nreturn [{ json: CONFIG }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -109,6 +109,16 @@
       "position": [1320, 240],
       "id": "a1b2c3d4-0009-4000-8000-000000000009",
       "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "jsCode": "// TAMAMLANDI - Ozet bilgi\nconst config = $node[\"CONFIG\"].json;\nconst totalItems = $node[\"Tek Tek Yukle\"].context.noItemsLeft \n  ? 0 \n  : ($node[\"Tek Tek Yukle\"].context.currentRunIndex || 0) + 1;\n\nreturn [{\n  json: {\n    status: \"TAMAMLANDI\",\n    message: `Toplam ${totalItems} PDF dosyasi islendi ve Qdrant'a yuklendi.`,\n    collection: config.collection,\n    folderTag: config.folderTag,\n    folderPath: config.folderPath,\n    totalFiles: totalItems\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [200, 300],
+      "id": "a1b2c3d4-0010-4000-8000-000000000010",
+      "name": "Bitti - Ozet"
     }
   ],
   "pinData": {},
@@ -151,6 +161,13 @@
         [
           {
             "node": "PDF Text Cikar",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Bitti - Ozet",
             "type": "main",
             "index": 0
           }
