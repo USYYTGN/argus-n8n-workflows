@@ -176,7 +176,7 @@
       "parameters": {
         "promptType": "define",
         "text": "={{$json.prompt}}",
-        "needsFallback": true,
+        "needsFallback": false,
         "batching": {}
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
