@@ -19,7 +19,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// MODE DETECTOR + SESSION ID\n// POST body: { \"message\": \"soru\", \"mode\": \"online\" | \"offline\" | \"auto\", \"session_id\": \"abc123\" }\n\nconst body = items[0].json.body || items[0].json || {};\nconst message = body.message || body.question || body.text || \"\";\nconst modeOverride = (body.mode || \"auto\").toLowerCase().trim();\n\n// Session ID: client gonderirse kullan, yoksa timestamp ile olustur\nconst session_id = body.session_id || body.sessionId || body.session || `s_${Date.now()}`;\n\nlet mode = \"offline\";\n\nif (modeOverride === \"online\") {\n  mode = \"online\";\n} else if (modeOverride === \"offline\") {\n  mode = \"offline\";\n} else {\n  mode = \"offline\";\n}\n\nreturn [{\n  json: {\n    message,\n    mode,\n    session_id,\n    original_body: body\n  }\n}];\n"
+        "jsCode": "// MODE DETECTOR + SESSION ID + HISTORY\n// POST body: { \"message\": \"soru\", \"mode\": \"offline\", \"session_id\": \"abc\", \"history\": [{\"role\":\"user\",\"content\":\"...\"},{\"role\":\"assistant\",\"content\":\"...\"}] }\n\nconst body = items[0].json.body || items[0].json || {};\nconst message = body.message || body.question || body.text || \"\";\nconst modeOverride = (body.mode || \"auto\").toLowerCase().trim();\n\nconst session_id = body.session_id || body.sessionId || body.session || `s_${Date.now()}`;\n\n// Conversation history - client tarafindan gonderilir\nconst history = Array.isArray(body.history) ? body.history : [];\n\nlet mode = \"offline\";\nif (modeOverride === \"online\") {\n  mode = \"online\";\n} else if (modeOverride === \"offline\") {\n  mode = \"offline\";\n} else {\n  mode = \"offline\";\n}\n\nreturn [{\n  json: {\n    message,\n    mode,\n    session_id,\n    history,\n    original_body: body\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -63,7 +63,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// APPLY_ROUTE - parse + sanitize + session_id pass-through\n\nfunction getRouterText(item) {\n  return (item.json.content || item.json.message?.content || item.json.data?.message?.content || \"\").trim();\n}\n\nconst raw = getRouterText(items[0] || { json: {} });\nlet obj = {};\ntry {\n  let c = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  obj = JSON.parse(c);\n} catch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) { try { obj = JSON.parse(m[0]); } catch (_) {} }\n}\n\n// Fallback: webhook'tan orijinal mesaj\nlet wbMsg = \"\";\ntry {\n  wbMsg = $node[\"MODE_DETECT\"].json.message || \"\";\n} catch (_) {}\n\nconst question = (obj.question || wbMsg || \"\").trim();\nconst mode = $node[\"MODE_DETECT\"].json.mode || \"offline\";\nconst session_id = $node[\"MODE_DETECT\"].json.session_id || \"default\";\n\nif (!question) {\n  return [{ json: { error: true, message: \"Soru alınamadı. Lütfen tekrar deneyin.\" } }];\n}\n\nlet collection = String(obj.collection || \"ship_manuals_v3\").trim().replace(/^=+/, \"\");\nconst allowed = new Set([\"ship_electric\",\"ship_ccr\",\"ship_machinery\",\"ship_bridge_equipment\",\"ship_accommodation\",\"ship_hull_piping\",\"ship_hull_outfitting\",\"ship_bwts_training\",\"ship_8189_yard_dwg\",\"ship_f\"]);\nif (!allowed.has(collection)) collection = \"ship_machinery\";\n\nconst validFolders = new Set([\"ELECTRIC\",\"CCR\",\"BRIDGE_EQUIPMENT\",\"MACHINERY\",\"ACCOMMODATION\",\"HULL PIPING\",\"HULL OUTFITTING\",\"BWTS TRAINING\",\"8189 YARD DWG\"]);\nlet folder = obj.folder ?? null;\nif (typeof folder === \"string\") {\n  folder = folder.trim().toUpperCase();\n  if (!folder || !validFolders.has(folder)) folder = null;\n}\n\nlet query_en = String(obj.query_en || \"\").trim();\nif (!query_en) query_en = question;\n\nreturn [{ json: { question, query_en, collection, folder, mode, session_id } }];\n"
+        "jsCode": "// APPLY_ROUTE - parse + sanitize + session_id + history pass-through\n\nfunction getRouterText(item) {\n  return (item.json.content || item.json.message?.content || item.json.data?.message?.content || \"\").trim();\n}\n\nconst raw = getRouterText(items[0] || { json: {} });\nlet obj = {};\ntry {\n  let c = raw.replace(/```json\\n?/g, '').replace(/```\\n?/g, '').trim();\n  obj = JSON.parse(c);\n} catch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) { try { obj = JSON.parse(m[0]); } catch (_) {} }\n}\n\nlet wbMsg = \"\";\ntry {\n  wbMsg = $node[\"MODE_DETECT\"].json.message || \"\";\n} catch (_) {}\n\nconst question = (obj.question || wbMsg || \"\").trim();\nconst mode = $node[\"MODE_DETECT\"].json.mode || \"offline\";\nconst session_id = $node[\"MODE_DETECT\"].json.session_id || \"default\";\nconst history = $node[\"MODE_DETECT\"].json.history || [];\n\nif (!question) {\n  return [{ json: { error: true, message: \"Soru alınamadı. Lütfen tekrar deneyin.\" } }];\n}\n\nlet collection = String(obj.collection || \"ship_manuals_v3\").trim().replace(/^=+/, \"\");\nconst allowed = new Set([\"ship_electric\",\"ship_ccr\",\"ship_machinery\",\"ship_bridge_equipment\",\"ship_accommodation\",\"ship_hull_piping\",\"ship_hull_outfitting\",\"ship_bwts_training\",\"ship_8189_yard_dwg\",\"ship_f\"]);\nif (!allowed.has(collection)) collection = \"ship_machinery\";\n\nconst validFolders = new Set([\"ELECTRIC\",\"CCR\",\"BRIDGE_EQUIPMENT\",\"MACHINERY\",\"ACCOMMODATION\",\"HULL PIPING\",\"HULL OUTFITTING\",\"BWTS TRAINING\",\"8189 YARD DWG\"]);\nlet folder = obj.folder ?? null;\nif (typeof folder === \"string\") {\n  folder = folder.trim().toUpperCase();\n  if (!folder || !validFolders.has(folder)) folder = null;\n}\n\nlet query_en = String(obj.query_en || \"\").trim();\nif (!query_en) query_en = question;\n\nreturn [{ json: { question, query_en, collection, folder, mode, session_id, history } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -125,7 +125,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// BUILD_PROMPT v2 - Kapsamli prompt + daha fazla chunk\n\nconst route = $node[\"APPLY_ROUTE\"].json;\nconst question = route.question || \"\";\nconst mode = route.mode || \"offline\";\nconst session_id = route.session_id || \"default\";\n\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || d.text || \"\").trim();\n    const md = d.metadata || {};\n    return {\n      text,\n      source: md.sourceName || md.fileName || md.source || md.file || \"Manuel\",\n      folder: md.folder || \"\",\n      page: md.page ?? md.loc?.pageNumber ?? \"\",\n      chunk: md.chunk ?? \"\",\n      section: md.section || md.header || \"\"\n    };\n  })\n  .filter(h => h.text.length > 20)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\n// Daha fazla chunk: offline 12, online 10\nconst maxChunks = mode === \"online\" ? 10 : 12;\nconst top = cleaned.slice(0, maxChunks);\n\nlet context, sources;\nif (top.length === 0) {\n  context = \"İlgili dokümanlarda bilgi bulunamadı.\";\n  sources = \"Kaynak bulunamadı\";\n} else {\n  context = top.map((h, i) => {\n    const pg = h.page ? ` | Sayfa: ${h.page}` : \"\";\n    const sec = h.section ? ` | Bölüm: ${h.section}` : \"\";\n    return `[Kaynak ${i+1}] ${h.source}${pg}${sec}\\n${h.text}`;\n  }).join(\"\\n---\\n\");\n  sources = top.map((h, i) => {\n    const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n    const sec = h.section ? ` - ${h.section}` : \"\";\n    return `${i+1}. ${h.source}${pg}${sec}`;\n  }).join(\"\\n\");\n}\n\nconst prompt = `Sen MANTA ANADOLU gemisinin kıdemli teknik uzmanı ARGUS'sun. Teknik manualleri ezbere biliyorsun.\n\n## GÖREV\nAşağıdaki teknik doküman bölümlerini SATIR SATIR oku ve kullanıcının sorusuna bu bilgilere dayanarak EN KAPSAMLI ve EN DETAYLI cevabı ver.\n\n## KRİTİK KURALLAR\n1. Context'teki TÜM ilgili bilgiyi kullan. Hiçbir teknik detayı, sayısal değeri veya referansı ATLAMA.\n2. Doküman adı, bölüm numarası, tablo adı, şekil referansı varsa cevabında MUTLAKA belirt.\n3. Birden fazla kaynakta bilgi varsa ÇAPRAZ REFERANS yap - tutarsızlık varsa bunu da belirt.\n4. Teknik terimlerin İngilizcesini parantez içinde yaz: \"yalancı alarm (spurious alarm)\" gibi.\n5. Sayısal değerleri (süreler, sıcaklıklar, basınçlar, set değerleri) BİREBİR aktar.\n6. Context'te OLMAYAN bilgiyi KESİNLİKLE UYDURMA. Bilgi yoksa açıkça söyle.\n7. Kullanıcının verdiği değer ile dokümandaki değer farklıysa, bu FARKI açıkla ve olası sebeplerini analiz et.\n\n## CEVAP YAPISI (Bu yapıyı MUTLAKA takip et)\n\n### Analiz\nSorunun 1-2 cümlelik teknik özeti.\n\n### Detaylı Açıklama\n- Arıza/sorun soruluyorsa: Olası nedenleri NUMARALI liste halinde yaz. Her madde için:\n  * Nedenin teknik açıklaması\n  * Hangi dokümanda/bölümde bu bilginin geçtiği\n  * Varsa ilgili parametre değerleri\n- Prosedür soruluyorsa: Adım adım talimatlar\n- Bilgi soruluyorsa: Kapsamlı teknik açıklama\n\n### Çözüm / Öneri\nPratik çözüm adımları, kontrol edilmesi gereken noktalar, dikkat edilmesi gereken güvenlik uyarıları.\n\n### 📚 KAYNAKLAR\nHer kaynak için: Doküman Adı (doküman numarası varsa) - Bölüm/Sayfa bilgisi\n\nKULLANICI SORUSU: ${question}\n\n--- TEKNİK DOKÜMAN İÇERİĞİ ---\n${context}\n--- DOKÜMAN SONU ---\n\nYukarıdaki doküman içeriğini dikkatle analiz et ve kapsamlı cevap ver:`;\n\nreturn [{\n  json: { question, context, sources, prompt, mode, session_id }\n}];\n"
+        "jsCode": "// BUILD_PROMPT v3 - Anti-hallucination + client-side memory + deep source extraction\n\nconst route = $node[\"APPLY_ROUTE\"].json;\nconst question = route.question || \"\";\nconst mode = route.mode || \"offline\";\nconst session_id = route.session_id || \"default\";\nconst history = route.history || [];\n\n// --- DEEP SOURCE EXTRACTION ---\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || d.text || \"\").trim();\n    const md = d.metadata || {};\n\n    // Try many possible metadata keys for source name\n    let source = md.sourceName || md.fileName || md.source_name || md.file_name\n      || md.name || md.title || md.document_name || md.doc_name;\n\n    // If source is blob URL or empty, try to extract from path\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const rawSource = String(md.source || md.file || md.path || \"\");\n      if (rawSource && !rawSource.startsWith('blob:') && rawSource.length > 2) {\n        // Extract filename from path: /path/to/file.pdf -> file.pdf\n        const parts = rawSource.split('/').pop().split('\\\\').pop();\n        if (parts && parts.length > 2) source = parts;\n      }\n    }\n\n    // Still no valid source? Use folder as context\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const folder = md.folder || md.category || md.collection || \"\";\n      if (folder) {\n        const folderMap = {\n          'ELECTRIC': 'Elektrik Sistemi Manueli',\n          'CCR': 'Kargo Kontrol Odasi Manueli',\n          'MACHINERY': 'Makine Dairesi Manueli',\n          'BRIDGE_EQUIPMENT': 'Kopru Ekipmanlari Manueli',\n          'ACCOMMODATION': 'Yasam Alanlari Manueli',\n          'HULL PIPING': 'Boru Hatlari Manueli',\n          'HULL OUTFITTING': 'Gemi Donanimi Manueli',\n          'BWTS TRAINING': 'Balast Suyu Aritma Manueli'\n        };\n        source = folderMap[folder.toUpperCase()] || `${folder} Manueli`;\n      } else {\n        source = \"Teknik Manuel\";\n      }\n    }\n\n    return {\n      text,\n      source,\n      folder: md.folder || md.category || \"\",\n      page: md.page ?? md.pageNumber ?? md.loc?.pageNumber ?? md.page_number ?? \"\",\n      chunk: md.chunk ?? md.chunk_id ?? \"\",\n      section: md.section || md.header || md.heading || md.chapter || \"\",\n      _metaKeys: Object.keys(md).join(\",\")\n    };\n  })\n  .filter(h => h.text.length > 20)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\nconst maxChunks = mode === \"online\" ? 10 : 12;\nconst top = cleaned.slice(0, maxChunks);\n\n// Debug: all unique metadata keys\nconst allMetaKeys = [...new Set(cleaned.flatMap(c => c._metaKeys.split(\",\")))].join(\", \");\n\nlet context, sources;\nif (top.length === 0) {\n  context = \"Ilgili dokumanlarda bilgi bulunamadi.\";\n  sources = \"Kaynak bulunamadi\";\n} else {\n  context = top.map((h, i) => {\n    const pg = h.page ? ` | Sayfa: ${h.page}` : \"\";\n    const sec = h.section ? ` | Bolum: ${h.section}` : \"\";\n    return `[Kaynak ${i+1}] ${h.source}${pg}${sec}\\n${h.text}`;\n  }).join(\"\\n---\\n\");\n  sources = top.map((h, i) => {\n    const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n    const sec = h.section ? ` - ${h.section}` : \"\";\n    return `${i+1}. ${h.source}${pg}${sec}`;\n  }).join(\"\\n\");\n}\n\n// --- CONVERSATION HISTORY (client-side, brief) ---\nlet historyBlock = \"\";\nif (history.length > 0) {\n  const recent = history.slice(-6); // max 3 Q&A pairs\n  historyBlock = \"\\n## ONCEKI SOHBET GECMISI (Sadece baglam icin)\\n\";\n  historyBlock += recent.map(h => {\n    const role = h.role === \"user\" ? \"Kullanici\" : \"ARGUS\";\n    // Truncate long answers to 250 chars\n    const content = String(h.content || \"\").substring(0, 250);\n    return `${role}: ${content}`;\n  }).join(\"\\n\");\n  historyBlock += \"\\n\\nUYARI: Onceki sohbet sadece BAGLAM icindir. Simdiki soruya SADECE asagidaki GUNCEL dokuman icerigiyle cevap ver. Onceki cevaplardaki bilgileri kaynak olarak KULLANMA.\\n\";\n}\n\nconst prompt = `Sen MANTA ANADOLU gemisinin kidemli teknik uzmani ARGUS'sun.\n\n## GOREV\nAsagidaki teknik dokuman bolumlerini SATIR SATIR oku ve kullanicinin sorusuna bu bilgilere dayanarak EN KAPSAMLI ve EN DETAYLI cevabi ver.\n${historyBlock}\n## KRITIK KURALLAR\n1. Context'teki TUM ilgili bilgiyi kullan. Hicbir teknik detayi, sayisal degeri veya referansi ATLAMA.\n2. Kaynak referansi verirken SADECE context'te [Kaynak 1], [Kaynak 2] vb. olarak verilen bilgileri kullan.\n3. Birden fazla kaynakta bilgi varsa CAPRAZ REFERANS yap.\n4. Teknik terimlerin Ingilizcesini parantez icinde yaz.\n5. Sayisal degerleri (sureler, sicakliklar, basinclar) BIREBIR aktar.\n6. Context'te OLMAYAN bilgiyi KESINLIKLE UYDURMA.\n7. Kullanicinin verdigi deger ile dokumandaki deger farkliysa, bu FARKI acikla.\n\n## YASAK DAVRANISLAR (BUNLARI KESINLIKLE YAPMA!)\n- Context'te GECMEYEN referans numarasi UYDURMA (orn: \"Bolum 3.2.1\" yazma eger context'te gecmiyorsa)\n- Context'te OLMAYAN tablo veya sekil adi UYDURMA\n- Genel muhendislik bilgisi ile cevap verme - SADECE context'teki bilgiyi kullan\n- \"Referans: X.Y.Z\" gibi uydurma referans numaralari YAZMA\n- Konuyu DEGISTIRME - kullanici ne sorduysa ONA cevap ver, baska konuya SAPMA\n- Onceki sohbet gecmisindeki konulara SAPMA - simdiki soruya ODAKLAN\n\n## CEVAP YAPISI\n\n### Analiz\nSorunun 1-2 cumlelik teknik ozeti.\n\n### Detayli Aciklama\nOlasi nedenleri NUMARALI liste halinde yaz. Her madde icin:\n* Teknik aciklama\n* Context'te bu bilginin gectigi kaynak: [Kaynak X] olarak belirt\n* Ilgili parametre degerleri (varsa)\n\n### Cozum / Oneri\nPratik cozum adimlari ve guvenlik uyarilari.\n\n### KAYNAKLAR\nSADECE context'te verilen kaynaklari listele. Uydurma referans EKLEME.\n\nKULLANICI SORUSU: ${question}\n\n--- TEKNIK DOKUMAN ICERIGI ---\n${context}\n--- DOKUMAN SONU ---\n\nYukaridaki dokuman icerigini dikkatle analiz et ve SADECE bu icerige dayanarak cevap ver:`;\n\nreturn [{\n  json: { question, context, sources, prompt, mode, session_id, debug_meta: allMetaKeys }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -159,7 +159,7 @@
       "parameters": {
         "model": "llama3.1:latest",
         "options": {
-          "temperature": 0.2,
+          "temperature": 0.15,
           "numPredict": 4096
         }
       },
@@ -184,17 +184,6 @@
       "position": [560, -500],
       "id": "answer-offline-hybrid-001",
       "name": "ANSWER_OFFLINE"
-    },
-    {
-      "parameters": {
-        "sessionKey": "={{ $json.session_id || 'default' }}",
-        "contextWindowLength": 10
-      },
-      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
-      "typeVersion": 1.3,
-      "position": [720, -280],
-      "id": "memory-hybrid-001",
-      "name": "Window Buffer Memory"
     },
     {
       "parameters": {
@@ -224,7 +213,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Claude API response parse\nconst input = items[0].json;\nlet text = \"Cevap üretilemedi.\";\n\ntry {\n  if (input.content && Array.isArray(input.content) && input.content[0]) {\n    text = input.content[0].text || text;\n  } else if (input.error) {\n    text = \"Online API hatası: \" + JSON.stringify(input.error);\n  }\n} catch (e) {\n  text = \"API yanıtı parse edilemedi: \" + e.message;\n}\n\nreturn [{ json: { text, sources: $node[\"BUILD_PROMPT\"].json.sources || \"\", question: $node[\"BUILD_PROMPT\"].json.question || \"\" } }];\n"
+        "jsCode": "// Claude API response parse\nconst input = items[0].json;\nlet text = \"Cevap uretilemedi.\";\n\ntry {\n  if (input.content && Array.isArray(input.content) && input.content[0]) {\n    text = input.content[0].text || text;\n  } else if (input.error) {\n    text = \"Online API hatasi: \" + JSON.stringify(input.error);\n  }\n} catch (e) {\n  text = \"API yaniti parse edilemedi: \" + e.message;\n}\n\nreturn [{ json: { text, sources: $node[\"BUILD_PROMPT\"].json.sources || \"\", question: $node[\"BUILD_PROMPT\"].json.question || \"\" } }];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
@@ -239,7 +228,7 @@
             {
               "id": "final-text-1",
               "name": "text",
-              "value": "={{ ($json.text ?? $json.output ?? $json.content ?? $json.answer ?? \"Cevap üretilemedi.\").toString().trim() }}",
+              "value": "={{ ($json.text ?? $json.output ?? $json.content ?? $json.answer ?? \"Cevap uretilemedi.\").toString().trim() }}",
               "type": "string"
             },
             {
@@ -265,6 +254,18 @@
               "name": "ok",
               "value": true,
               "type": "boolean"
+            },
+            {
+              "id": "final-sid-1",
+              "name": "session_id",
+              "value": "={{ $node[\"APPLY_ROUTE\"].json.session_id || \"\" }}",
+              "type": "string"
+            },
+            {
+              "id": "final-debug-1",
+              "name": "debug_meta_keys",
+              "value": "={{ $node[\"BUILD_PROMPT\"].json.debug_meta || \"\" }}",
+              "type": "string"
             }
           ]
         },
@@ -280,7 +281,7 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "err-t-1", "name": "text", "value": "={{ $json.message || \"Bir hata oluştu.\" }}", "type": "string" },
+            { "id": "err-t-1", "name": "text", "value": "={{ $json.message || \"Bir hata olustu.\" }}", "type": "string" },
             { "id": "err-o-1", "name": "ok", "value": false, "type": "boolean" },
             { "id": "err-s-1", "name": "sources", "value": "", "type": "string" }
           ]
@@ -350,9 +351,6 @@
     },
     "Ollama LLM": {
       "ai_languageModel": [[{ "node": "ANSWER_OFFLINE", "type": "ai_languageModel", "index": 0 }]]
-    },
-    "Window Buffer Memory": {
-      "ai_memory": [[{ "node": "ANSWER_OFFLINE", "type": "ai_memory", "index": 0 }]]
     },
     "ANSWER_OFFLINE": {
       "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
