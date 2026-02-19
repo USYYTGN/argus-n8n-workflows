@@ -10,7 +10,10 @@
       },
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2.1,
-      "position": [-1200, -400],
+      "position": [
+        -1200,
+        -400
+      ],
       "id": "wh-hybrid-001",
       "name": "Webhook",
       "webhookId": "a7ae4b5a-7a1c-4b21-b465-29310b473ae7",
@@ -23,7 +26,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-1000, -400],
+      "position": [
+        -1000,
+        -400
+      ],
       "id": "mode-detect-001",
       "name": "MODE_DETECT"
     },
@@ -51,7 +57,10 @@
       },
       "type": "@n8n/n8n-nodes-langchain.ollama",
       "typeVersion": 1,
-      "position": [-780, -400],
+      "position": [
+        -780,
+        -400
+      ],
       "id": "router-hybrid-001",
       "name": "ROUTER",
       "credentials": {
@@ -67,20 +76,32 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [-560, -400],
+      "position": [
+        -560,
+        -400
+      ],
       "id": "apply-route-hybrid-001",
       "name": "APPLY_ROUTE"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
           "conditions": [
             {
               "id": "err-chk-hybrid",
               "leftValue": "={{ $json.error }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals", "name": "filter.operator.equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
             }
           ],
           "combinator": "and"
@@ -89,60 +110,93 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [-380, -400],
+      "position": [
+        -380,
+        -400
+      ],
       "id": "err-check-hybrid-001",
       "name": "Route Error?"
     },
     {
       "parameters": {
         "mode": "load",
-        "qdrantCollection": { "__rl": true, "value": "={{$json.collection}}", "mode": "id" },
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "={{$json.collection}}",
+          "mode": "id"
+        },
         "prompt": "={{$json.query_en}}",
-        "topK": 15,
+        "topK": 20,
         "options": {
           "searchFilterJson": "={{ $json.folder ? { must: [{ key:\"metadata.folder\", match:{ value:$json.folder } }] } : {} }}"
         }
       },
       "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
       "typeVersion": 1.3,
-      "position": [-160, -400],
+      "position": [
+        -160,
+        -400
+      ],
       "id": "qdrant-hybrid-001",
       "name": "Qdrant Vector Store",
       "credentials": {
-        "qdrantApi": { "id": "X0pbbSADyJw0n4U8", "name": "QdrantApi account" }
-      }
-    },
-    {
-      "parameters": { "model": "nomic-embed-text:latest" },
-      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
-      "typeVersion": 1,
-      "position": [-160, -200],
-      "id": "embed-hybrid-001",
-      "name": "Embeddings Ollama",
-      "credentials": {
-        "ollamaApi": { "id": "m56zkpBYscfCoPii", "name": "Ollama account" }
+        "qdrantApi": {
+          "id": "X0pbbSADyJw0n4U8",
+          "name": "QdrantApi account"
+        }
       }
     },
     {
       "parameters": {
-        "jsCode": "// BUILD_PROMPT v4 - Hard guard against hallucination + client-side memory + deep source extraction\n\nconst route = $node[\"APPLY_ROUTE\"].json;\nconst question = route.question || \"\";\nconst mode = route.mode || \"offline\";\nconst session_id = route.session_id || \"default\";\nconst history = route.history || [];\nconst collection = route.collection || \"unknown\";\n\n// --- DEEP SOURCE EXTRACTION ---\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || d.text || \"\").trim();\n    const md = d.metadata || {};\n\n    // Try many possible metadata keys for source name\n    let source = md.sourceName || md.fileName || md.source_name || md.file_name\n      || md.name || md.title || md.document_name || md.doc_name;\n\n    // If source is blob URL or empty, try to extract from path\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const rawSource = String(md.source || md.file || md.path || \"\");\n      if (rawSource && !rawSource.startsWith('blob:') && rawSource.length > 2) {\n        const parts = rawSource.split('/').pop().split('\\\\').pop();\n        if (parts && parts.length > 2) source = parts;\n      }\n    }\n\n    // Still no valid source? Use folder as context\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const folder = md.folder || md.category || md.collection || \"\";\n      if (folder) {\n        const folderMap = {\n          'ELECTRIC': 'Elektrik Sistemi Manueli',\n          'CCR': 'Kargo Kontrol Odasi Manueli',\n          'MACHINERY': 'Makine Dairesi Manueli',\n          'BRIDGE_EQUIPMENT': 'Kopru Ekipmanlari Manueli',\n          'ACCOMMODATION': 'Yasam Alanlari Manueli',\n          'HULL PIPING': 'Boru Hatlari Manueli',\n          'HULL OUTFITTING': 'Gemi Donanimi Manueli',\n          'BWTS TRAINING': 'Balast Suyu Aritma Manueli'\n        };\n        source = folderMap[folder.toUpperCase()] || `${folder} Manueli`;\n      } else {\n        source = \"Teknik Manuel\";\n      }\n    }\n\n    return {\n      text,\n      source,\n      folder: md.folder || md.category || \"\",\n      page: md.page ?? md.pageNumber ?? md.loc?.pageNumber ?? md.page_number ?? \"\",\n      chunk: md.chunk ?? md.chunk_id ?? \"\",\n      section: md.section || md.header || md.heading || md.chapter || \"\",\n      _metaKeys: Object.keys(md).join(\",\")\n    };\n  })\n  .filter(h => h.text.length > 20)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\nconst maxChunks = mode === \"online\" ? 10 : 12;\nconst top = cleaned.slice(0, maxChunks);\n\n// Debug: all unique metadata keys\nconst allMetaKeys = [...new Set(cleaned.flatMap(c => c._metaKeys.split(\",\")))].join(\", \");\n\n// --- HARD GUARD: No context = no LLM, return fixed response ---\nconst contextFound = top.length > 0;\n\nif (!contextFound) {\n  const collectionNames = {\n    'ship_electric': 'Elektrik',\n    'ship_ccr': 'Kargo Kontrol (CCR)',\n    'ship_machinery': 'Makine Dairesi',\n    'ship_bridge_equipment': 'Kopru Ekipmanlari',\n    'ship_accommodation': 'Yasam Alanlari',\n    'ship_hull_piping': 'Boru Hatlari',\n    'ship_hull_outfitting': 'Gemi Donanimi',\n    'ship_bwts_training': 'Balast Suyu Aritma',\n    'ship_8189_yard_dwg': 'Tersane Cizimleri',\n    'ship_f': 'SOLAS/Egitim'\n  };\n  const colName = collectionNames[collection] || collection;\n  return [{\n    json: {\n      question,\n      context_found: false,\n      text: `Bu konuda ${colName} dokumanlarinda yeterli bilgi bulunamadi.\\n\\nOlasi nedenler:\\n- ${colName} koleksiyonuna henuz dokuman yuklenmemis olabilir\\n- Soru farkli bir kategoriyle ilgili olabilir\\n- Arama terimleri dokumanlarla eslesmiyor olabilir\\n\\nOneri: Soruyu farkli kelimelerle tekrar deneyin veya daha spesifik bir soru sorun.`,\n      sources: \"Kaynak bulunamadi - koleksiyonda eslesen dokuman yok\",\n      prompt: \"\",\n      mode,\n      session_id,\n      debug_meta: allMetaKeys,\n      debug_collection: collection,\n      debug_chunk_count: 0\n    }\n  }];\n}\n\n// --- Context found, build prompt normally ---\nconst context = top.map((h, i) => {\n  const pg = h.page ? ` | Sayfa: ${h.page}` : \"\";\n  const sec = h.section ? ` | Bolum: ${h.section}` : \"\";\n  return `[Kaynak ${i+1}] ${h.source}${pg}${sec}\\n${h.text}`;\n}).join(\"\\n---\\n\");\n\nconst sources = top.map((h, i) => {\n  const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n  const sec = h.section ? ` - ${h.section}` : \"\";\n  return `${i+1}. ${h.source}${pg}${sec}`;\n}).join(\"\\n\");\n\n// --- CONVERSATION HISTORY (client-side, brief) ---\nlet historyBlock = \"\";\nif (history.length > 0) {\n  const recent = history.slice(-6);\n  historyBlock = \"\\n## ONCEKI SOHBET GECMISI (Sadece baglam icin)\\n\";\n  historyBlock += recent.map(h => {\n    const role = h.role === \"user\" ? \"Kullanici\" : \"ARGUS\";\n    const content = String(h.content || \"\").substring(0, 250);\n    return `${role}: ${content}`;\n  }).join(\"\\n\");\n  historyBlock += \"\\n\\nUYARI: Onceki sohbet sadece BAGLAM icindir. Simdiki soruya SADECE asagidaki GUNCEL dokuman icerigiyle cevap ver.\\n\";\n}\n\n// --- Build source list for prompt ---\nconst sourceList = top.map((h, i) => {\n  const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n  const sec = h.section ? ` - ${h.section}` : \"\";\n  return `[Kaynak ${i+1}] ${h.source}${pg}${sec}`;\n}).join(\"\\n\");\n\nconst prompt = `Sen MANTA ANADOLU gemisinin kidemli teknik uzmani ARGUS'sun.\n\n## MUTLAK KURAL - HALLUCINATION YASAGI\nAsagida \"TEKNIK DOKUMAN ICERIGI\" bolumunde sana verilen bilgi DISINDA HICBIR SEY UYDURMA.\nEger dokuman iceriginde soruyla ilgili bilgi YOKSA, \"Bu konuda dokumanlarda bilgi bulunamadi\" de ve DUR.\nKendi bilginle, genel muhendislik bilgisiyle veya tahminle KESINLIKLE cevap VERME.\n${historyBlock}\n## GOREV\nAsagidaki teknik dokuman bolumlerini oku ve SADECE bu bilgilere dayanarak cevap ver.\n\n## KURALLAR\n1. SADECE asagidaki context'teki bilgiyi kullan. Context DISINDA bilgi VERME.\n2. Kaynak gosterirken SADECE su formati kullan: [Kaynak 1], [Kaynak 2] vb.\n3. Context'te GECMEYEN bolum numarasi, tablo adi, referans numarasi UYDURMA.\n4. Birden fazla kaynakta bilgi varsa capraz referans yap.\n5. Teknik terimlerin Ingilizcesini parantez icinde yaz.\n6. Sayisal degerleri BIREBIR aktar, yuvarlama veya tahmin YAPMA.\n\n## KULLANILABILIR KAYNAKLAR (Sadece bunlara referans ver)\n${sourceList}\n\n## CEVAP FORMATI\n\n### Analiz\nSorunun 1-2 cumlelik teknik ozeti.\n\n### Detayli Aciklama\nContext'teki bilgilere dayanarak numarali liste. Her madde icin:\n* Teknik aciklama (SADECE context'ten)\n* Kaynak: [Kaynak X]\n* Parametre degerleri (varsa, SADECE context'ten)\n\n### Cozum / Oneri\nContext'teki bilgilere dayanan pratik adimlar.\n\n### KAYNAKLAR\nKullandigin kaynaklari listele (SADECE yukaridaki listeden).\n\nKULLANICI SORUSU: ${question}\n\n--- TEKNIK DOKUMAN ICERIGI (${top.length} parca bulundu) ---\n${context}\n--- DOKUMAN SONU ---\n\nONEMLI HATIRLATMA: Yukaridaki dokuman iceriginde OLMAYAN hicbir bilgiyi cevabina EKLEME. Eger dokumanda soruyla ilgili yeterli bilgi yoksa bunu acikca belirt.`;\n\nreturn [{\n  json: {\n    question, context, sources, prompt, mode, session_id,\n    context_found: true,\n    debug_meta: allMetaKeys,\n    debug_collection: collection,\n    debug_chunk_count: top.length\n  }\n}];\n"
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [
+        -160,
+        -200
+      ],
+      "id": "embed-hybrid-001",
+      "name": "Embeddings Ollama",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// BUILD_PROMPT v5 - Embedded source extraction + improved prompt\n\nconst route = $node[\"APPLY_ROUTE\"].json;\nconst question = route.question || \"\";\nconst mode = route.mode || \"offline\";\nconst session_id = route.session_id || \"default\";\nconst history = route.history || [];\nconst collection = route.collection || \"unknown\";\n\n// --- DEEP SOURCE EXTRACTION ---\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    let text = String(d.pageContent || d.page_content || d.text || \"\").trim();\n    const md = d.metadata || {};\n\n    // 1) First try embedded [KAYNAK: ...] header in chunk text\n    let source = \"\";\n    let page = \"\";\n    let folder = \"\";\n    let section = \"\";\n\n    const headerMatch = text.match(/^\\[KAYNAK:\\s*(.+?)\\s*\\|\\s*Sayfa:\\s*(\\d+)\\s*\\|\\s*([^|\\]]+)(?:\\s*\\|\\s*([^\\]]+))?\\]/);\n    if (headerMatch) {\n      source = headerMatch[1].trim();\n      page = parseInt(headerMatch[2]);\n      folder = headerMatch[3].trim();\n      if (headerMatch[4]) section = headerMatch[4].trim();\n      // Remove header from display text\n      text = text.substring(text.indexOf(']') + 1).trim();\n    }\n\n    // 2) If no embedded header, try metadata fields\n    if (!source) {\n      source = md.sourceName || md.fileName || md.source_name || md.file_name\n        || md.name || md.title || md.document_name || md.doc_name || \"\";\n    }\n\n    // 3) If source is blob URL, try path extraction\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const rawSource = String(md.source || md.file || md.path || \"\");\n      if (rawSource && !rawSource.startsWith('blob:') && rawSource.length > 2) {\n        const parts = rawSource.split('/').pop().split('\\\\').pop();\n        if (parts && parts.length > 2) source = parts;\n      }\n    }\n\n    // 4) Fallback to folder name\n    if (!source || source === 'blob' || String(source).startsWith('blob:')) {\n      const f = folder || md.folder || md.category || md.collection || \"\";\n      if (f) {\n        const folderMap = {\n          'ELECTRIC': 'Elektrik Sistemi Manueli',\n          'CCR': 'Kargo Kontrol Odasi Manueli',\n          'MACHINERY': 'Makine Dairesi Manueli',\n          'BRIDGE_EQUIPMENT': 'Kopru Ekipmanlari Manueli',\n          'ACCOMMODATION': 'Yasam Alanlari Manueli',\n          'HULL PIPING': 'Boru Hatlari Manueli',\n          'HULL OUTFITTING': 'Gemi Donanimi Manueli',\n          'BWTS TRAINING': 'Balast Suyu Aritma Manueli'\n        };\n        source = folderMap[f.toUpperCase()] || f + ' Manueli';\n      } else {\n        source = \"Teknik Manuel\";\n      }\n    }\n\n    // Get page/section from metadata if not from header\n    if (!page) page = md.page ?? md.pageNumber ?? md.loc?.pageNumber ?? md.page_number ?? \"\";\n    if (!folder) folder = md.folder || md.category || \"\";\n    if (!section) section = md.section || md.header || md.heading || md.chapter || \"\";\n\n    return {\n      text,\n      source,\n      folder,\n      page,\n      chunk: md.chunk ?? md.chunk_id ?? \"\",\n      section,\n      _metaKeys: Object.keys(md).join(\",\")\n    };\n  })\n  .filter(h => h.text.length > 20)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\nconst maxChunks = mode === \"online\" ? 12 : 14;\nconst top = cleaned.slice(0, maxChunks);\n\nconst allMetaKeys = [...new Set(cleaned.flatMap(c => c._metaKeys.split(\",\")))].join(\", \");\n\n// --- HARD GUARD: No context = no LLM ---\nif (top.length === 0) {\n  const collectionNames = {\n    'ship_electric': 'Elektrik',\n    'ship_ccr': 'Kargo Kontrol (CCR)',\n    'ship_machinery': 'Makine Dairesi',\n    'ship_bridge_equipment': 'Kopru Ekipmanlari',\n    'ship_accommodation': 'Yasam Alanlari',\n    'ship_hull_piping': 'Boru Hatlari',\n    'ship_hull_outfitting': 'Gemi Donanimi',\n    'ship_bwts_training': 'Balast Suyu Aritma',\n    'ship_8189_yard_dwg': 'Tersane Cizimleri',\n    'ship_f': 'SOLAS/Egitim'\n  };\n  const colName = collectionNames[collection] || collection;\n  return [{\n    json: {\n      question,\n      context_found: false,\n      text: `Bu konuda ${colName} dokumanlarinda yeterli bilgi bulunamadi.\\n\\nOlasi nedenler:\\n- ${colName} koleksiyonuna henuz dokuman yuklenmemis olabilir\\n- Soru farkli bir kategoriyle ilgili olabilir\\n- Arama terimleri dokumanlarla eslesmiyor olabilir\\n\\nOneri: Soruyu farkli kelimelerle tekrar deneyin veya daha spesifik bir soru sorun.`,\n      sources: \"Kaynak bulunamadi - koleksiyonda eslesen dokuman yok\",\n      prompt: \"\",\n      mode,\n      session_id,\n      debug_meta: allMetaKeys,\n      debug_collection: collection,\n      debug_chunk_count: 0\n    }\n  }];\n}\n\n// --- Build context ---\nconst context = top.map((h, i) => {\n  const pg = h.page ? ` | Sayfa: ${h.page}` : \"\";\n  const sec = h.section ? ` | Bolum: ${h.section}` : \"\";\n  return `[Kaynak ${i+1}] ${h.source}${pg}${sec}\\n${h.text}`;\n}).join(\"\\n---\\n\");\n\nconst sources = top.map((h, i) => {\n  const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n  const sec = h.section ? ` - ${h.section}` : \"\";\n  return `${i+1}. ${h.source}${pg}${sec}`;\n}).join(\"\\n\");\n\n// --- Conversation history ---\nlet historyBlock = \"\";\nif (history.length > 0) {\n  const recent = history.slice(-4);\n  historyBlock = \"\\n## ONCEKI SOHBET (Baglam icin)\\n\";\n  historyBlock += recent.map(h => {\n    const role = h.role === \"user\" ? \"Kullanici\" : \"ARGUS\";\n    const content = String(h.content || \"\").substring(0, 200);\n    return `${role}: ${content}`;\n  }).join(\"\\n\");\n  historyBlock += \"\\nUYARI: Onceki sohbet sadece BAGLAM icindir. SADECE asagidaki dokuman icerigiyle cevap ver.\\n\";\n}\n\n// --- Source list for prompt ---\nconst sourceList = top.map((h, i) => {\n  const pg = h.page ? ` - Sayfa ${h.page}` : \"\";\n  const sec = h.section ? ` - ${h.section}` : \"\";\n  return `[Kaynak ${i+1}] ${h.source}${pg}${sec}`;\n}).join(\"\\n\");\n\nconst prompt = `Sen MANTA ANADOLU gemisinin teknik uzmani ARGUS'sun.\n\n## KESIN KURALLAR\n1. SADECE asagidaki dokuman icerigindeki bilgiyi kullan. UYDURMA!\n2. Dokumanda bilgi yoksa \"Bu konuda dokumanlarda bilgi bulunamadi\" de, baska bir sey EKLEME.\n3. Her bilgiyi kaynagiyla ver: [Kaynak X]\n4. Teknik terimlerin Ingilizcesini parantez icinde yaz.\n5. Sayisal degerleri BIREBIR aktar.\n${historyBlock}\n## KULLANILABILIR KAYNAKLAR\n${sourceList}\n\n## CEVAP FORMATI\n\n### Sorun Analizi\n1-2 cumle ile sorunun teknik ozeti.\n\n### Kontrol Edilecek Noktalar\nDokumandan bulunan SPESIFIK kontrol noktalari (numara ile):\n1. [Ne kontrol edilecek] - [Kaynak X, Sayfa Y]\n   * Dokumandaki ilgili teknik detay\n2. ...\n\n### Adim Adim Yapilacaklar\nDokumandaki prosedure dayanan pratik adimlar:\n1. ...\n2. ...\n\n### Kaynaklar\nKullanilan dokumanlar (dosya adi ve sayfa numarasi ile).\n\nKULLANICI SORUSU: ${question}\n\n--- TEKNIK DOKUMAN ICERIGI (${top.length} parca bulundu) ---\n${context}\n--- DOKUMAN SONU ---\n\nHATIRLATMA: Yukaridaki dokumanda OLMAYAN bilgiyi EKLEME. Her iddiani [Kaynak X] ile destekle.`;\n\nreturn [{\n  json: {\n    question, context, sources, prompt, mode, session_id,\n    context_found: true,\n    debug_meta: allMetaKeys,\n    debug_collection: collection,\n    debug_chunk_count: top.length\n  }\n}];\n"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [80, -440],
+      "position": [
+        80,
+        -440
+      ],
       "id": "build-prompt-hybrid-001",
       "name": "BUILD_PROMPT"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
           "conditions": [
             {
               "id": "ctx-check-1",
               "leftValue": "={{ $json.context_found }}",
               "rightValue": true,
-              "operator": { "type": "boolean", "operation": "equals", "name": "filter.operator.equals" }
+              "operator": {
+                "type": "boolean",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
             }
           ],
           "combinator": "and"
@@ -151,20 +205,32 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [190, -440],
+      "position": [
+        190,
+        -440
+      ],
       "id": "ctx-check-hybrid-001",
       "name": "Context Found?"
     },
     {
       "parameters": {
         "conditions": {
-          "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "strict", "version": 2 },
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
           "conditions": [
             {
               "id": "mode-check-1",
               "leftValue": "={{ $json.mode }}",
               "rightValue": "online",
-              "operator": { "type": "string", "operation": "equals", "name": "filter.operator.equals" }
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
             }
           ],
           "combinator": "and"
@@ -173,7 +239,10 @@
       },
       "type": "n8n-nodes-base.if",
       "typeVersion": 2.2,
-      "position": [400, -440],
+      "position": [
+        400,
+        -440
+      ],
       "id": "mode-switch-hybrid-001",
       "name": "Online mi?"
     },
@@ -187,11 +256,17 @@
       },
       "type": "@n8n/n8n-nodes-langchain.lmOllama",
       "typeVersion": 1,
-      "position": [660, -280],
+      "position": [
+        660,
+        -280
+      ],
       "id": "ollama-llm-hybrid-001",
       "name": "Ollama LLM",
       "credentials": {
-        "ollamaApi": { "id": "m56zkpBYscfCoPii", "name": "Ollama account" }
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
       }
     },
     {
@@ -203,7 +278,10 @@
       },
       "type": "@n8n/n8n-nodes-langchain.chainLlm",
       "typeVersion": 1.9,
-      "position": [660, -500],
+      "position": [
+        660,
+        -500
+      ],
       "id": "answer-offline-hybrid-001",
       "name": "ANSWER_OFFLINE"
     },
@@ -214,9 +292,18 @@
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
-            { "name": "x-api-key", "value": "={{ $env.ANTHROPIC_API_KEY || 'YOUR_KEY_HERE' }}" },
-            { "name": "anthropic-version", "value": "2023-06-01" },
-            { "name": "Content-Type", "value": "application/json" }
+            {
+              "name": "x-api-key",
+              "value": "={{ $env.ANTHROPIC_API_KEY || 'YOUR_KEY_HERE' }}"
+            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
           ]
         },
         "sendBody": true,
@@ -229,7 +316,10 @@
       },
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.3,
-      "position": [660, -680],
+      "position": [
+        660,
+        -680
+      ],
       "id": "answer-online-hybrid-001",
       "name": "ANSWER_ONLINE (Claude)"
     },
@@ -239,7 +329,10 @@
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [880, -680],
+      "position": [
+        880,
+        -680
+      ],
       "id": "parse-online-hybrid-001",
       "name": "Parse Online Response"
     },
@@ -295,7 +388,10 @@
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [1020, -500],
+      "position": [
+        1020,
+        -500
+      ],
       "id": "final-fields-hybrid-001",
       "name": "Format Response"
     },
@@ -303,16 +399,34 @@
       "parameters": {
         "assignments": {
           "assignments": [
-            { "id": "err-t-1", "name": "text", "value": "={{ $json.message || \"Bir hata olustu.\" }}", "type": "string" },
-            { "id": "err-o-1", "name": "ok", "value": false, "type": "boolean" },
-            { "id": "err-s-1", "name": "sources", "value": "", "type": "string" }
+            {
+              "id": "err-t-1",
+              "name": "text",
+              "value": "={{ $json.message || \"Bir hata olustu.\" }}",
+              "type": "string"
+            },
+            {
+              "id": "err-o-1",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "err-s-1",
+              "name": "sources",
+              "value": "",
+              "type": "string"
+            }
           ]
         },
         "options": {}
       },
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [-200, -240],
+      "position": [
+        -200,
+        -240
+      ],
       "id": "err-resp-hybrid-001",
       "name": "Error Response"
     },
@@ -321,17 +435,32 @@
         "options": {
           "responseHeaders": {
             "entries": [
-              { "name": "Content-Type", "value": "application/json" },
-              { "name": "Access-Control-Allow-Origin", "value": "*" },
-              { "name": "Access-Control-Allow-Headers", "value": "Content-Type" },
-              { "name": "Access-Control-Allow-Methods", "value": "POST, OPTIONS" }
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              }
             ]
           }
         }
       },
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.5,
-      "position": [1260, -500],
+      "position": [
+        1260,
+        -500
+      ],
       "id": "respond-hybrid-001",
       "name": "Respond to Webhook"
     }
@@ -339,61 +468,201 @@
   "pinData": {},
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "MODE_DETECT", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "MODE_DETECT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "MODE_DETECT": {
-      "main": [[{ "node": "ROUTER", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "ROUTER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "ROUTER": {
-      "main": [[{ "node": "APPLY_ROUTE", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "APPLY_ROUTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "APPLY_ROUTE": {
-      "main": [[{ "node": "Route Error?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Route Error?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Route Error?": {
       "main": [
-        [{ "node": "Error Response", "type": "main", "index": 0 }],
-        [{ "node": "Qdrant Vector Store", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Qdrant Vector Store": {
-      "main": [[{ "node": "BUILD_PROMPT", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "BUILD_PROMPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Embeddings Ollama": {
-      "ai_embedding": [[{ "node": "Qdrant Vector Store", "type": "ai_embedding", "index": 0 }]]
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
     },
     "BUILD_PROMPT": {
-      "main": [[{ "node": "Context Found?", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Context Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Context Found?": {
       "main": [
-        [{ "node": "Online mi?", "type": "main", "index": 0 }],
-        [{ "node": "Format Response", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "Online mi?",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Online mi?": {
       "main": [
-        [{ "node": "ANSWER_ONLINE (Claude)", "type": "main", "index": 0 }],
-        [{ "node": "ANSWER_OFFLINE", "type": "main", "index": 0 }]
+        [
+          {
+            "node": "ANSWER_ONLINE (Claude)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "ANSWER_OFFLINE",
+            "type": "main",
+            "index": 0
+          }
+        ]
       ]
     },
     "Ollama LLM": {
-      "ai_languageModel": [[{ "node": "ANSWER_OFFLINE", "type": "ai_languageModel", "index": 0 }]]
+      "ai_languageModel": [
+        [
+          {
+            "node": "ANSWER_OFFLINE",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
     },
     "ANSWER_OFFLINE": {
-      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "ANSWER_ONLINE (Claude)": {
-      "main": [[{ "node": "Parse Online Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Parse Online Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Parse Online Response": {
-      "main": [[{ "node": "Format Response", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Format Response": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Error Response": {
-      "main": [[{ "node": "Respond to Webhook", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "active": false,
