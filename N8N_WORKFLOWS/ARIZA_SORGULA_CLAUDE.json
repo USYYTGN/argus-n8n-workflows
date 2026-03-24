@@ -1,0 +1,346 @@
+{
+  "name": "ARIZA_SORGULA_CLAUDE",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ariza-sorgula",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-1120, -528],
+      "id": "b2c3d4e5-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "webhookId": "d3e4f5a6-0001-4000-8000-000000000001",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "llama3.1:latest",
+          "mode": "list",
+          "cachedResultName": "llama3.1:latest"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a router for ship manuals.\n\nReturn ONLY this JSON (no markdown, no explanation):\n{\"question\":\"...\",\"collection\":\"...\",\"folder\":null,\"query_en\":\"...\"}\n\nCollections with data:\n- ship_electric\n- ship_ccr\n- ship_manuals\n- ship_manuals_v2\n- ship_manuals_v3\n\nFolder MUST match exactly (or null):\n\"ELECTRIC\", \"CCR\", \"BRIDGE_EQUIPMENT\", \"MACHINERY\", \"ACCOMMODATION\", \"HULL PIPING\", \"HULL OUTFITTING\", \"BWTS TRAINING\", \"8189 YARD DWG\", \"F\"\n\nRouting rules:\n- electric/switchboard/msb/esb/transformer/generator/power → collection=ship_electric, folder=\"ELECTRIC\"\n- cargo/ccr/pump/valve/ows/tank/ballast → collection=ship_ccr, folder=\"CCR\"\n- bridge/autopilot/radar/gyro/ais/ecdis/echo sounder → collection=ship_manuals_v3, folder=\"BRIDGE_EQUIPMENT\"\n- engine/machinery/boiler/pump/compressor → collection=ship_manuals_v3, folder=\"MACHINERY\"\n- if unsure → collection=ship_manuals_v3, folder=null\n\nquery_en: translate/rephrase as short English search query with technical synonyms.\n\nQuestion:\n={{$json.body.message || $json.body.question || $json.body.soru || $json.question || $json.message || $json.soru}}\n"
+            }
+          ]
+        },
+        "simplify": false,
+        "options": {
+          "system": "Return only valid JSON. No markdown. No explanation. No extra text.",
+          "temperature": 0.1,
+          "num_predict": 200
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.ollama",
+      "typeVersion": 1,
+      "position": [-912, -560],
+      "id": "b2c3d4e5-0002-4000-8000-000000000002",
+      "name": "ROUTER",
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "function getRouterText(item) {\n  return (\n    item.json.content ||\n    item.json.message?.content ||\n    item.json.data?.message?.content ||\n    ''\n  ).trim();\n}\n\nconst item0 = items[0] || { json: {} };\nconst raw = getRouterText(item0);\n\nlet obj = {};\ntry {\n  obj = JSON.parse(raw);\n} catch (e) {\n  const m = raw.match(/\\{[\\s\\S]*\\}/);\n  if (m) {\n    try { obj = JSON.parse(m[0]); } catch (e2) { obj = {}; }\n  }\n}\n\n// Webhook'tan orijinal soruyu al\nlet wbMsg = '';\ntry {\n  const wb = $items('Webhook')[0].json;\n  wbMsg = wb.body?.message || wb.body?.question || wb.body?.soru || wb.message || wb.question || wb.soru || '';\n} catch (e) {}\n\nconst question = (obj.question || wbMsg || '').trim();\n\nlet collection = String(obj.collection || 'ship_manuals_v3').trim().replace(/^=+/, '');\nconst allowed = new Set(['ship_electric','ship_ccr','ship_manuals','ship_manuals_v2','ship_manuals_v3']);\nif (!allowed.has(collection)) collection = 'ship_manuals_v3';\n\nlet folder = obj.folder ?? null;\nif (typeof folder === 'string') {\n  folder = folder.trim();\n  if (!folder) folder = null;\n}\n\nlet query_en = String(obj.query_en || '').trim();\nif (!query_en) query_en = question;\n\nreturn [{ json: { question, query_en, collection, folder } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-576, -528],
+      "id": "b2c3d4e5-0003-4000-8000-000000000003",
+      "name": "APPLY_ROUTE"
+    },
+    {
+      "parameters": {
+        "mode": "load",
+        "qdrantCollection": {
+          "__rl": true,
+          "value": "={{ $json.collection }}",
+          "mode": "id"
+        },
+        "prompt": "={{ $json.query_en }}",
+        "topK": 15,
+        "options": {
+          "searchFilterJson": "={{ $json.folder ? { must: [{ key: \"metadata.folder\", match: { value: $json.folder } }] } : {} }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStoreQdrant",
+      "typeVersion": 1.3,
+      "position": [-256, -528],
+      "id": "b2c3d4e5-0004-4000-8000-000000000004",
+      "name": "Qdrant Vector Store",
+      "credentials": {
+        "qdrantApi": {
+          "id": "X0pbbSADyJw0n4U8",
+          "name": "QdrantApi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "nomic-embed-text:latest"
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOllama",
+      "typeVersion": 1,
+      "position": [-256, -304],
+      "id": "b2c3d4e5-0005-4000-8000-000000000005",
+      "name": "Embeddings Ollama",
+      "alwaysOutputData": true,
+      "credentials": {
+        "ollamaApi": {
+          "id": "m56zkpBYscfCoPii",
+          "name": "Ollama account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Context oluştur ve Claude için sistem promptu hazırla\nconst route = $node['APPLY_ROUTE'].json;\nconst question = route.question || '';\n\n// Qdrant'tan gelen item'ları normalize et\nconst cleaned = items\n  .map((it) => it.json.document ? it.json.document : it.json)\n  .map((d) => {\n    const text = String(d.pageContent || d.page_content || '').trim();\n    const md = d.metadata || {};\n    return {\n      text,\n      source: md.sourceName || md.fileName || md.source || 'Bilinmiyor',\n      page: md.page ?? '?',\n      chunk: md.chunk ?? '',\n      folder: md.folder || ''\n    };\n  })\n  .filter(h => h.text.length > 80)\n  .filter(h => !/^[\\W_]+$/.test(h.text));\n\nconst top = cleaned.slice(0, 12); // Top 12 chunk yeterli, daha fazlası prompt'u şişirir\n\n// Her chunk için kaynak bilgisini ekleyerek context oluştur\nconst context = top.map((h, i) => {\n  return `[${i+1}] Kaynak: ${h.source} | Sayfa: ${h.page}\\n${h.text}`;\n}).join('\\n\\n---\\n\\n');\n\n// Kaynak listesi\nconst sourcesList = top.map((h, i) => `  ${i+1}. ${h.source} — Sayfa ${h.page}`).join('\\n');\n\nconst systemPrompt = `Sen deneyimli bir gemi teknik uzmanısın. Sana verilen gemi manueli alıntılarına dayanarak teknik soruları cevaplıyorsun.\n\nKEYİF KURALLARI:\n1. SADECE aşağıdaki CONTEXT içindeki bilgileri kullan — asla uydurma yapma\n2. Teknik detayları eksiksiz ver, kesmeden anlat\n3. Adım adım prosedür gerekiyorsa numaralı liste kullan\n4. Cevabının SONUNDA her zaman \"📚 KAYNAKLAR:\" bölümü ekle\n5. Kaynak formatı: • Kaynak: [dosya adı] Sayfa: [sayfa no]\n6. Bilgi yetersizse dürüstçe \"Bu konuda yeterli bilgi bulunamadı\" de ve hangi kaynaklara bakıldığını belirt\n\nMEVCUT BELGE ALINTILARI:\n${context}\n\nKAYNAK ÖZETİ (cevap sonunda kullan):\n${sourcesList}`;\n\nreturn [{\n  json: {\n    systemPrompt,\n    userText: question,\n    question,\n    sourcesList\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [32, -528],
+      "id": "b2c3d4e5-0006-4000-8000-000000000006",
+      "name": "BUILD_PROMPT"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": " DUMMY_ANTHROPIC_KEY"            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-6\",\n  max_tokens: 2048,\n  system: $json.systemPrompt,\n  messages: [\n    {\n      role: \"user\",\n      content: $json.userText\n    }\n  ]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [256, -528],
+      "id": "b2c3d4e5-0007-4000-8000-000000000007",
+      "name": "Claude API"
+    },
+    {
+      "parameters": {
+        "jsCode": "const claudeResp = $input.first().json;\n// Claude API response formatı: content[0].text\nconst answer = claudeResp.content?.[0]?.text || claudeResp.content || 'Cevap üretilemedi.';\nconst question = $items('BUILD_PROMPT')[0].json.question || '';\nconst sourcesList = $items('BUILD_PROMPT')[0].json.sourcesList || '';\n\nreturn [{\n  json: {\n    text: answer,\n    sources: sourcesList,\n    question,\n    ok: true\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [480, -528],
+      "id": "b2c3d4e5-0008-4000-8000-000000000008",
+      "name": "Format Response"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "b2c3d4e5-0009-4000-8000-000000000009",
+              "name": "text",
+              "value": "={{ $json.text ?? 'Cevap üretilemedi.' }}",
+              "type": "string"
+            },
+            {
+              "id": "b2c3d4e5-0010-4000-8000-000000000010",
+              "name": "sources",
+              "value": "={{ $json.sources ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b2c3d4e5-0011-4000-8000-000000000011",
+              "name": "question",
+              "value": "={{ $json.question ?? '' }}",
+              "type": "string"
+            },
+            {
+              "id": "b2c3d4e5-0012-4000-8000-000000000012",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [700, -528],
+      "id": "b2c3d4e5-0013-4000-8000-000000000013",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {
+                "name": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "name": "Access-Control-Allow-Origin",
+                "value": "*"
+              },
+              {
+                "name": "Access-Control-Allow-Headers",
+                "value": "Content-Type"
+              },
+              {
+                "name": "Access-Control-Allow-Methods",
+                "value": "POST, OPTIONS"
+              }
+            ]
+          }
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [920, -528],
+      "id": "b2c3d4e5-0014-4000-8000-000000000014",
+      "name": "Respond to Webhook"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "ROUTER",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "ROUTER": {
+      "main": [
+        [
+          {
+            "node": "APPLY_ROUTE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "APPLY_ROUTE": {
+      "main": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Qdrant Vector Store": {
+      "main": [
+        [
+          {
+            "node": "BUILD_PROMPT",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings Ollama": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Qdrant Vector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "BUILD_PROMPT": {
+      "main": [
+        [
+          {
+            "node": "Claude API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude API": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": true,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Istanbul",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "b2c3d4e5-ffff-4000-8000-000000000000",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "id": "ArizaSorgulaClaudeV1",
+  "tags": []
+}
