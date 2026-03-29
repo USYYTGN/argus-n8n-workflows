@@ -1,0 +1,240 @@
+{
+  "name": "MANUAL_SEARCH_V2",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-800, 0],
+      "id": "c3d4e5f6-0001-4000-8000-000000000001",
+      "name": "Webhook",
+      "webhookId": "e5f6a7b8-0001-4000-8000-000000000001",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "jsCode": "// Gelen body'den soruyu normalize et\nconst payload = $json.body ?? $json;\nconst msg = String(\n  payload.message ||\n  payload.query ||\n  payload.text ||\n  ''\n).trim();\nconst mode = String(payload.mode || 'auto').trim();\n\nreturn [{\n  json: {\n    ...payload,\n    original_message: msg,\n    query: msg,\n    text: msg,\n    mode,\n    // Arama scriptine gönderilecek kelimeler (max 8)\n    words: msg\n      .split(/\\s+/)\n      .map(w => w.trim())\n      .filter(Boolean)\n      .slice(0, 8)\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-580, 0],
+      "id": "c3d4e5f6-0002-4000-8000-000000000002",
+      "name": "query"
+    },
+    {
+      "parameters": {
+        "command": "={{ 'python3 /home/argus/search_chunks_v2.py ' + (($json.words || []).map(w => `\"${String(w).replace(/\"/g, '\\\\\"')}\"`).join(' ')) }}"
+      },
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [-360, 0],
+      "id": "c3d4e5f6-0003-4000-8000-000000000003",
+      "name": "Execute Command"
+    },
+    {
+      "parameters": {
+        "jsCode": "const stdout = $input.first().json.stdout || '';\nconst stderr = $input.first().json.stderr || '';\ntry {\n  const parsed = JSON.parse(stdout);\n  return [{ json: parsed }];\n} catch (e) {\n  return [{ json: {\n    ok: false,\n    query: '',\n    query_terms: [],\n    result_count: 0,\n    results: [],\n    error: `parse hatası: ${e.message}`,\n    raw_stdout: stdout,\n    raw_stderr: stderr\n  } }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [-140, 0],
+      "id": "c3d4e5f6-0004-4000-8000-000000000004",
+      "name": "parse"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c3d4e5f6-0010-4000-8000-000000000010",
+              "leftValue": "={{ $json.ok }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "c3d4e5f6-0011-4000-8000-000000000011",
+              "leftValue": "={{ $json.result_count }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [80, 0],
+      "id": "c3d4e5f6-0005-4000-8000-000000000005",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "jsCode": "const query   = $json.query || '';\nconst results = ($json.results || []).slice(0, 3);\n\n// Model için context — artık gerçek PDF adı ve sayfa var\nconst context = results.map((r, i) => {\n  return [\n    `[KAYNAK ${i + 1}]`,\n    `PDF  : ${r.pdf_file   || r.manual_name || '-'}`,\n    `Sayfa: ${r.page ?? '?'}`,\n    `Skor : ${r.score}`,\n    ``,\n    r.text\n  ].join('\\n');\n}).join('\\n\\n─────────────────────\\n\\n');\n\nreturn [{\n  json: {\n    query,\n    raw_results: $json.results || [],\n    prompt: `Sen teknik gemi manual arama asistanısın.\nSADECE verilen kaynaklara dayanarak cevap ver. Uydurma yapma.\nBilgi yoksa açıkça söyle.\nKısa, net ve teknik yaz.\n\nKullanıcı sorusu:\n${query}\n\nKaynaklar:\n${context}\n\nSadece JSON döndür:\n{ \"summary\": \"kısa teknik cevap\", \"confidence\": \"high|medium|low\" }`\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, -120],
+      "id": "c3d4e5f6-0006-4000-8000-000000000006",
+      "name": "summary_prompt"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-api-key",
+              "value": " DUMMY_ANTHROPIC_KEY"            },
+            {
+              "name": "anthropic-version",
+              "value": "2023-06-01"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "application/json",
+        "body": "={{ JSON.stringify({\n  model: \"claude-sonnet-4-6\",\n  max_tokens: 1024,\n  system: \"Teknik gemi manual asistanısın. Sadece geçerli JSON döndür. Markdown yok.\",\n  messages: [{ role: \"user\", content: $json.prompt }]\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [520, -120],
+      "id": "c3d4e5f6-0007-4000-8000-000000000007",
+      "name": "Message a model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const modelOutput = $input.first().json;\n// Claude API response: content[0].text\nconst raw = modelOutput?.content?.[0]?.text ||\n            modelOutput?.text ||\n            modelOutput?.content ||\n            modelOutput?.response || '';\n\nlet parsed;\ntry {\n  parsed = JSON.parse(String(raw).trim());\n} catch (e) {\n  // JSON parse başarısız — ham metni kullan\n  parsed = {\n    summary:    String(raw).trim() || 'Özet üretilemedi.',\n    confidence: 'low'\n  };\n}\n\n// parse node'dan ham sonuçları al\nconst parseData  = $('parse').first().json;\nconst rawResults = parseData.results || [];\nconst query      = parseData.query   || '';\n\n// Kullanıcıya gösterilecek kaynak listesi\n// ARTIK: pdf_file + page  (chunk_id, skor vs. kullanıcıya gösterilmez)\nconst sources = rawResults.map((r, i) => ({\n  index:       i + 1,\n  pdf_file:    r.pdf_file    || (r.manual_name ? r.manual_name + '.pdf' : '-'),\n  manual_name: r.manual_name || '-',\n  page:        r.page        ?? null,\n  score:       r.score       // sadece debug için; HTML'de gösterilmez\n}));\n\nreturn [{\n  json: {\n    ok:         true,\n    query,\n    summary:    parsed.summary    || 'Özet üretilemedi.',\n    confidence: parsed.confidence || 'low',\n    sources,\n    raw_results: rawResults\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [740, -120],
+      "id": "c3d4e5f6-0008-4000-8000-000000000008",
+      "name": "final_response"
+    },
+    {
+      "parameters": {
+        "jsCode": "return [{\n  json: {\n    ok:         false,\n    query:      $json.query || '',\n    summary:    $json.error || 'Bu konuda dokümanlarda bilgi bulunamadı.',\n    confidence: 'low',\n    sources:    [],\n    raw_results: $json.results || []\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [300, 120],
+      "id": "c3d4e5f6-0009-4000-8000-000000000009",
+      "name": "no_result_response"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {"name": "Content-Type",                 "value": "application/json"},
+              {"name": "Access-Control-Allow-Origin",  "value": "*"},
+              {"name": "Access-Control-Allow-Headers", "value": "Content-Type"},
+              {"name": "Access-Control-Allow-Methods", "value": "POST, OPTIONS"}
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  text: $json.summary || 'Cevap yok.',\n\n  // Kullanıcıya sadece \"Kaynak: X.pdf | Sayfa: Y\" göster\n  sources: Array.isArray($json.sources) && $json.sources.length\n    ? $json.sources\n        .map(s => `Kaynak: ${s.pdf_file} | Sayfa: ${s.page ?? '?'}`)\n        .join('\\n')\n    : 'Kaynak bulunamadı.',\n\n  ok:         $json.ok         ?? false,\n  query:      $json.query      || '',\n  confidence: $json.confidence || 'low'\n}) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [960, -120],
+      "id": "c3d4e5f6-0010-4000-8000-000000000010",
+      "name": "Respond to Webhook (OK)"
+    },
+    {
+      "parameters": {
+        "options": {
+          "responseHeaders": {
+            "entries": [
+              {"name": "Content-Type",                 "value": "application/json"},
+              {"name": "Access-Control-Allow-Origin",  "value": "*"},
+              {"name": "Access-Control-Allow-Headers", "value": "Content-Type"},
+              {"name": "Access-Control-Allow-Methods", "value": "POST, OPTIONS"}
+            ]
+          }
+        },
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify({\n  text: $json.summary || 'Dokümanlarda bulunamadı.',\n  sources: 'Kaynak bulunamadı.',\n  ok: false,\n  query: $json.query || '',\n  confidence: 'low'\n}) }}"
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [520, 120],
+      "id": "c3d4e5f6-0011-4000-8000-000000000011",
+      "name": "Respond to Webhook (Boş)"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [[{"node": "query", "type": "main", "index": 0}]]
+    },
+    "query": {
+      "main": [[{"node": "Execute Command", "type": "main", "index": 0}]]
+    },
+    "Execute Command": {
+      "main": [[{"node": "parse", "type": "main", "index": 0}]]
+    },
+    "parse": {
+      "main": [[{"node": "If", "type": "main", "index": 0}]]
+    },
+    "If": {
+      "main": [
+        [{"node": "summary_prompt",    "type": "main", "index": 0}],
+        [{"node": "no_result_response","type": "main", "index": 0}]
+      ]
+    },
+    "summary_prompt": {
+      "main": [[{"node": "Message a model", "type": "main", "index": 0}]]
+    },
+    "Message a model": {
+      "main": [[{"node": "final_response", "type": "main", "index": 0}]]
+    },
+    "final_response": {
+      "main": [[{"node": "Respond to Webhook (OK)", "type": "main", "index": 0}]]
+    },
+    "no_result_response": {
+      "main": [[{"node": "Respond to Webhook (Boş)", "type": "main", "index": 0}]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "timezone": "Europe/Istanbul",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "c3d4e5f6-ffff-4000-8000-000000000000",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "1f3bb329867d83a64a7fcb9eea21ec33827ac4bebf2b87637c3c03f57702477f"
+  },
+  "id": "ManualSearchV2",
+  "tags": []
+}
