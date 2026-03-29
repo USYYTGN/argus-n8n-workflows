@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ARGUS — Gemi Teknik Asistanı</title>
+  <style>
+    :root {
+      --bg:        #0d1117;
+      --surface:   #161b22;
+      --border:    #30363d;
+      --accent:    #238636;
+      --accent-h:  #2ea043;
+      --offline:   #9e6a03;
+      --offline-h: #d29922;
+      --text:      #c9d1d9;
+      --muted:     #8b949e;
+      --danger:    #f85149;
+      --radius:    10px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ─────────────────────────────────────────────────── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 20px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, #1f6feb, #388bfd);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: #fff;
+    }
+    .logo-text h1 { font-size: 16px; font-weight: 700; line-height: 1.1; }
+    .logo-text p  { font-size: 11px; color: var(--muted); }
+
+    /* ── Mode toggle ─────────────────────────────────────────────── */
+    .mode-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .mode-label { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+    .toggle {
+      position: relative;
+      width: 180px;
+      height: 34px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      display: flex;
+      cursor: pointer;
+      overflow: hidden;
+      user-select: none;
+    }
+    .toggle-btn {
+      flex: 1;
+      display: flex; align-items: center; justify-content: center;
+      gap: 5px;
+      font-size: 12px; font-weight: 600;
+      z-index: 1;
+      transition: color .2s;
+    }
+    .toggle-btn .dot {
+      width: 7px; height: 7px; border-radius: 50%;
+    }
+    .toggle-slider {
+      position: absolute;
+      top: 3px; left: 3px;
+      width: calc(50% - 3px); height: calc(100% - 6px);
+      border-radius: 6px;
+      transition: transform .25s ease, background .25s;
+    }
+
+    /* Online state */
+    body.mode-online .toggle-slider {
+      background: var(--accent);
+      transform: translateX(0);
+    }
+    body.mode-online .toggle-btn:nth-child(2) { color: #fff; }
+    body.mode-online .toggle-btn:nth-child(2) .dot { background: #7ee787; }
+    body.mode-online .toggle-btn:nth-child(3) { color: var(--muted); }
+    body.mode-online .toggle-btn:nth-child(3) .dot { background: var(--muted); }
+
+    /* Offline state */
+    body.mode-offline .toggle-slider {
+      background: var(--offline);
+      transform: translateX(calc(100% + 3px));
+    }
+    body.mode-offline .toggle-btn:nth-child(2) { color: var(--muted); }
+    body.mode-offline .toggle-btn:nth-child(2) .dot { background: var(--muted); }
+    body.mode-offline .toggle-btn:nth-child(3) { color: #fff; }
+    body.mode-offline .toggle-btn:nth-child(3) .dot { background: #f0b72f; }
+
+    /* ── Mode banner ─────────────────────────────────────────────── */
+    #mode-banner {
+      display: none;
+      padding: 6px 20px;
+      font-size: 12px;
+      text-align: center;
+      font-weight: 500;
+    }
+    body.mode-offline #mode-banner {
+      display: block;
+      background: #272115;
+      color: #d29922;
+      border-bottom: 1px solid #5a3e1b;
+    }
+    body.mode-online #mode-banner { display: none; }
+
+    /* ── Chat area ───────────────────────────────────────────────── */
+    #chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      scroll-behavior: smooth;
+    }
+
+    .msg {
+      display: flex;
+      gap: 10px;
+      max-width: 820px;
+    }
+    .msg.user  { align-self: flex-end; flex-direction: row-reverse; }
+    .msg.bot   { align-self: flex-start; }
+
+    .avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; flex-shrink: 0;
+    }
+    .msg.user .avatar  { background: #1f6feb; }
+    .msg.bot  .avatar  { background: #21262d; border: 1px solid var(--border); }
+
+    .bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      line-height: 1.6;
+      font-size: 14px;
+      max-width: 680px;
+    }
+    .msg.user .bubble {
+      background: #1c3353;
+      border: 1px solid #1f6feb44;
+      color: var(--text);
+    }
+    .msg.bot .bubble {
+      background: var(--surface);
+      border: 1px solid var(--border);
+    }
+
+    .bubble pre {
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      font-size: 12px;
+      margin-top: 8px;
+    }
+
+    /* Sources */
+    .sources {
+      margin-top: 10px;
+      padding: 8px 12px;
+      background: #0d1117;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .sources strong { color: var(--text); font-size: 11px; text-transform: uppercase; letter-spacing: .5px; }
+    .sources ul { margin: 4px 0 0 0; padding-left: 16px; }
+    .sources li { margin: 2px 0; }
+
+    /* Mode badge on bot messages */
+    .mode-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-left: 6px;
+      vertical-align: middle;
+      font-weight: 600;
+    }
+    .mode-badge.online  { background: #1a3a1e; color: #7ee787; border: 1px solid #2ea04344; }
+    .mode-badge.offline { background: #2d2008; color: #f0b72f; border: 1px solid #d2992244; }
+
+    /* Typing indicator */
+    .typing .dot-wave {
+      display: flex; gap: 4px; align-items: center; height: 20px;
+    }
+    .typing .dot-wave span {
+      width: 8px; height: 8px; background: var(--muted);
+      border-radius: 50%;
+      animation: bounce .8s infinite;
+    }
+    .typing .dot-wave span:nth-child(2) { animation-delay: .15s; }
+    .typing .dot-wave span:nth-child(3) { animation-delay: .3s; }
+    @keyframes bounce {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%           { transform: translateY(-6px); }
+    }
+
+    /* Error */
+    .error-bubble {
+      background: #1a0e0e;
+      border: 1px solid #6e1a1a;
+      color: var(--danger);
+      padding: 10px 14px;
+      border-radius: var(--radius);
+      font-size: 13px;
+    }
+
+    /* ── Input bar ───────────────────────────────────────────────── */
+    #input-bar {
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      padding: 14px 20px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    #question {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 14px;
+      color: var(--text);
+      font-size: 14px;
+      resize: none;
+      min-height: 42px;
+      max-height: 160px;
+      line-height: 1.5;
+      outline: none;
+      transition: border-color .15s;
+      font-family: inherit;
+    }
+    #question:focus { border-color: #388bfd; }
+    #question::placeholder { color: var(--muted); }
+
+    #send-btn {
+      width: 42px; height: 42px;
+      background: var(--accent);
+      border: none; border-radius: var(--radius);
+      cursor: pointer; color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      transition: background .15s, opacity .15s;
+      flex-shrink: 0;
+    }
+    #send-btn:hover   { background: var(--accent-h); }
+    #send-btn:disabled { opacity: .4; cursor: not-allowed; }
+    body.mode-offline #send-btn { background: var(--offline); }
+    body.mode-offline #send-btn:hover:not(:disabled) { background: var(--offline-h); }
+
+    /* Config modal */
+    #config-btn {
+      background: none; border: 1px solid var(--border);
+      border-radius: 8px; padding: 6px 10px;
+      color: var(--muted); cursor: pointer; font-size: 13px;
+      transition: border-color .15s, color .15s;
+    }
+    #config-btn:hover { border-color: var(--text); color: var(--text); }
+
+    .modal-bg {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.6);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100;
+      display: none;
+    }
+    .modal-bg.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      width: 360px;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .modal h2 { font-size: 15px; }
+    .modal label { font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px; }
+    .modal input {
+      width: 100%;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 10px;
+      color: var(--text);
+      font-size: 13px;
+      outline: none;
+    }
+    .modal input:focus { border-color: #388bfd; }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; }
+    .btn-secondary {
+      background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 7px 14px;
+      color: var(--text); cursor: pointer; font-size: 13px;
+    }
+    .btn-primary {
+      background: var(--accent); border: none;
+      border-radius: 6px; padding: 7px 14px;
+      color: #fff; cursor: pointer; font-size: 13px;
+    }
+    .btn-primary:hover  { background: var(--accent-h); }
+
+    /* Scrollbar */
+    #chat::-webkit-scrollbar { width: 6px; }
+    #chat::-webkit-scrollbar-track { background: transparent; }
+    #chat::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  </style>
+</head>
+<body class="mode-offline">
+
+<!-- ── Config Modal ─────────────────────────────────────────────── -->
+<div class="modal-bg" id="modal-bg">
+  <div class="modal">
+    <h2>⚙️ Ayarlar</h2>
+    <div>
+      <label>Webhook URL</label>
+      <input id="cfg-url" type="text" placeholder="https://n8n.argussees.com/webhook/chat" />
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modal-cancel">İptal</button>
+      <button class="btn-primary"   id="modal-save">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ──────────────────────────────────────────────────── -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">A</div>
+    <div class="logo-text">
+      <h1>ARGUS</h1>
+      <p>Gemi Teknik Asistanı</p>
+    </div>
+  </div>
+
+  <div class="mode-wrap">
+    <span class="mode-label">Mod:</span>
+    <div class="toggle" id="mode-toggle" title="Online: Claude API | Offline: Ollama (yerel)">
+      <div class="toggle-slider"></div>
+      <div class="toggle-btn" data-mode="online">
+        <span class="dot"></span> Online
+      </div>
+      <div class="toggle-btn" data-mode="offline">
+        <span class="dot"></span> Offline
+      </div>
+    </div>
+  </div>
+
+  <button id="config-btn">⚙️ Ayarlar</button>
+</header>
+
+<!-- ── Mode banner ─────────────────────────────────────────────── -->
+<div id="mode-banner">
+  📡 Offline Mod — Yerel Ollama (qwen2.5:14b) kullanılıyor. İnternet bağlantısı gerekmez.
+</div>
+
+<!-- ── Chat ────────────────────────────────────────────────────── -->
+<div id="chat">
+  <div class="msg bot">
+    <div class="avatar">⚓</div>
+    <div class="bubble">
+      Merhaba! Ben <strong>ARGUS</strong> Gemi Teknik Asistanıyım.<br>
+      Gemi manuelleriyle ilgili teknik sorularınızı sorabilirsiniz.<br><br>
+      <small style="color:var(--muted)">
+        Üst sağdaki modü <strong>Online</strong> (Claude API) veya
+        <strong>Offline</strong> (Yerel Ollama) olarak seçebilirsiniz.
+      </small>
+    </div>
+  </div>
+</div>
+
+<!-- ── Input bar ───────────────────────────────────────────────── -->
+<div id="input-bar">
+  <textarea id="question" rows="1" placeholder="Teknik sorunuzu yazın… (Enter = gönder, Shift+Enter = yeni satır)"></textarea>
+  <button id="send-btn" title="Gönder">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="22" y1="2" x2="11" y2="13"></line>
+      <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+    </svg>
+  </button>
+</div>
+
+<script>
+  // ── Config ────────────────────────────────────────────────────
+  const DEFAULT_URL = 'https://n8n.argussees.com/webhook/chat';
+  let webhookUrl = localStorage.getItem('argus_webhook_url') || DEFAULT_URL;
+  let currentMode = localStorage.getItem('argus_mode') || 'offline';
+  let busy = false;
+
+  // ── Mode toggle ───────────────────────────────────────────────
+  function applyMode(mode) {
+    currentMode = mode;
+    localStorage.setItem('argus_mode', mode);
+    document.body.className = 'mode-' + mode;
+  }
+  applyMode(currentMode);
+
+  document.getElementById('mode-toggle').addEventListener('click', function(e) {
+    const btn = e.target.closest('[data-mode]');
+    if (btn) applyMode(btn.dataset.mode);
+    else applyMode(currentMode === 'online' ? 'offline' : 'online');
+  });
+
+  // ── Config modal ──────────────────────────────────────────────
+  const modalBg     = document.getElementById('modal-bg');
+  const cfgUrl      = document.getElementById('cfg-url');
+
+  document.getElementById('config-btn').onclick = () => {
+    cfgUrl.value = webhookUrl;
+    modalBg.classList.add('open');
+  };
+  document.getElementById('modal-cancel').onclick = () => modalBg.classList.remove('open');
+  document.getElementById('modal-save').onclick = () => {
+    const u = cfgUrl.value.trim();
+    if (u) { webhookUrl = u; localStorage.setItem('argus_webhook_url', u); }
+    modalBg.classList.remove('open');
+  };
+  modalBg.addEventListener('click', e => { if (e.target === modalBg) modalBg.classList.remove('open'); });
+
+  // ── Chat helpers ──────────────────────────────────────────────
+  const chat = document.getElementById('chat');
+
+  function addMsg(role, html, modeBadge) {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg ' + role;
+
+    const av = document.createElement('div');
+    av.className = 'avatar';
+    av.textContent = role === 'user' ? '👤' : '⚓';
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    if (modeBadge) {
+      const badge = document.createElement('span');
+      badge.className = 'mode-badge ' + modeBadge;
+      badge.textContent = modeBadge === 'online' ? '☁ Online' : '📡 Offline';
+      bubble.appendChild(badge);
+    }
+    bubble.innerHTML += html;
+
+    wrap.appendChild(av);
+    wrap.appendChild(bubble);
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function addTyping() {
+    const wrap = document.createElement('div');
+    wrap.className = 'msg bot typing';
+    wrap.innerHTML = `
+      <div class="avatar">⚓</div>
+      <div class="bubble">
+        <div class="dot-wave"><span></span><span></span><span></span></div>
+      </div>`;
+    chat.appendChild(wrap);
+    chat.scrollTop = chat.scrollHeight;
+    return wrap;
+  }
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function formatAnswer(text) {
+    // Bold **text** and inline code `code`
+    return escHtml(text)
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/`([^`]+)`/g, '<code style="background:#0d1117;padding:1px 4px;border-radius:3px;font-size:12px">$1</code>')
+      .replace(/\n/g, '<br>');
+  }
+
+  function buildSourcesHtml(sourcesStr) {
+    if (!sourcesStr || sourcesStr === 'Kaynak bulunamadı.') return '';
+    const lines = sourcesStr.split('\n').filter(Boolean);
+    const items = lines.map(l => `<li>${escHtml(l)}</li>`).join('');
+    return `<div class="sources"><strong>📚 Kaynaklar</strong><ul>${items}</ul></div>`;
+  }
+
+  // ── Send ──────────────────────────────────────────────────────
+  async function send() {
+    const ta  = document.getElementById('question');
+    const btn = document.getElementById('send-btn');
+    const text = ta.value.trim();
+    if (!text || busy) return;
+
+    busy = true;
+    btn.disabled = true;
+
+    addMsg('user', escHtml(text));
+    ta.value = '';
+    ta.style.height = 'auto';
+
+    const typing = addTyping();
+    const mode   = currentMode;
+
+    try {
+      const resp = await fetch(webhookUrl, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ message: text, mode }),
+        signal:  AbortSignal.timeout(mode === 'offline' ? 120000 : 30000)
+      });
+
+      typing.remove();
+
+      if (!resp.ok) {
+        const errText = await resp.text();
+        addMsg('bot', `<div class="error-bubble">HTTP ${resp.status}: ${escHtml(errText)}</div>`);
+      } else {
+        const data = await resp.json();
+        let answerHtml = formatAnswer(data.text || data.summary || 'Cevap alınamadı.');
+        answerHtml += buildSourcesHtml(data.sources);
+        addMsg('bot', answerHtml, mode);
+      }
+    } catch (err) {
+      typing.remove();
+      let msg = err.name === 'TimeoutError'
+        ? `⏱ Zaman aşımı (${mode === 'offline' ? '120s' : '30s'}). Offline modda Ollama yanıt vermedi. Sunucuyu kontrol edin.`
+        : `Bağlantı hatası: ${escHtml(err.message)}`;
+      addMsg('bot', `<div class="error-bubble">${msg}</div>`);
+    }
+
+    busy = false;
+    btn.disabled = false;
+    ta.focus();
+  }
+
+  // ── Textarea auto-resize + Enter key ─────────────────────────
+  const ta = document.getElementById('question');
+  ta.addEventListener('input', () => {
+    ta.style.height = 'auto';
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px';
+  });
+  ta.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
+  });
+  document.getElementById('send-btn').addEventListener('click', send);
+</script>
+</body>
+</html>
