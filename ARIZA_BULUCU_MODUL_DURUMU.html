@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<title>ARGUS — Arıza Bulucu Modül Durum Raporu</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; color: #1a1a1a; line-height: 1.7; }
+  h1 { background: #0d2137; color: #fff; padding: 24px 30px; border-radius: 8px; }
+  h2 { background: #1a3a5c; color: #fff; padding: 10px 18px; border-radius: 5px; margin-top: 40px; }
+  h3 { color: #0d2137; border-bottom: 2px solid #0d2137; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th { background: #0d2137; color: #fff; padding: 8px 12px; text-align: left; }
+  td { border: 1px solid #ccc; padding: 8px 12px; }
+  tr:nth-child(even) { background: #f4f8fb; }
+  .ok   { color: #1a7a1a; font-weight: bold; }
+  .warn { color: #b85c00; font-weight: bold; }
+  .bad  { color: #c00; font-weight: bold; }
+  code  { background: #eef2f7; padding: 2px 6px; border-radius: 3px; font-size: 13px; }
+  pre   { background: #eef2f7; padding: 14px; border-radius: 6px; overflow-x: auto; font-size: 13px; }
+  .box  { border: 1px solid #b0c8e0; border-radius: 6px; padding: 14px 18px; margin: 12px 0; background: #f4f8fb; }
+  ul li { margin: 4px 0; }
+  @media print { body { margin: 20px; } }
+</style>
+</head>
+<body>
+
+<h1>⚙️ ARGUS — Arıza Bulucu (Engineer-GPT) Modülü<br><small style="font-size:15px;font-weight:normal">Tam Durum Raporu — Nisan 2026</small></h1>
+
+<h2>1. PROJE AMACI</h2>
+<div class="box">
+  <p>Gemi teknik manuellerini (PDF) sisteme yükleyip, mürettebatın <strong>doğal dilde sorduğu arıza sorularına</strong> manuele dayalı, kaynaklı (PDF adı + sayfa numarası) cevaplar üreten bir yapay zeka sistemi. Hedef: Google'ın <strong>NotebookLM</strong>'ine benzer ama <strong>kendi sunucusunda, sıfır internet maliyetiyle</strong> çalışan sistem.</p>
+  <ul>
+    <li>PDF yükle → Sisteme öğret → Sor → Kaynaklı cevap al</li>
+    <li><strong>Online Mod:</strong> Claude API (Anthropic) — kaliteli, ücretli</li>
+    <li><strong>Offline Mod:</strong> Yerel Ollama (qwen2.5:7b) — ücretsiz, internet gerektirmez</li>
+    <li><strong>Arama:</strong> Semantic Search (nomic-embed-text vektör araması) — NotebookLM kalitesi</li>
+  </ul>
+</div>
+
+<h2>2. SUNUCU BİLGİLERİ</h2>
+<table>
+  <tr><th>Özellik</th><th>Değer</th></tr>
+  <tr><td>Sunucu IP</td><td><code>37.27.84.235</code></td></tr>
+  <tr><td>Kullanıcı</td><td><code>argus</code></td></tr>
+  <tr><td>İşletim Sistemi</td><td>Ubuntu 24.04.3 LTS (GNU/Linux 6.8.0-87)</td></tr>
+  <tr><td>RAM</td><td>16 GB</td></tr>
+  <tr><td>Disk</td><td>300 GB (17% kullanımlı)</td></tr>
+  <tr><td>Domain</td><td><code>n8n.argussees.com</code></td></tr>
+  <tr><td>n8n URL</td><td><code>https://n8n.argussees.com</code></td></tr>
+  <tr><td>Webhook URL</td><td><code>https://n8n.argussees.com/webhook/chat</code></td></tr>
+  <tr><td>n8n Workflow ID</td><td><code>ERBMV5brydKQ4WI0</code></td></tr>
+  <tr><td>Ollama URL</td><td><code>http://127.0.0.1:11434</code></td></tr>
+</table>
+
+<h2>3. SUNUCUDAKI DOSYA YAPISI</h2>
+<pre>
+/home/argus/
+├── manuals/                        ← Tüm PDF'ler burada (10 GB, 2960 PDF)
+│   ├── 3. HULL OUTFITTING/
+│   ├── 4. ACCOMMODATION/
+│   ├── 5. HULL PIPING/
+│   ├── 6. MACHINERY/
+│   ├── 7. ELECTRIC/
+│   ├── 8189 YARD DWG/
+│   ├── Bridge equipment Manuals/
+│   ├── BWTS TRAINING/
+│   ├── konsberg/
+│   ├── LGE/
+│   ├── riken manuals/
+│   └── [kök dizininde tekil PDF'ler]
+│
+├── manuals_index/                  ← JSON index (PDF başına 1 JSON, chunk'lar içinde)
+│   ├── 3. HULL OUTFITTING/
+│   ├── 4. ACCOMMODATION/
+│   ├── 5. HULL PIPING/
+│   ├── 6. MACHINERY/
+│   ├── 7. ELECTRIC/
+│   └── ...
+│
+├── embeddings.npz                  ← 136,569 chunk'ın vektör embeddingi (364 MB)
+├── embeddings_meta.json            ← Embedding metadata (PDF adı, sayfa, metin) (82 MB)
+│
+├── ingest_with_pages.py            ← PDF → JSON index scripti
+├── search_chunks_v2.py             ← Keyword arama scripti (yedek)
+├── search_semantic.py              ← Semantic (vektör) arama scripti (AKTİF)
+└── build_embeddings.py             ← Embedding üretme scripti (bir kerelik çalıştırıldı)
+</pre>
+
+<h2>4. GIT REPO (Claude Code Ortamı)</h2>
+<table>
+  <tr><th>Konum</th><th>İçerik</th></tr>
+  <tr><td><code>/home/user/argus-n8n-workflows/</code></td><td>Ana git repo (Claude Code ortamı)</td></tr>
+  <tr><td><code>SCRIPTS/ingest_with_pages.py</code></td><td>PDF indexleme scripti</td></tr>
+  <tr><td><code>SCRIPTS/search_chunks_v2.py</code></td><td>Keyword arama scripti</td></tr>
+  <tr><td><code>SCRIPTS/argus_chat.html</code></td><td>Chat arayüzü (online/offline toggle)</td></tr>
+  <tr><td><code>N8N_WORKFLOWS/MANUAL_SEARCH_V2.json</code></td><td>n8n workflow referans kopyası</td></tr>
+  <tr><td>Branch</td><td><code>claude/ship-manual-automation-CMruu</code></td></tr>
+</table>
+
+<h2>5. SİSTEM MİMARİSİ (Nasıl Çalışıyor)</h2>
+<pre>
+Kullanıcı sorusu
+      ↓
+n8n Webhook (POST /webhook/chat)
+      ↓
+query node → soruyu temizle, Türkçe karakter düzelt
+      ↓
+Execute Command → python3 /home/argus/search_semantic.py [kelimeler]
+      ↓
+search_semantic.py:
+  1. nomic-embed-text ile soruyu vektöre çevir
+  2. 136,569 chunk vektörüyle cosine similarity hesapla
+  3. En yakın 5 chunk'ı döndür (PDF adı + sayfa + metin)
+      ↓
+parse node → JSON parse
+      ↓
+If node → sonuç var mı?
+      ↓ EVET
+summary_promt node → Context oluştur + NotebookLM tarzı sistem promptu
+      ↓
+IF_MODE node → mode == "online"?
+  ├── ONLINE  → Claude API (claude-sonnet-4-6, 2048 token)
+  └── OFFLINE → Ollama API (qwen2.5:7b, keep_alive=-1)
+      ↓
+final_response node → Cevabı formatla, kaynakları ekle
+      ↓
+Respond to Webhook → JSON döndür
+  { text, sources, ok, query, confidence }
+</pre>
+
+<h2>6. n8n WORKFLOW NODE'LARI</h2>
+<table>
+  <tr><th>Node Adı</th><th>Tipi</th><th>Görevi</th></tr>
+  <tr><td>Webhook</td><td>Webhook</td><td>POST /webhook/chat — message + mode alır</td></tr>
+  <tr><td>query</td><td>Code</td><td>Soruyu normalize et, Türkçe noktalama temizle, max 8 kelime</td></tr>
+  <tr><td>Execute Command</td><td>Execute Command</td><td><code>python3 /home/argus/search_semantic.py ...</code></td></tr>
+  <tr><td>parse</td><td>Code</td><td>stdout'u JSON parse et</td></tr>
+  <tr><td>If</td><td>IF</td><td>ok==true AND result_count>0 kontrolü (typeValidation: loose)</td></tr>
+  <tr><td>summary_promt</td><td>Code</td><td>3 chunk context + ARGUS sistem promptu oluştur</td></tr>
+  <tr><td>IF_MODE</td><td>IF</td><td>mode=="online" → Claude, değilse → Ollama</td></tr>
+  <tr><td>Message a model</td><td>HTTP Request</td><td>Anthropic API — claude-sonnet-4-6</td></tr>
+  <tr><td>Ollama_API</td><td>HTTP Request</td><td>http://127.0.0.1:11434/api/chat — qwen2.5:7b, timeout=120s</td></tr>
+  <tr><td>final_response</td><td>Code</td><td>Cevabı + kaynakları formatla</td></tr>
+  <tr><td>no_result_response</td><td>Code</td><td>Sonuç bulunamazsa hata mesajı</td></tr>
+  <tr><td>Respond to Webhook</td><td>Respond</td><td>JSON yanıt gönder</td></tr>
+</table>
+
+<h2>7. YÜKLÜ MODELLER (Ollama)</h2>
+<table>
+  <tr><th>Model</th><th>Boyut</th><th>Kullanım</th></tr>
+  <tr><td><code>qwen2.5:14b</code></td><td>9 GB</td><td>Kurulu ama çok yavaş (timeout), kullanılmıyor</td></tr>
+  <tr><td><code>qwen2.5:7b</code></td><td>4.7 GB</td><td><span class="ok">AKTİF — Offline mod cevap üretici</span></td></tr>
+  <tr><td><code>nomic-embed-text</code></td><td>274 MB</td><td><span class="ok">AKTİF — Semantic search embedding</span></td></tr>
+</table>
+
+<h2>8. MANUEL İNDEKS İSTATİSTİKLERİ</h2>
+<table>
+  <tr><th>Metrik</th><th>Değer</th></tr>
+  <tr><td>Toplam PDF sayısı</td><td><strong>2,960</strong></td></tr>
+  <tr><td>Toplam chunk sayısı</td><td><strong>136,569</strong></td></tr>
+  <tr><td>Embedding vektör sayısı</td><td><strong>136,569 (768 boyut)</strong></td></tr>
+  <tr><td>Embedding dosyası</td><td>364 MB (embeddings.npz)</td></tr>
+  <tr><td>Metadata dosyası</td><td>82 MB (embeddings_meta.json)</td></tr>
+  <tr><td>Manuel toplam boyutu</td><td>~10 GB</td></tr>
+  <tr><td>Atlanan PDF</td><td>108 (okunamayan/bozuk)</td></tr>
+</table>
+
+<h2>9. ARAYÜZ DURUMU</h2>
+<div class="box">
+  <p><strong>SCRIPTS/argus_chat.html</strong> — Git repo'da mevcut, sunucuya kopyalanmamış.</p>
+  <ul>
+    <li>Online/Offline toggle (localStorage'a kaydedilir)</li>
+    <li>Offline modda sarı banner ve 120s timeout</li>
+    <li>Her cevapta kaynak listesi gösterimi</li>
+    <li>Ayarlar modalı (webhook URL değiştirilebilir)</li>
+    <li>Markdown formatlaması (bold, tablo)</li>
+  </ul>
+  <p><strong>Ayrıca:</strong> Kullanıcının kendi arayüzü (ARGUS SYSTEM — yeşil tasarım) aktif olarak kullanılıyor, Online/Offline dropdown mevcut.</p>
+</div>
+
+<h2>10. KARŞILAŞILAN SORUNLAR VE ÇÖZÜMLER</h2>
+<table>
+  <tr><th>Sorun</th><th>Sebep</th><th>Çözüm</th></tr>
+  <tr><td>git clone hatası</td><td>Repo zaten vardı</td><td>git pull kullanıldı</td></tr>
+  <tr><td>n8n API 401 Unauthorized</td><td>JWT token süresi dolmuştu</td><td>Yeni API key oluşturuldu</td></tr>
+  <tr><td>nginx 3 gün kapalı</td><td>.bak config dosyası — duplicate location hatası</td><td>Bak dosyası silindi, nginx başlatıldı</td></tr>
+  <tr><td>Workflow PUT hatası</td><td>n8n API fazla alan kabul etmiyor</td><td>Sadece name/nodes/connections/settings/staticData gönderildi</td></tr>
+  <tr><td>Execute Command quoting hatası</td><td>Türkçe ? karakteri shell'i bozuyordu</td><td>Query node'da noktalama temizlendi</td></tr>
+  <tr><td>mode kayboluyordu</td><td>parse node'dan geçince webhook body ulaşmıyordu</td><td>IF_MODE doğrudan Webhook node'undan okuyor</td></tr>
+  <tr><td>Ollama boş cevap</td><td>qwen2.5:14b 16GB RAM'e sığmıyor, timeout</td><td>qwen2.5:7b'ye geçildi</td></tr>
+  <tr><td>Cevap yarıda kesiliyor</td><td>num_predict: 512 çok küçüktü</td><td>1024'e çıkarıldı</td></tr>
+  <tr><td>Yanlış sayfa numarası</td><td>Fiziksel PDF sayfası ≠ baskılı sayfa numarası</td><td>Bilinen kısıtlama, çözüm zor</td></tr>
+  <tr><td>Yanlış PDF buluyor</td><td>Keyword search "flow" kelimesini flowmeter manuelinde de buluyordu</td><td>Semantic search'e geçildi</td></tr>
+  <tr><td>SALWICO 3 kez indexlenmişti</td><td>Aynı PDF 3 farklı klasörde yüklüydü</td><td>2 kopya silindi</td></tr>
+  <tr><td>JSON yapısı farklıydı</td><td>chunks anahtarı içindeydi, script dışarı bakıyordu</td><td>search_chunks_v2.py güncellendi</td></tr>
+  <tr><td>Embedding 96K'da kesildi</td><td>tmux yoktu, SSH kopunca durdu</td><td>tmux açılıp tekrar başlatıldı, tamamlandı</td></tr>
+  <tr><td>If node type hatası</td><td>Boolean true, string "true" bekleniyordu</td><td>typeValidation: loose yapıldı</td></tr>
+</table>
+
+<h2>11. TAMAMLANAN İŞLER ✅</h2>
+<ul>
+  <li>✅ PDF'lerin sayfa bazlı indexlenmesi (ingest_with_pages.py)</li>
+  <li>✅ n8n webhook akışı kurulumu</li>
+  <li>✅ Online mod — Claude API entegrasyonu (claude-sonnet-4-6)</li>
+  <li>✅ Offline mod — Ollama qwen2.5:7b entegrasyonu</li>
+  <li>✅ NotebookLM tarzı inline kaynak sistemi [Kaynak: PDF.pdf, Sayfa: X]</li>
+  <li>✅ Online/Offline mod seçimi (webhook'a mode parametresi)</li>
+  <li>✅ nginx domaininin düzeltilmesi (n8n.argussees.com)</li>
+  <li>✅ 2,960 PDF — 136,569 chunk indexlendi</li>
+  <li>✅ nomic-embed-text ile semantic embedding üretildi</li>
+  <li>✅ search_semantic.py — cosine similarity ile vektör arama</li>
+  <li>✅ n8n workflow Execute Command → search_semantic.py olarak güncellendi</li>
+  <li>✅ Chat arayüzü HTML (argus_chat.html) — online/offline toggle</li>
+  <li>✅ WinSCP ile 10GB manuel sunucuya aktarıldı</li>
+</ul>
+
+<h2>12. KALAN İŞLER ⏳</h2>
+<ul>
+  <li>⏳ <strong>Sayfa numarası doğruluğu:</strong> Fiziksel sayfa ≠ baskılı sayfa sorunu. PDF page label okuma ile çözülebilir.</li>
+  <li>⏳ <strong>Sohbet hafızası:</strong> Her soru bağımsız. Önceki soruları hatırlamıyor. n8n'de session bazlı hafıza eklenebilir.</li>
+  <li>⏳ <strong>Chunk sayısı artırma:</strong> Şu an top-3 chunk gönderiliyor, top-8'e çıkarılabilir.</li>
+  <li>⏳ <strong>Offline mod kalitesi:</strong> qwen2.5:7b, Claude kadar detaylı cevap veremiyor. Daha büyük sunucu ile 14b kullanılabilir.</li>
+  <li>⏳ <strong>Yeni manüel eklenince re-index:</strong> Otomatik hale getirilmeli (inotify ile izleme).</li>
+  <li>⏳ <strong>Arayüz sunucuya yüklenmesi:</strong> argus_chat.html, /var/www veya n8n static klasörüne taşınmalı.</li>
+  <li>⏳ <strong>Birden fazla gemi desteği:</strong> Şu an tek gemi (Manta Anadolu). Gemi bazlı klasör + ayrı index yapısı.</li>
+</ul>
+
+<h2>13. ÖNEMLİ KOMUTLAR</h2>
+<pre>
+# Sunucuya bağlan (Putty)
+Host: 37.27.84.235 | Port: 22 | User: argus
+
+# n8n durumu
+pm2 status
+pm2 restart n8n
+
+# Ollama durumu
+sudo systemctl status ollama
+curl http://127.0.0.1:11434/api/tags
+
+# Yeni PDF ekleyince index güncelle
+python3 /home/argus/ingest_with_pages.py --dir /home/argus/manuals/YENİKLASÖR/
+
+# Embedding yeniden üret (uzun sürer, tmux içinde çalıştır)
+tmux new -s embed
+python3 /home/argus/build_embeddings.py
+
+# Semantic arama test
+python3 /home/argus/search_semantic.py "salwico flow fault" | python3 -m json.tool
+
+# Webhook test (online)
+curl -s -X POST "https://n8n.argussees.com/webhook/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "alarm ariza", "mode": "online"}' --max-time 30
+
+# Webhook test (offline)
+curl -s -X POST "https://n8n.argussees.com/webhook/chat" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "alarm ariza", "mode": "offline"}' --max-time 120
+</pre>
+
+<h2>14. MALİYET ANALİZİ</h2>
+<table>
+  <tr><th>Mod</th><th>Model</th><th>Maliyet</th><th>Kalite</th></tr>
+  <tr><td>Online</td><td>claude-sonnet-4-6</td><td>~$0.02/soru (10K soru = ~$200/ay)</td><td>⭐⭐⭐⭐⭐</td></tr>
+  <tr><td>Offline</td><td>qwen2.5:7b (Ollama)</td><td>SIFIR (yerel)</td><td>⭐⭐⭐</td></tr>
+  <tr><td>Embedding</td><td>nomic-embed-text (Ollama)</td><td>SIFIR (yerel, bir kerelik)</td><td>—</td></tr>
+</table>
+
+<div class="box" style="margin-top:40px; background:#e8f5e9; border-color:#4caf50">
+  <strong>Rapor Tarihi:</strong> Nisan 2026<br>
+  <strong>Hazırlayan:</strong> Claude (Anthropic) — ARGUS n8n Workflows Projesi<br>
+  <strong>Repo:</strong> usyytgn/argus-n8n-workflows / branch: claude/ship-manual-automation-CMruu
+</div>
+
+</body>
+</html>
