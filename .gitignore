@@ -7,6 +7,14 @@
 **/credentials.json
 **/keys.json
 
+# Local n8n workflow backup'ları (secret içerirler — sadece kullanıcı local'inde)
+N8N_WORKFLOWS/TÜM FLOWLAR/
+N8N_WORKFLOWS/BTC2_PRICE_1715_TELEGRAM.json
+N8N_WORKFLOWS/BTC_PRICE_1715_TELEGRAM.json
+N8N_WORKFLOWS/ARGUS auto_*.json
+*.json.bak
+*.backup
+
 # Node projeleri varsa
 node_modules/
 
